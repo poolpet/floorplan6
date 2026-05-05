@@ -1,111 +1,120 @@
-# WT_PARAMETERS — parametry przepisów dla etapu 3 (podział piętra)
+# WT_PARAMETERS — Polish Building Code values used in Stage 3
 
-> Wszystkie liczby zakodowane w `config.py` z odnośnikami do paragrafów.
-> Źródło: Rozporządzenie Ministra Infrastruktury z 12.04.2002 ws. warunków technicznych
-> jakim powinny odpowiadać budynki i ich usytuowanie (z nowelizacją 2024-08-01).
+> All numeric values are hard-coded in `config.py` with paragraph references
+> back to the regulation. The user can override every value from the GUI;
+> defaults are safe for a typical Polish multi-family residential building.
 >
-> User w GUI może każdą wartość nadpisać (defaulty są bezpieczne dla typowego budynku PL).
+> **Source:** Regulation of the Minister of Infrastructure of 12 April 2002
+> on the technical conditions to be met by buildings and their location
+> (consolidated text, amended 2024-08-01). Abbreviated in this document as
+> "WT" (*Warunki Techniczne*).
 
 ---
 
-## Korytarze (WT §237 + Rozdział 7 mieszkania wielorodzinne)
+## Corridors (WT § 237 + Chapter 7 — multi-family dwellings)
 
-| Parametr | Wartość | Stała w config | Uzasadnienie |
+| Parameter | Value | Constant in `config.py` | Notes |
 |---|---|---|---|
-| Korytarz wewnątrz mieszkania | min **1.2 m** | `WT_CORRIDOR_INTERNAL_MIN` | dop. miejscowe zwężenie do 0.9m × 1.5m dł. |
-| Korytarz komunikacji ogólnej (ewakuacyjny) | min **1.4 m** | `WT_CORRIDOR_PUBLIC_MIN` | wielorodzinne, na drogę ewakuacji |
+| Corridor inside an apartment | min **1.2 m** | `WT_CORRIDOR_INTERNAL_MIN` | local narrowing to 0.9 m × 1.5 m allowed |
+| Public / evacuation corridor | min **1.4 m** | `WT_CORRIDOR_PUBLIC_MIN` | multi-family, on the evacuation route |
 
-## Drogi ewakuacyjne (WT §256, ZL IV — mieszkalne wielorodzinne)
+## Evacuation routes (WT § 256, ZL IV — multi-family residential)
 
-| Parametr | Wartość | Stała |
+| Parameter | Value | Constant |
 |---|---|---|
-| Max długość dojścia gdy 1 klatka | **10 m** | `WT_DOJSCIE_MAX_1KLATKA` |
-| Max długość krótszego dojścia gdy ≥2 klatki | **40 m** | `WT_DOJSCIE_MAX_2KLATKI` |
-| Z DSO/oddymianiem | +100% (×2) | runtime computed |
-| Min szer. drzwi mieszkanie/klatka | **0.9 m** | `DOOR_MIN_WIDTH` |
+| Max walking distance with 1 stairwell | **10 m** | `WT_DOJSCIE_MAX_1KLATKA` |
+| Max length of the shorter walk with ≥ 2 stairwells | **40 m** | `WT_DOJSCIE_MAX_2KLATKI` |
+| With smoke-control system / DSO | +100 % (× 2) | computed at runtime |
+| Min apartment-to-stairwell door width | **0.9 m** | `DOOR_MIN_WIDTH` |
 
-## Klatki schodowe (WT §66-69, mieszkalnictwo wielorodzinne)
+## Stairwells (WT § 66–69, multi-family)
 
-| Parametr | Wartość | Stała |
+| Parameter | Value | Constant |
 |---|---|---|
-| Min szer. biegu | **0.9 m** | `WT_STAIR_BIEG_WIDTH` |
-| Spocznik typowy | **1.2 m** | `WT_STAIR_SPOCZNIK_WIDTH` |
-| Szyb między biegami | **0.10 m** | `WT_STAIR_GAP_BIEGS` |
-| Max wys. stopnia | **0.16 m** | `WT_STAIR_STEP_HEIGHT_MAX` |
-| Wzór Blondela 2h+s | **0.63 m** | `WT_STAIR_BLONDEL` |
-| Min szer. stopnia | **0.25 m** | `WT_STAIR_STEP_WIDTH_MIN` |
+| Min flight width | **0.9 m** | `WT_STAIR_BIEG_WIDTH` |
+| Standard landing depth | **1.2 m** | `WT_STAIR_SPOCZNIK_WIDTH` |
+| Gap between flights | **0.10 m** | `WT_STAIR_GAP_BIEGS` |
+| Max riser height | **0.16 m** | `WT_STAIR_STEP_HEIGHT_MAX` |
+| Blondel formula 2h + s | **0.63 m** | `WT_STAIR_BLONDEL` |
+| Min tread depth | **0.25 m** | `WT_STAIR_STEP_WIDTH_MIN` |
 
-### Auto-compute klatki (`compute_stairwell_dimensions`)
+### Auto-computed stairwell (`compute_stairwell_dimensions`)
 ```
-n_steps = ceil(h_kondygnacji / 0.16), parzysta
-h_step = h_kondygnacji / n_steps
-s_step = 0.63 - 2*h_step (min 0.25)
-bieg = (n_steps/2) × s_step
-klatka_length = bieg + spocznik (+ przedsionek wg klasy)
-klatka_width = 2*bieg_width + szyb (+ szyb windy jeśli wymagana)
+n_steps         = ceil(floor_height / 0.16), rounded up to an even number
+h_step          = floor_height / n_steps
+s_step          = 0.63 - 2 * h_step (min 0.25)
+flight_length   = (n_steps / 2) * s_step
+shaft_length    = flight_length + landing (+ vestibule per building class)
+shaft_width     = 2 * flight_width + gap (+ elevator shaft width if required)
 ```
 
-## Winda (WT §54)
+## Elevator (WT § 54)
 
-| Parametr | Wartość | Stała |
+| Parameter | Value | Constant |
 |---|---|---|
-| Próg wymagalności (h_total) | **9.5 m** | `WT_ELEVATOR_HEIGHT_THRESHOLD` |
-| Szyb mieszkalny | **1.5 × 1.7 m** | `WT_ELEVATOR_SHAFT_W/L` |
-| Szyb ewakuacyjny (klasa W+) | **2.0 × 2.4 m** | `WT_ELEVATOR_FIRE_W/L` |
-| Ściana między klatką a szybem | **0.20 m** | `WT_ELEVATOR_WALL_GAP` |
+| Mandatory above building height | **9.5 m** | `WT_ELEVATOR_HEIGHT_THRESHOLD` |
+| Residential shaft | **1.5 × 1.7 m** | `WT_ELEVATOR_SHAFT_W/L` |
+| Fire-evacuation shaft (class W or higher) | **2.0 × 2.4 m** | `WT_ELEVATOR_FIRE_W/L` |
+| Wall between stairwell and shaft | **0.20 m** | `WT_ELEVATOR_WALL_GAP` |
 
-## Klasy wysokości budynku (WT, dział VI)
+## Building height classes (WT, Section VI)
 
-| Klasa | Wysokość budynku | Kondygnacje | Klatka | Przedsionek |
+| Class | Building height | Storeys | Stairwell type | Vestibule depth |
 |---|---|---|---|---|
-| **N** | ≤12 m | ≤4 | otwarta dopuszczalna | 0 m |
-| **SW** | 12-25 m | 5-9 | zamknięta drzwi p.poż. | +1.0 m |
-| **W** | 25-55 m | 10-18 | przeciwpożarowa + DSO | +1.5 m |
-| **WW** | >55 m | >18 | jak W + winda ewakuacyjna | +1.5 m |
+| **N** (low) | ≤ 12 m | ≤ 4 | open allowed | 0 m |
+| **SW** (medium-low) | 12–25 m | 5–9 | enclosed, fire doors | + 1.0 m |
+| **W** (medium-high) | 25–55 m | 10–18 | fire-rated + smoke control | + 1.5 m |
+| **WW** (high) | > 55 m | > 18 | as W + fire-evacuation lift | + 1.5 m |
 
-Stała: `WT_BUILDING_CLASS_THRESHOLDS`, `WT_PRZEDSIONEK_DEPTH`.
+Constants: `WT_BUILDING_CLASS_THRESHOLDS`, `WT_PRZEDSIONEK_DEPTH`.
 
-## Mieszkania (WT §93+ i praktyka)
+## Apartment sizes (WT § 93+ and common practice)
 
-| Typ | Min powierzchnia | Opt powierzchnia | Default % w mixie |
+| Type | Min area | Optimal area | Default mix share |
 |---|---|---|---|
-| M1 (kawalerka) | 35 m² | 40 m² | 10% |
-| M2 (2-pokojowe) | 45 m² | 55 m² | 30% |
-| M3 (3-pokojowe) | 60 m² | 75 m² | 40% |
-| M4 (4-pokojowe) | 80 m² | 100 m² | 10% |
-| M5 (5-pokojowe) | 100 m² | 130 m² | 10% |
+| M1 (studio) | 35 m² | 40 m² | 10 % |
+| M2 (2-room) | 45 m² | 55 m² | 30 % |
+| M3 (3-room) | 60 m² | 75 m² | 40 % |
+| M4 (4-room) | 80 m² | 100 m² | 10 % |
+| M5 (5-room) | 100 m² | 130 m² | 10 % |
 
-Stałe: `APARTMENT_MIN_AREA`, `APARTMENT_OPT_AREA`, `APARTMENT_MIX_DEFAULT`.
-Średnia ważona dla domyślnego mixu: ~73.5 m²/mieszkanie.
+Constants: `APARTMENT_MIN_AREA`, `APARTMENT_OPT_AREA`, `APARTMENT_MIX_DEFAULT`.
+Weighted average for the default mix: ≈ 73.5 m² per apartment.
 
-## Rezerwa na komunikację
+## Circulation reserve
 
-| Parametr | Wartość | Stała |
+| Parameter | Value | Constant |
 |---|---|---|
-| Rezerwa korytarze + klatki | **15%** obrysu | `FLOOR_RESERVE_RATIO` |
+| Reserve for corridors + stairwells | **15 %** of the floor outline | `FLOOR_RESERVE_RATIO` |
 
-User w GUI może to obniżyć (więcej mieszkań, ciaśniej) lub zwiększyć (luźniej).
+The user can lower this in the GUI (more apartments, tighter packing) or
+raise it (looser plan).
 
 ---
 
-## Algorytm etapu 3 (FAZA 3)
+## Stage 3 algorithm
 
-7 kroków zaimplementowanych w `core/floor_solver.py` + `core/floor_compute.py`:
+Seven steps implemented in `core/floor_layout.py` + `core/floor_compute.py`:
 
-1. **Compute mieszkań:** `compute_apartment_count(area, mix, reserve)` → `{M1: n1, M2: n2...}`
-2. **Compute klatek:** `compute_min_stairwells(polygon, h_floor, n_floors, dojscie_max)` → `{n_required, building_class}`
-3. **Compute klatki dim:** `compute_stairwell_dimensions(h_floor, n_floors)` → `{stairwell_w, stairwell_l, has_elevator...}`
-4. **Pozycje klatek** (heurystyka K-means lub równomierne)
-5. **Voronoi → regiony per klatka** (clip do floor_polygon)
-6. **Solver per region** (mieszkania + korytarze, dotychczasowy `solve_floor` z rozszerzeniem o korytarz)
-7. **Walidacja Dijkstra** długości dojścia per mieszkanie. Jeśli > max → dodaj klatkę i wróć do (2).
+1. **Apartment count:** `compute_apartment_count(area, mix, reserve)` →
+   `{M1: n1, M2: n2, ...}`
+2. **Stairwell count:** `compute_min_stairwells(polygon, h_floor, n_floors,
+   max_walk)` → `{n_required, building_class}`
+3. **Stairwell dimensions:** `compute_stairwell_dimensions(h_floor, n_floors)`
+   → `{stairwell_w, stairwell_l, has_elevator, ...}`
+4. **Stairwell positions** (heuristic — k-means clustering or evenly spaced)
+5. **Voronoi → per-stairwell regions** (clipped to the floor polygon)
+6. **Solver per region** (apartments + corridor segment, the legacy
+   `solve_floor` extended with a corridor strip)
+7. **Dijkstra validation** of the walking distance per apartment. If any
+   distance exceeds the WT § 256 cap → add a stairwell and return to step 2.
 
-## Przykłady (z `compute_stairwell_dimensions`)
+## Worked examples (from `compute_stairwell_dimensions`)
 
-| h kond. | Kondyg. | h_total | Klasa | n stopni | h step | s step | Klatka W×L | Winda | Trzon m² |
+| Floor h | Storeys | Total h | Class | n steps | h step | s step | Stairwell W × L | Lift | Core m² |
 |---|---|---|---|---|---|---|---|---|---|
-| 2.6 | 4 | 10.4 | N | 18 | 14.4cm | 34.2cm | 1.9 × 4.28m | TAK | ~12.6 |
-| 2.8 | 4 | 11.2 | N | 18 | 15.6cm | 31.9cm | 1.9 × 4.07m | TAK | ~14.0 |
-| 2.8 | 3 | 8.4 | N | 18 | 15.6cm | 31.9cm | 1.9 × 4.07m | NIE | ~7.7 |
-| 3.0 | 5 | 15.0 | SW | 20 | 15.0cm | 33.0cm | 1.9 × 4.50m | TAK | ~16.6 |
-| 3.2 | 8 | 25.6 | W | 20 | 16.0cm | 31.0cm | 2.4 × 4.60m | TAK | ~22.6 |
+| 2.6 m | 4 | 10.4 m | N | 18 | 14.4 cm | 34.2 cm | 1.9 × 4.28 m | YES | ≈ 12.6 |
+| 2.8 m | 4 | 11.2 m | N | 18 | 15.6 cm | 31.9 cm | 1.9 × 4.07 m | YES | ≈ 14.0 |
+| 2.8 m | 3 |  8.4 m | N | 18 | 15.6 cm | 31.9 cm | 1.9 × 4.07 m | NO  | ≈  7.7 |
+| 3.0 m | 5 | 15.0 m | SW | 20 | 15.0 cm | 33.0 cm | 1.9 × 4.50 m | YES | ≈ 16.6 |
+| 3.2 m | 8 | 25.6 m | W  | 20 | 16.0 cm | 31.0 cm | 2.4 × 4.60 m | YES | ≈ 22.6 |

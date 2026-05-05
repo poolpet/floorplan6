@@ -121,7 +121,7 @@ rewrite). Old modules removed:
 - Architecture overview in `docs/ARCHITECTURE.md`.
 - WT parameters table in `docs/WT_PARAMETERS.md`.
 - Open architectural questions in `docs/OPEN_QUESTIONS.md`.
-- After every session: update this file (CO DZIAŁA / CO NIE / METRYKI).
+- After every session: update this file (WHAT WORKS / WHAT DOESN'T / METRICS).
 
 ---
 
