@@ -1,5 +1,10 @@
 # FloorPlan6 — automatic apartment & floor layout generator
 
+[![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](./LICENSE)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
+[![Tests](https://github.com/poolpet/floorplan6/actions/workflows/test.yml/badge.svg)](https://github.com/poolpet/floorplan6/actions/workflows/test.yml)
+[![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](./CONTRIBUTING.md)
+
 > **Status:** active development. Stage 4 (apartment layout) and Stage 3
 > (floor layout) are functional MVPs. Stages 1 & 2 are open for contributors.
 >
@@ -105,6 +110,46 @@ These tabs in the UI are placeholders waiting for an architect-developer:
   types, slab + roof export to ArchiCAD). MVP estimate: 1–2 weeks.
 
 Open a Discussion or a draft PR — happy to mentor.
+
+## Project history — why Python (and not C++)
+
+This is the 6th iteration. Earlier versions:
+
+- **FloorPlan2 / FloorPlan3** — early Python prototypes (PyQt5 + heuristics).
+  Abandoned.
+- **FloorPlan4** (Python, OR-Tools CP-SAT) — first solver-based version.
+  Reached **36/36 unit tests passing** with 27 reference plans containing
+  geometry + adjacency graphs. Abandoned in favour of a C++ port for
+  performance and tighter ArchiCAD integration.
+- **FloorPlan4_CPP** (C++ ArchiCAD add-on) — the C++ port. Stage 3 floor
+  mode works (6/6 tests), but Stage 4 broke badly — bathroom area grew to
+  **13 m²** instead of the 5 m² hard cap (262 % over WT limit). Stage 1
+  Plot Subdivider had 4 known geometry bugs after a single session.
+  Diagnosed root causes in `docs/LESSONS_LEARNED.md` (lessons E1–E6).
+- **FloorPlan5** — documentation-only consolidation. The "everything in C++"
+  decision was reversed on 2026-04-29.
+- **FloorPlan6** (this repo, Python again) — pragmatic return to Python for
+  the algorithm side, with C++ kept as a reference for the UI / AC bridge.
+
+**Why the return to Python after committing to C++:**
+
+1. **Geometric algorithms are faster to iterate in Python.** Shapely +
+   matplotlib give immediate visual feedback; a buggy clip is obvious from
+   the rendered PNG. In C++ the iteration loop was: edit → recompile bundle
+   → reload AC → re-test → diagnose without a quick visualiser. Plot
+   Subdivider in C++ produced 4 bugs in one session because of this slow
+   feedback loop.
+2. **Rule enforcement was easier to lose in C++.** The bathroom-13-m² bug
+   came from changing `Coverage` from `==` to `<=` and forgetting to add a
+   MAX-area validator — both invisible in a fast review of C++ source.
+   Python with `WT_MAX_AREA` as a config constant + a regression test makes
+   the same omission impossible.
+3. **OR-Tools is more idiomatic in Python.** Constraint construction reads
+   like the rule it expresses; the C++ API is much heavier.
+4. **The C++ work is not lost** — `FloorPlan4_CPP` is retained as the
+   reference for the eventual ArchiCAD add-on UI (palette, MPZP dialog,
+   `BADPOLY` zone-insertion fix). After Python stabilises, the proven
+   algorithm will be ported back to C++ keeping the existing UI.
 
 ## Tech stack
 

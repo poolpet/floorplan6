@@ -1,164 +1,223 @@
-# OPEN_QUESTIONS — pytania architektoniczne do decyzji
+# OPEN_QUESTIONS — architectural decisions awaiting answers
 
-> **Zasada:** zanim Claude zaimplementuje cokolwiek związanego z poniższymi pytaniami — MUSI zapytać Dawida i poczekać na decyzję. NIE zgadywać. Reguła B5.
+> **Rule:** before implementing anything related to the questions below,
+> Claude MUST ask the project owner and wait for a decision. Do NOT guess.
+> Rule B5.
 
-> **Format:** każde pytanie ma kontekst (skąd przyszło), opcje (a/b/c), domyślną rekomendację (jeśli jest sensowna) i status (OPEN / DECIDED).
+> **Format:** every question has context (where it came from), options
+> (a/b/c), a default recommendation (if there is a sensible one), and a
+> status (OPEN / DECIDED).
 
 ---
 
-## ETAP 1 — PLOT SUBDIVISION (z C++ FloorPlan4_CPP sesja 29.04)
+## STAGE 1 — PLOT SUBDIVISION (from C++ FloorPlan4_CPP session 2026-04-29)
 
-> **Status etapu:** ⏸️ ODŁOŻONE w FloorPlan6 do osobnej sesji. Najpierw etap 4 (rzuty mieszkań).
+> **Stage status:** ⏸️ ON HOLD in FloorPlan6 until a separate session.
+> Stage 4 (apartment layout) first.
 >
-> **Kontekst:** w C++ Plot Subdivider miał 4 znane bugi (sub-działki wystają poza granicę, drogi wystają, strefa budowlana ignorowana, 36 stref dla 10 możliwych). Reimplementacja w Pythonie z Shapely + matplotlib. Te decyzje są wymagane PRZED implementacją.
+> **Context:** in C++ Plot Subdivider had 4 known bugs (sub-plots overflow
+> boundary, roads overflow, building zone ignored, 36 zones for ~10 possible).
+> Re-implementation in Python with Shapely + matplotlib. These decisions are
+> required BEFORE implementation.
 
-### Q1: Sub-działki przy nieregularnej granicy
-**Pytanie:** co robić z sub-działką która wpadałaby częściowo poza granicę działki głównej (lub poza strefę budowlaną)?
+### Q1 — Sub-plots near an irregular boundary
+**Question:** what to do with a sub-plot that would partially fall outside
+the main plot boundary (or outside the building zone)?
 
-**Opcje:**
-- (a) **Przyciąć do granicy** → sub-działka ma kształt trapezu (analogia z trapezowymi mieszkaniami z FloorPlan2/4 — istnieje `core/trapezoid_handler.py`)
-- (b) **Odrzucić całkowicie** → tylko pełnoprawne prostokąty
-- (c) **Zmniejszyć** → mniejszy prostokąt który mieści się w środku
+**Options:**
+- (a) **Clip to the boundary** → sub-plot has a trapezoid shape (analogy
+  with trapezoidal apartments from FloorPlan2/4 — `core/trapezoid_handler.py`
+  already exists)
+- (b) **Reject entirely** → only full rectangles
+- (c) **Shrink** → smaller rectangle that fits inside
 
-**Rekomendacja:** (a) — istnieje już infrastruktura trapez handler. Ale to decyzja Dawida.
-
-**Status:** OPEN
-
-### Q2: Układ dróg wewnętrznych
-**Pytanie:** jak prowadzić drogi wewnętrzne między sub-działkami?
-
-**Opcje:**
-- (a) **Pasy między rzędami** (prosty grid — obecnie zaimplementowane w C++)
-- (b) **Jedna główna droga (kręgosłup)** + krótkie dojścia do każdej działki
-- (c) **Pętla / sięgacz / inny układ**
-
-**Rekomendacja:** brak — czysto architektoniczna decyzja. Dawid wie jak to wygląda w realnych projektach.
+**Recommendation:** (a) — trapezoid handler infrastructure already exists.
+But it's the project owner's call.
 
 **Status:** OPEN
 
-### Q3: Czy front sub-działki musi być przy drodze?
-**Pytanie:** czy każda sub-działka MUSI mieć krótszy bok przy drodze (front)?
+### Q2 — Internal road layout
+**Question:** how to lay out roads between sub-plots?
 
-**Opcje:**
-- (a) **TAK** — krótszy bok = front, dłuższy bok = bok parceli (standard PL)
-- (b) **NIE** — może być na odwrót (głębsza działka dłuższa od ulicy)
-- (c) **Zależy od typu zabudowy** — szeregowa TAK, wolnostojąca obojętnie
+**Options:**
+- (a) **Strips between rows** (simple grid — currently implemented in C++)
+- (b) **One main road (spine) + short access spurs** to each sub-plot
+- (c) **Loop / cul-de-sac / other**
 
-**Status:** OPEN
-
-### Q4: BLIZNIACZA — definicja sub-działki
-**Pytanie:** jak liczyć sub-działkę dla zabudowy bliźniaczej?
-
-**Opcje:**
-- (a) **1 sub-działka = 1 segment** (1 lokal). Para to 2 sąsiednie sub-działki ze wspólną ścianą. (obecnie w C++)
-- (b) **1 sub-działka = 1 cały budynek bliźniaczy** (2 lokale w jednym budynku)
+**Recommendation:** none — purely architectural. The owner knows what real
+projects look like.
 
 **Status:** OPEN
 
-### Q5: Orientacja siatki sub-działek
-**Pytanie:** jaką orientację ma mieć siatka sub-działek?
+### Q3 — Must the sub-plot front face the road?
+**Question:** must every sub-plot have its shorter side (front) towards
+the road?
 
-**Opcje:**
-- (a) **Aligned z najdłuższą krawędzią działki** (auto)
-- (b) **Aligned z user-marked external access edge** (z palety AC, wymaga interakcji)
-- (c) **Optymalizacja** dla maksymalnego wykorzystania działki (algorytm szuka)
+**Options:**
+- (a) **YES** — shorter side = front, longer side = lateral plot edge (PL standard)
+- (b) **NO** — can be the other way (deeper plot longer along the street)
+- (c) **Depends on building type** — terraced YES, detached doesn't matter
 
-**Rekomendacja:** (b) — daje user controlu, prosty UX (jeden click "oznacz dostęp do drogi" — jest już w paletcie C++).
+**Status:** OPEN
+
+### Q4 — TWIN-HOUSE (BLIZNIACZA) — sub-plot definition
+**Question:** how to count a sub-plot for a twin-house development?
+
+**Options:**
+- (a) **1 sub-plot = 1 segment** (1 unit). A pair = 2 adjacent sub-plots
+  with a shared wall. (currently in C++)
+- (b) **1 sub-plot = 1 whole twin building** (2 units in one building)
+
+**Status:** OPEN
+
+### Q5 — Sub-plot grid orientation
+**Question:** what orientation should the sub-plot grid have?
+
+**Options:**
+- (a) **Aligned with the longest plot edge** (auto)
+- (b) **Aligned with a user-marked external access edge** (from the AC
+  palette, requires interaction)
+- (c) **Optimisation** for maximum plot utilisation (algorithm searches)
+
+**Recommendation:** (b) — gives user control, simple UX (one click "mark
+access to the road" — already in the C++ palette).
 
 **Status:** OPEN
 
 ---
 
-## ETAP 4 — RZUTY MIESZKAŃ (NOWE Q POJAWIAJĄ SIĘ TUTAJ PO PIERWSZEJ SESJI)
+## STAGE 4 — APARTMENT LAYOUTS (NEW Q's appear here after the first session)
 
-### Q6: Łazienka — kto absorbuje "extra area"?
-**Pytanie:** jeśli polygon mieszkania ma więcej powierzchni niż suma min_powierzchni pokoi (typowy przypadek), kto absorbuje nadmiar żeby F1 (100% coverage) było spełnione?
+### Q6 — Bathroom — who absorbs the "extra area"?
+**Question:** if the apartment polygon has more area than the sum of room
+`min_powierzchnia` (typical case), who absorbs the excess so F1
+(100 % coverage) is satisfied?
 
-**Opcje:**
-- (a) **Salon_aneks** — bo ma najszerszy zakres `procent_powierzchni` (max 45%)
-- (b) **Sypialnia główna** — bo druga największa
-- (c) **Hub** — ale to łamie F4 (hub max 15%)
+**Options:**
+- (a) **Living room (`salon_aneks`)** — has the widest `procent_powierzchni`
+  range (max 45 %)
+- (b) **Master bedroom** — second largest
+- (c) **Hub** — but this breaks F4 (hub max 15 %)
 
 **Status:** DECIDED 2026-04-30
-**Decyzja Dawida:** salon bierze **80% nadmiaru**, pozostałe **20% rozdzielone proporcjonalnie między sypialnie**. Sypialnie nie muszą siedzieć na minimum — mogą iść powyżej. Hub i pokoje usługowe (łazienka, WC) zostają przy `procent_powierzchni` lub twardym capie WT (Q7). Przykład: mieszkanie 100m², suma min_powierzchni = 60m² → nadmiar 40m² → salon dostaje +32m², sypialnie razem +8m² (proporcjonalnie do swoich min_powierzchnia).
+**Owner's decision:** living room takes **80 % of the excess**, the remaining
+**20 % is distributed proportionally among the bedrooms**. Bedrooms do NOT
+have to sit at the minimum — they can go above. Hub and service rooms
+(bathroom, WC) stay at `procent_powierzchni` or the WT hard cap (Q7).
 
-### Q7: 5m² łazienka vs `procent_powierzchni`
-**Pytanie:** w `M3_standard.json` łazienka ma `procent_powierzchni: [0.06, 0.12]`. Dla mieszkania 100m² to 6-12m². Konflikt z F2 (max 5m²).
+Example: 100 m² apartment, sum of `min_powierzchnia` = 60 m² → excess 40 m²
+→ living room +32 m², bedrooms together +8 m² (proportional to their
+respective `min_powierzchnia`).
 
-**Opcje:**
-- (a) **F2 wins** — `min(procent_powierzchni × usable, 5.0)` jako twardy cap
-- (b) **Procent_powierzchni wins** — ale to łamie F2
+### Q7 — 5 m² bathroom vs `procent_powierzchni`
+**Question:** in `M3_standard.json` the bathroom has
+`procent_powierzchni: [0.06, 0.12]`. For a 100 m² apartment that's 6–12 m².
+Conflict with F2 (max 5 m²).
+
+**Options:**
+- (a) **F2 wins** — `min(procent_powierzchni × usable, 5.0)` as a hard cap
+- (b) **Procent_powierzchni wins** — but this breaks F2
 
 **Status:** DECIDED 2026-04-30
-**Decyzja Dawida:** opcja (a) — **F2 wins**. Twardy cap WT ma pierwszeństwo nad `procent_powierzchni` z szablonu.
+**Owner's decision:** option (a) — **F2 wins**. WT hard cap takes precedence
+over template `procent_powierzchni`.
 
-**Capy WT (uściślone 2026-04-30):**
-- Łazienka: min 2.5m² / opt ~4.5-5.0m² / **max 5.0m²**
-- WC: min 1.5m² / **opt 1.8m²** / **max 3.0m²**
+**Refined caps (2026-04-30):**
+- Bathroom: min 2.5 m² / opt ~4.5–5.0 m² / **max 5.0 m²**
+- WC: min 1.5 m² / **opt 1.8 m²** / **max 3.0 m²**
 
-Efektywny upper bound: `min(procent_max × usable_area, WT_MAX_AREA[room_id])`. Implementacja: stała `WT_MAX_AREA` w `config.py` + constraint `model.add(area_i <= max_area_cm2)` w solverze + funkcja `_check_max_areas` w validatorze.
+Effective upper bound: `min(procent_max × usable_area, WT_MAX_AREA[room_id])`.
+Implementation: `WT_MAX_AREA` constant in `config.py` +
+`model.add(area_i <= max_area_cm2)` in solver + `_check_max_areas` function
+in validator.
 
-### Q8: Klatka schodowa w etapie 4
-**Pytanie:** czy etap 4 dostaje sam obrys mieszkania (już bez klatki) czy obrys z klatką do wycięcia?
+### Q8 — Staircase in Stage 4
+**Question:** does Stage 4 receive only the apartment outline (already
+without the staircase) or the outline including the staircase to be cut out?
 
-**Opcje:**
-- (a) **Bez klatki** — etap 3 (Floor mode) już wyciął klatkę, etap 4 dostaje czyste mieszkania
-- (b) **Z klatką** — etap 4 musi sam wyciąć
+**Options:**
+- (a) **Without staircase** — Stage 3 (Floor mode) already cut the staircase
+  out, Stage 4 receives clean apartments
+- (b) **With staircase** — Stage 4 cuts it out itself
 
-**Rekomendacja:** (a) — separation of concerns.
+**Recommendation:** (a) — separation of concerns.
 
 **Status:** OPEN
 
 ---
 
-## ETAP 3 — PIĘTRO (gdy będziemy portować z C++)
+## STAGE 3 — FLOOR (when porting from C++)
 
-### Q9: Jak portować Floor mode z C++ do Python
-**Pytanie:** Floor mode (etap 3) działa w C++ (6/6 testów). Czy port do Pythona ma być 1:1 czy reimplementacja?
+### Q9 — How to port Floor mode from C++ to Python
+**Question:** Floor mode (Stage 3) works in C++ (6/6 tests). Should the
+Python port be 1:1 or a re-implementation?
 
-**Opcje:**
-- (a) **Port 1:1** — szybciej ale C++ idiomy w Pythonie
-- (b) **Reimplementacja** — wolniej ale czysty Pythonic kod (Shapely zamiast geometrii ręcznej)
+**Options:**
+- (a) **1:1 port** — faster but C++ idioms in Python
+- (b) **Re-implementation** — slower but clean Pythonic code (Shapely
+  instead of manual geometry)
 
-**Rekomendacja:** (b) — etap 4 też ma być Pythonic, więc jednolity styl.
+**Recommendation:** (b) — Stage 4 is also Pythonic, so unified style.
 
-**Status:** OPEN — decyzja gdy dojdziemy do etapu 3.
-
----
-
-## OGÓLNE
-
-### Q10: Python Palette w AC vs CLI
-**Pytanie:** jak end-user uruchamia FloorPlan6?
-
-**Opcje:**
-- (a) **Python Palette w AC** (nadbudowa Tapira) — klika przycisk w AC
-- (b) **CLI** — `python main.py` z terminala
-- (c) **PyQt5 GUI** (`ui/main_window.py`) — okno desktop
-
-**Rekomendacja:** docelowo **(a)** dla architektów. **(b)+(c)** dla developera. Sprawdzić jak Tapir Python Palette się konfiguruje.
-
-**Status:** OPEN — decyzja przed pierwszym deploymentem do user.
+**Status:** PARTIALLY DECIDED — for FloorPlan6 we wrote Stage 3 in Python
+from scratch (`core/floor_layout.py`). The C++ Floor mode remains a
+reference for any feature we might miss.
 
 ---
 
-## DECYDED (przykład — gdy przeniesiemy odpowiedź)
+## CROSS-CUTTING
 
-> Format po decyzji:
+### Q10 — Python Palette in AC vs CLI
+**Question:** how does the end-user run FloorPlan6?
+
+**Options:**
+- (a) **Python Palette in AC** (wrapper around Tapir) — clicks a button in AC
+- (b) **CLI** — `python main.py` from a terminal
+- (c) **PyQt5 GUI** (`ui/main_window.py`) — desktop window
+
+**Recommendation:** ultimately **(a)** for architects. **(b)+(c)** for
+developers. Verify how Tapir Python Palette is configured.
+
+**Status:** OPEN — decision before the first deployment to a user.
+
+### Q11 — Validator API: `strict_max_areas` flag
+**Question:** validator was failing for reference Polish apartments after
+F2 was added (real apartments sometimes have 6–8 m² bathrooms, exceeding
+the WT cap). How to handle this?
+
+**Options:**
+- (a) `_check_max_areas` reports WARNING instead of ERROR
+- (b) **Flag `validate(fp, strict_max_areas: bool = True)`** — default True
+  (strict for generated plans), False for reference data
+- (c) Heuristic by `template.source` — skip MAX check if `source != "manual"`
+- (d) Lower the test threshold
+
+**Status:** DECIDED 2026-04-30
+**Owner's decision:** option (b) — flag `strict_max_areas`. Default True —
+strict for plans generated by the solver. False for reference plans from
+`data/plans/` (real PL apartments may have bathrooms > 5 m²). Consistent
+with the existing dynamic-tolerance pattern in `_check_area_coverage`.
+
+---
+
+## DECIDED (example — once we move an answer here)
+
+> Format after a decision:
 > ```
-> ### QX: [pytanie]
-> **Status:** DECIDED 2026-MM-DD
-> **Decyzja:** opcja (a) — uzasadnienie Dawida: ...
+> ### QX: [question]
+> **Status:** DECIDED YYYY-MM-DD
+> **Decision:** option (a) — owner's reasoning: ...
 > ```
 
 ---
 
-## PROCES
+## PROCESS
 
-1. Claude napotyka decyzję → sprawdza ten plik
-2. Jeśli Q jest OPEN → STOP, pyta Dawida
-3. Po decyzji Dawida → Claude UPDATE-uje ten plik (przesuwa Q do DECIDED z datą i uzasadnieniem)
-4. Claude implementuje zgodnie z decyzją
-5. Jeśli implementacja ujawnia nowe pytania → DODAJ jako Q11, Q12, …
+1. Claude hits a decision → checks this file
+2. If Q is OPEN → STOP, asks the owner
+3. After the owner's decision → Claude UPDATES this file (moves Q to
+   DECIDED with date and reasoning)
+4. Claude implements according to the decision
+5. If implementation reveals new questions → ADD as Q11, Q12, …
 
-**Reguła B5:** pytaj o decyzje architektoniczne, NIE o oczywistości.
+**Rule B5:** ask about architectural decisions, NOT obvious things.

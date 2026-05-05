@@ -1,238 +1,264 @@
-# FUNDAMENTAL_RULES — ABSOLUTNY PRIORYTET
+# FUNDAMENTAL_RULES — absolute priority
 
-> **Te zasady są NIENARUSZALNE.** W sesji 24-25 kwietnia w C++ FloorPlan4_CPP były **notorycznie łamane** — to przyczyna katastrofy (25+ commitów regresji, 4 nieudane podejścia, łazienka 13m² zamiast 5m²).
+> **These rules are NON-NEGOTIABLE.** During the C++ session of 2026-04-25
+> in FloorPlan4_CPP they were repeatedly broken — that was the root cause of
+> the disaster (25+ regression commits, 4 failed approaches, bathroom 13 m²
+> instead of 5).
 >
-> **PRZED KAŻDĄ zmianą w kodzie:** przeczytaj ten plik. Jeśli chcesz zmienić cokolwiek co narusza te zasady — STOP, zapytaj użytkownika EXPLICIT.
+> **Before EVERY code change:** read this file. If you want to change
+> anything that violates these rules — STOP and ask the project owner
+> EXPLICITLY.
 
 ---
 
-## REGUŁY ARCHITEKTONICZNE (WT i layout) — ABSOLUTNE
+## ARCHITECTURAL RULES (WT and layout) — ABSOLUTE
 
-### F1: 100% COVERAGE OBRYSU
-**Polygon użytkownika = mieszkanie. W CAŁOŚCI. Bez wyjątków.**
+### F1 — 100 % outline coverage
+**The user's polygon = the apartment. ENTIRELY. No exceptions.**
 
-- Wynik solvera MUSI wypełnić cały polygon
-- Coverage = `sum(rooms_areas) == usable_area_cm2` (RÓWNOŚĆ, nie nierówność!)
-- ŻADNYCH "virtual obstacles" zmniejszających usable area
-- ŻADNYCH gap > 0 m²
-- ŻADNYCH "prostokątów z dupy" (extra_rect odłączonych od głównego pokoju)
+- Solver result MUST fill the whole polygon
+- Coverage = `sum(rooms_areas) == usable_area_cm2` (EQUALITY, not inequality!)
+- NO "virtual obstacles" reducing usable area
+- NO gaps > 0 m²
+- NO "rectangles from nowhere" (extra_rect detached from the main room)
 
-**W sesji C++ NARUSZONE:** dziury 15%, odłączone prostokąty.
+**Violated in C++ session:** 15 % holes, detached rectangles.
 
-**W Pythonie:** `core/cpsat_solver.py:140` — `model.Add(sum(areas) == usable_area_cm2)`. To jest święte — nie zmieniaj na `<=`.
+**In Python:** `core/cpsat_solver.py:253` — `model.add(sum(areas) == usable_area)`.
+This is sacred — do not change to `<=`.
 
-### F2: ŁAZIENKA MAX 5 m² (WT — twardy cap)
-**Łazienka NIGDY nie może być większa niż 5 m². Niezależnie od typu mieszkania, wielkości obrysu, czy okoliczności.**
+### F2 — Bathroom max 5 m² (WT — hard cap)
+**The bathroom CAN NEVER exceed 5 m². Regardless of apartment type, outline
+size or any other circumstance.**
 
-- WT min: 175×250 cm w świetle
+- WT min: 175 × 250 cm clear dimensions
 - WT max: **5.0 m² absolute**
-- WT max wymiar: 3 m
-- Łazienka MUSI być prostokątna (instalacje sanitarne)
-- Łazienka NIE absorbuje overflow / extra area
+- WT max dimension: 3 m
+- The bathroom MUST be rectangular (sanitary installations)
+- The bathroom does NOT absorb overflow / extra area
 
-**W sesji C++ NARUSZONE:** wielokrotnie 5.4–13.1m². To jest BUG #1 do naprawy w pierwszej sesji FloorPlan6 — patrz `docs/STATE.md` i `MASTER_PROMPT_etap4.md`.
+**Violated in C++ session:** 5.4–13.1 m² multiple times. This was BUG #1
+fixed in the first FloorPlan6 session — see `docs/STATE.md`.
 
-### F3: WT min_powierzchnia, min_szerokosc — NIGDY nie obniżać
-**Reguły z WT 2002 są progu PRAWNE. Nie wolno ich obniżać "żeby solver znalazł rozwiązanie".**
+### F3 — WT `min_powierzchnia`, `min_szerokosc` — never lower
+**Rules from WT 2002 are LEGAL thresholds. They cannot be lowered "to
+make the solver find a solution".**
 
-- min_powierzchnia (np. salon M1: 25 m², sypialnia 2-os: 9 m²) — SZTYWNE
-- min_szerokosc (np. salon: 3.2 m, łazienka: 1.5 m) — SZTYWNE
-- Pokoje USŁUGOWE spełniają min łazienki (1.5m × 2.5m)
+- `min_powierzchnia` (e.g. living room M1: 25 m², bedroom 2-person: 9 m²) — RIGID
+- `min_szerokosc` (e.g. living room: 3.2 m, bathroom: 1.5 m) — RIGID
+- Service rooms must satisfy bathroom min (1.5 m × 2.5 m)
 
-**Jeśli solver INFEASIBLE z tymi regułami → zmień szablon, NIE obniżaj progów.**
+**If solver INFEASIBLE with these rules → change the template, do NOT lower
+the thresholds.**
 
-### F4: HUB — kompaktowy, NIE spine
-**Hub to przedpokój centralny, NIE wąski korytarz.**
+### F4 — Hub: compact, NOT a spine
+**Hub is a central hallway, NOT a narrow corridor.**
 
-- Hub max 15% powierzchni użytkowej
-- Hub max aspect ratio 1.5 (NIE wąski długi)
-- Hub max 60% BW i max 60% BH (NIE pełna szerokość/wysokość)
-- Hub zawiera entry_point
-- Hub dotyka KAŻDEGO pokoju (adjacency edge ≥ 90 cm)
+- Hub max 15 % of usable area
+- Hub max aspect ratio 1.5 (NOT a long narrow strip)
+- Hub max 60 % of BW and 60 % of BH (NOT full width/height)
+- Hub contains the entry_point
+- Hub touches EVERY room (adjacency edge ≥ 90 cm)
 
-### F5: TOPOLOGIA PRZEZ HUB
-**Wszystkie pokoje dostępne przez hub. Brak bezpośrednich połączeń pokój↔pokój.**
+### F5 — Topology through the hub
+**All rooms accessible through the hub. No direct room↔room connections.**
 
-- Wyjątek: łazienka↔sypialnia tylko gdy >1 łazienka (M4+)
-- Sąsiedztwo z szablonu = bezpośredni shared edge ≥ 90 cm
+- Exception: bathroom↔bedroom only when there is more than one bathroom (M4+)
+- Adjacency from the template = direct shared edge ≥ 90 cm
 
-### F6: FACADE — pokoje wymagające okien dotykają polygon edge
-**Pokoje z `wymaga_okna=true` muszą dotykać krawędzi FACADE polygonu (nie bbox side).**
+### F6 — Facade: rooms requiring windows touch the polygon edge
+**Rooms with `wymaga_okna=true` must touch a FACADE edge of the polygon
+(not a bbox side).**
 
-- Salon, sypialnia, kuchnia → wymagają fasady
-- Łazienka, hub, garderoba → mogą być wewnętrzne
-- Detection: real polygon edge, NIE bbox approximation
+- Living room, bedroom, kitchen → require facade
+- Bathroom, hub, walk-in closet → may be internal
+- Detection: real polygon edge, NOT bbox approximation
 
-### F7: PROPORCJE pokoi MAX 2.5 (aspect ratio)
-**Żaden pokój nie może być dłuższy niż 2.5× szerokość.**
+### F7 — Room aspect ratio MAX 2.5
+**No room can be longer than 2.5 × its width.**
 
-- Optymalne: 1.0-2.0
-- Tolerowane: do 2.5
-- Powyżej: pokój staje się "kanał" — niefunkcjonalny
+- Optimal: 1.0–2.0
+- Tolerated: up to 2.5
+- Above: room becomes a "channel" — non-functional
 
-### F8: DRZWI I ŚCIANY
-- Jedna ściana na styku dwóch pokoi
-- Linia odniesienia ściany = ŚRODEK
-- Drzwi: pokoje otwierają się DO WEWNĄTRZ, łazienki NA ZEWNĄTRZ
-- Drzwi wejściowe: NA ZEWNĄTRZ mieszkania
-- Skrzydło drzwi w stronę najbliższej prostopadłej ściany
-- Styk hub↔salon/aneks → pusty otwór na pełną szerokość
-- 2 łazienki TYLKO w M4+
+### F8 — Doors and walls
+- One wall per shared edge between two rooms
+- Wall reference line = CENTER
+- Doors: rooms open INWARD, bathrooms outward
+- Entry door: outward of the apartment
+- Door leaf swings towards the nearest perpendicular wall
+- Hub↔living room/kitchenette joint → empty opening of full width
+- Two bathrooms ONLY in M4+
 
-### F9: FACADE DETECTION
-**Inny composite = ściana zewnętrzna (FACADE).** Detection per rzeczywistą krawędź polygonu, nie bbox side.
+### F9 — Facade detection
+**A different composite = exterior wall (FACADE).** Detection per actual
+polygon edge, not bbox side.
 
-### F10: WALIDATOR POST-CLIP = 100% STRICT
-**Walidator MUSI sprawdzać MIN i MAX. Brak miękkich tolerancji.**
+### F10 — Post-clip validator = 100 % strict
+**Validator MUST check both MIN and MAX. No soft tolerances.**
 
-- min_powierzchnia → odrzuc jeśli pokój < min
-- min_szerokosc → odrzuc jeśli szerokość < min
-- **MAX powierzchnia (lazienka 5m²) → odrzuc jeśli > max** ⚠️ TO BYŁO ZAPOMNIANE w C++
-- pct_max × usable → odrzuc jeśli > limit
-- Pokój 1 cm poniżej WT lub 1 cm powyżej max = odrzucenie wariantu
+- `min_powierzchnia` → reject if room < min
+- `min_szerokosc` → reject if width < min
+- **MAX area (bathroom 5 m²) → reject if > max** ⚠️ THIS WAS FORGOTTEN in C++
+- `pct_max × usable` → reject if > limit
+- Room 1 cm below WT or 1 cm above max = variant rejected
 
-**W Pythonie:** `core/validator.py` — sprawdź czy są asserty na MAX. Jeśli nie, dodaj jako pierwsze zadanie.
+**In Python:** `core/validator.py` — check that MAX assertions exist. If not,
+add as the first task.
 
 ---
 
-## REGUŁY PRACY (CLAUDE behavior) — ABSOLUTNE
+## WORKFLOW RULES (CLAUDE behavior) — ABSOLUTE
 
-### B1: Po 2 nieudanych próbach → REWRITE, nie 3-cia iteracja
-**To absolutne. Nie negocjowane.**
+### B1 — After 2 failed attempts → REWRITE, not a 3rd iteration
+**This is absolute. Non-negotiable.**
 
-- 1 fail → diagnostyka root cause
-- 2 fail → STOP, rewrite modułu od zera z innym podejściem
-- 3-cia próba → ZAKAZANA
+- 1 fail → root-cause diagnosis
+- 2 fails → STOP, rewrite the module from scratch with a different approach
+- 3rd attempt → FORBIDDEN
 
-**W sesji C++ NARUSZONE:** 14 łatań w 1 obszarze (PolygonFiller). 4 nieudane podejścia architektoniczne.
+**Violated in C++ session:** 14 patches in one area (PolygonFiller). 4 failed
+architectural approaches.
 
-### B2: Plan w prostym języku PRZED zmianą kodu
-**Zawsze. Nawet 1 linia zmiany.**
+### B2 — Plain-language plan BEFORE changing code
+**Always. Even for a 1-line change.**
 
-- Co chcę zmienić (architektonicznie, nie programistycznie)
-- Dlaczego (przyczyna)
-- Jak się zmieni wynik (co user zobaczy)
-- **Czekaj na OK użytkownika**
+- What I want to change (architecturally, not programmatically)
+- Why (root cause)
+- How the result will change (what the user will see)
+- **Wait for the user's OK**
 
-### B3: NIE zmieniaj reguł żeby solver działał
-**Reguły WT, layout, scoring są SZTYWNE. Solver nie znajduje rozwiązania → zmień podejście, NIE regułę.**
+### B3 — Do NOT change the rules to make the solver work
+**WT, layout and scoring rules are RIGID. Solver doesn't find a solution →
+change the approach, NOT the rule.**
 
-- "Threshold za strict" → źle interpretujesz threshold, NIE obniżaj
-- "Solver INFEASIBLE" → szukaj innego szablonu / podejścia, NIE rozluźniaj constraint
-- "Cap pct_max za niski" → memory pozwala POZIOM 1 (fill) > POZIOM 2 (caps), ale ŁAZIENKA 5m² to twardy cap WT
+- "Threshold too strict" → you're misinterpreting the threshold, do NOT lower
+- "Solver INFEASIBLE" → look for another template / approach, do NOT relax the constraint
+- "pct_max cap too low" → memory allows LEVEL 1 (fill) > LEVEL 2 (caps), but the
+  BATHROOM 5 m² cap is a WT hard cap — still absolute
 
-### B4: NIE proponuj rule-violating opcji
-**Nawet jako fallback / last resort.**
+### B4 — Do NOT propose rule-violating options
+**Even as a fallback / last resort.**
 
-- Jeśli wszystkie opcje naruszają regułę → "nie widzę rozwiązania bez naruszenia X" + czekaj
-- NIE listuj opcji typu "obniżyć threshold do X% jako kompromis"
+- If all options violate a rule → "I see no solution without violating X" + wait
+- Do NOT list options like "lower threshold to X% as a compromise"
 
-### B5: Pytaj o decyzje architektoniczne, NIE o oczywistości
-- NIE pytaj: "czy polygon to mieszkanie?" (TAK, zawsze, definicja)
-- PYTAJ: "kto absorbuje nadmiar — salon czy sypialnia?"
-- PYTAJ: "łazienka na fasadzie czy wewnętrzna w tym przypadku?"
+### B5 — Ask about architectural decisions, NOT obvious things
+- Do NOT ask: "is the polygon the apartment?" (YES, always, by definition)
+- DO ASK: "who absorbs the excess — living room or bedroom?"
+- DO ASK: "bathroom on facade or internal in this case?"
 
-### B6: Słuchaj użytkownika dosłownie
-- "Wypełnij cały obrys" = WYPEŁNIJ CAŁY OBRYS, nie interpretuj że "tak naprawdę nie chciał"
-- "Nie zmieniaj X" = NIE ZMIENIAJ X, koniec dyskusji
+### B6 — Listen to the user literally
+- "Fill the entire outline" = FILL THE ENTIRE OUTLINE, do not interpret as
+  "they didn't really mean it"
+- "Don't change X" = DO NOT CHANGE X, end of discussion
 
-### B7: Tłumacz architektonicznie, nie programistycznie
+### B7 — Translate architecturally, not programmatically
 - ❌ "AddEquality(area_sum, usable_area)"
-- ✅ "Solver wymaga że suma powierzchni pokoi DOKŁADNIE równa się powierzchni obrysu"
-- User jest architektem, ja programistą — komunikacja w jego języku
+- ✅ "Solver requires that the sum of room areas EXACTLY equals the outline area"
+- The user is an architect, I am a programmer — communicate in their language
 
-### B8: Verify before "done"
-**Nigdy nie raportuj "naprawione" / "działa" bez:**
-1. `pytest tests/` zielone
-2. Manual run przez `python main.py` lub notebook
-3. Wizualizacja matplotlib pokazująca wynik
-4. User retest pokazuje wynik
+### B8 — Verify before "done"
+**Never report "fixed" / "works" without:**
+1. `pytest tests/` green
+2. Manual run via `python main.py` or notebook
+3. Matplotlib visualisation showing the result
+4. User retest showing the result
 
-### B9: Memory-driven — pamiętaj, nie wymyślaj
-- Reguły są w docs/ FloorPlan6
-- Czytaj `docs/` NA START każdej sesji
-- Reguła jest w docs → respektuj. Reguła nie ma w docs ALE user ją podał → zapisz NATYCHMIAST do `docs/OPEN_QUESTIONS.md` lub odpowiedniego doc
+### B9 — Memory-driven — remember, don't invent
+- Rules are in FloorPlan6 docs/
+- Read `docs/` AT THE START of every session
+- Rule in docs → respect it. Rule not in docs BUT user gave it → save it
+  IMMEDIATELY to `docs/OPEN_QUESTIONS.md` or the appropriate doc
 
-### B10: Komunikacja kolega-do-kolegi (po polsku)
-- Bez "Pan / Pani"
-- Wspólnicy
-- Profesjonalnie ale familiarnie
-- Po polsku domyślnie (preferencja użytkownika)
-- Zwięźle, szczerze, obiektywnie — nie mów co user chce usłyszeć
+### B10 — Communication: peer-to-peer (in Polish)
+- No "Mr / Mrs"
+- We are partners
+- Professional but familiar
+- Polish by default (user preference)
+- Concise, honest, objective — don't say what the user wants to hear
 
 ---
 
-## ADAPTACJA DO PYTHONA
+## ADAPTATION TO PYTHON
 
-W FloorPlan6 (Python) szczególnie pamiętaj:
+In FloorPlan6 (Python), specifically remember:
 
-### P1: `Coverage equality` — `cpsat_solver.py`
-W FP4 Python `core/cpsat_solver.py:140` było `model.Add(sum(areas) == usable_area_cm2)`. Sprawdź że nadal tak jest. NIE zmieniaj na `<=`.
+### P1 — `Coverage equality` — `cpsat_solver.py`
+In FP4 Python `core/cpsat_solver.py:140` it was
+`model.Add(sum(areas) == usable_area_cm2)`. Verify it's still the case.
+Do NOT change to `<=`.
 
-### P2: `scale=100` (centymetry)
-Wszystkie wartości CP-SAT to integer cm. NIE wracaj do floatów. Eliminuje klasę bug-ów typu "0.999 != 1.0".
+### P2 — `scale=100` (centimetres)
+All CP-SAT values are integer cm. Do NOT go back to floats. Eliminates a
+class of bugs like "0.999 != 1.0".
 
-### P3: Wizualizacja od pierwszej minuty
-`viz/plan_renderer.py` istnieje. Po KAŻDEJ zmianie solvera — render PNG i obejrzyj. Geometryczny debug bez rysunku jest niemożliwy.
+### P3 — Visualisation from minute one
+`viz/plan_renderer.py` exists. After EVERY solver change — render PNG and
+look at it. Geometric debugging without a drawing is impossible.
 
-### P4: Testy regresji dla F2 i F10
-W `tests/test_cpsat_solver.py` dodaj/upewnij się że istnieje:
+### P4 — Regression tests for F2 and F10
+In `tests/test_cpsat_solver.py` add or ensure that this exists:
 ```python
 def test_lazienka_never_exceeds_5m2():
-    """F2: łazienka NIGDY > 5m². Test musi przejść dla wszystkich szablonów × wszystkie obrysy."""
-    for template_id in ["M2_standard", "M3_standard", "M3_wc", "M4_standard", "M4_2laz", "M5_standard"]:
+    """F2: bathroom NEVER > 5 m². Test must pass for all templates × all outlines."""
+    for template_id in ["M2_standard", "M3_standard", "M3_wc",
+                        "M4_standard", "M4_2laz", "M5_standard"]:
         for (w, h) in [(6, 6), (8, 6), (10, 8), (12, 10), (15, 12)]:
             ...
             for room in result.rooms:
                 if "lazienka" in room.spec.id.lower() or "wc" in room.spec.id.lower():
-                    assert room.area <= 5.0, f"F2 violation: {template_id} {w}×{h}: {room.spec.id}={room.area:.2f}m²"
+                    assert room.area <= 5.0, \
+                        f"F2 violation: {template_id} {w}×{h}: {room.spec.id}={room.area:.2f}m²"
 ```
 
 ---
 
-## CHECKLIST PRZED KAŻDĄ ZMIANĄ KODU
+## CHECKLIST BEFORE EVERY CODE CHANGE
 
 ```
-[ ] Czytałem ten plik FUNDAMENTAL_RULES.md TODAY
-[ ] Sprawdziłem czy zmiana NIE narusza F1-F10 (architektura) ani B1-B10 (workflow)
-[ ] Plan w prostym języku przedstawiony użytkownikowi (po polsku)
-[ ] Otrzymałem OK explicite (lub zmiana jest trywialna w ramach jasnej zgody)
-[ ] To pierwsza lub druga próba (NIE trzecia)
-[ ] Mam diagnostykę root cause (jeśli to fix)
-[ ] Wiem jak zweryfikuję wynik (pytest, manual run, viz)
+[ ] I read this FUNDAMENTAL_RULES.md TODAY
+[ ] I checked the change does NOT violate F1–F10 (architecture) or B1–B10 (workflow)
+[ ] Plain-language plan presented to the user (in Polish)
+[ ] Got explicit OK (or the change is trivially within clear consent)
+[ ] This is the first or second attempt (NOT the third)
+[ ] I have root-cause diagnosis (if it's a fix)
+[ ] I know how I'll verify the result (pytest, manual run, viz)
 ```
 
-**Jeśli którykolwiek punkt = NIE → STOP, nie zmieniaj kodu.**
+**If any item = NO → STOP, do not change the code.**
 
 ---
 
-## HIERARCHIA W KONFLIKTACH
+## CONFLICT HIERARCHY
 
-Gdy reguły się wykluczają (rzadko, ale zdarza się):
+When rules conflict (rare, but it happens):
 
-1. **WT i layout (F1-F10)** — najwyższy priorytet (prawo + reguły architektoniczne)
-2. **B1 (nie łatać)** — jeśli się powtarza, problem jest fundamentalny
-3. **Decyzja użytkownika** — gdy F i B nie rozstrzygają, user decyduje
-4. **POZIOM 1 (fill polygon) > POZIOM 2 (caps pct_max)** — autoryzowane 2026-04-22, ale **ŁAZIENKA 5m² jest cap WT, nie pct_max** — nadal absolute
+1. **WT and layout (F1–F10)** — highest priority (law + architectural rules)
+2. **B1 (don't patch)** — if it repeats, the problem is fundamental
+3. **User decision** — when F and B don't resolve, the user decides
+4. **LEVEL 1 (fill polygon) > LEVEL 2 (caps pct_max)** — authorised 2026-04-22,
+   but the **BATHROOM 5 m² cap is a WT cap, not pct_max** — still absolute
 
 ---
 
-## PRZYKŁADY NARUSZEŃ Z SESJI C++ (NIE POWTARZAĆ W PYTHONIE)
+## EXAMPLES OF VIOLATIONS FROM C++ SESSION (DO NOT REPEAT IN PYTHON)
 
-| # | Reguła naruszona | Co zrobiłem | Konsekwencja |
-|---|------------------|-------------|--------------|
-| 1 | F2 (5m²) + B3 (nie zmieniaj reguł) | Zmieniłem 70% facade ratio na "1m absolute" bez OK | Łazienka rosła do 13m² |
-| 2 | B1 (2 fail rewrite) | 14 łatań pre-assign cells (ceil/floor → round → strict) | Marnotrawstwo czasu, regresje |
-| 3 | F1 (100% coverage) | Zmieniłem `==` na `<=` w solverze | Dziury 15% w polygonie |
-| 4 | F2 (łazienka prostokąt) + F1 | absorbUncoveredPolygon dawał extra_rect odłączony | "Prostokąty z dupy" |
-| 5 | F10 (walidator MAX) | Walidator nie sprawdzał MAX | Łazienka 8-13m² przechodziła |
-| 6 | B2 (plan przed zmianą) | Edytowałem kod bez planu | Wielokrotne regresje |
-| 7 | B6 (słuchaj dosłownie) | Interpretowałem "nie ruszaj" jako "lekko zmodyfikuj" | User frustration |
+| # | Rule violated | What I did | Consequence |
+|---|---------------|------------|-------------|
+| 1 | F2 (5 m²) + B3 (don't change rules) | Changed 70 % facade ratio to "1 m absolute" without OK | Bathroom grew to 13 m² |
+| 2 | B1 (2 fails → rewrite) | 14 patches to pre-assign cells (ceil/floor → round → strict) | Time wasted, regressions |
+| 3 | F1 (100 % coverage) | Changed `==` to `<=` in solver | 15 % holes in polygon |
+| 4 | F2 (bathroom rectangle) + F1 | absorbUncoveredPolygon produced detached extra_rect | "Rectangles from nowhere" |
+| 5 | F10 (validator MAX) | Validator did not check MAX | Bathroom 8–13 m² passed validation |
+| 6 | B2 (plan before change) | Edited code without a plan | Multiple regressions |
+| 7 | B6 (listen literally) | Interpreted "don't touch" as "modify slightly" | User frustration |
 
 ---
 
 ## SUMMARY ONE-LINER
 
-**Reguły są nienaruszalne. Jeśli czujesz pokusę by je zmienić — STOP, zapytaj. Łatanie nigdy nie działa. 2 fail = rewrite.**
+**The rules are inviolable. If you feel tempted to change them — STOP, ask.
+Patching never works. 2 fails = rewrite.**
 
-— Te zasady ratują projekt. Ich łamanie zniszczyło sesję 25 kwietnia w C++.
+— These rules save the project. Breaking them destroyed the 25 April C++ session.

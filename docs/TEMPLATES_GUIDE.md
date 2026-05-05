@@ -1,33 +1,37 @@
-# TEMPLATES_GUIDE — 3 zestawy szablonów
+# TEMPLATES_GUIDE — three template sets
 
-> **Kontekst:** w toku pracy nad poprzednimi wersjami powstały TRZY różne zestawy "szablonów". Każdy ma inne przeznaczenie. Mylenie ich = bugi i marnowany czas.
-
----
-
-## SKĄD TE TRZY ZESTAWY
-
-W FloorPlan2 i wczesnym FloorPlan4 było tylko 1 zestaw — ręcznie napisane reguły. Z czasem powstały dodatkowo:
-- **Zestaw 2** — żeby trenować/walidować solver na rzeczywistych mieszkaniach
-- **Zestaw 3** — z grafem sąsiedztwa wypełnionym (do template_selectora który próbuje znaleźć podobny rzut do obrysu użytkownika)
-
-W FloorPlan4_CPP skopiowano tylko Zestaw 1 (constraints). FloorPlan6 ma wszystkie trzy.
+> **Context:** during work on previous versions THREE different "template"
+> sets were created. Each has a different purpose. Mixing them up = bugs and
+> wasted time.
 
 ---
 
-## ZESTAW 1: CONSTRAINT TEMPLATES (`templates/`) — 7 plików
+## WHERE THESE THREE SETS COME FROM
 
-**Lokalizacja:** `FloorPlan6/templates/M*.json`
+In FloorPlan2 and early FloorPlan4 there was only 1 set — hand-written
+rules. Over time two more were added:
+- **Set 2** — to train/validate the solver against real apartments
+- **Set 3** — with the adjacency graph filled in (for the template_selector
+  trying to find a plan similar to the user's outline)
+
+In FloorPlan4_CPP only Set 1 (constraints) was copied. FloorPlan6 has all three.
+
+---
+
+## SET 1: CONSTRAINT TEMPLATES (`templates/`) — 7 files
+
+**Location:** `FloorPlan6/templates/M*.json`
 
 **Schema:**
 ```json
 {
   "id": "M3_standard",
-  "nazwa": "3-pokojowe standardowe",
+  "nazwa": "3-room standard",
   "typ_mieszkania": "M3",
   "pokoje": [
     {
       "id": "hub",
-      "nazwa": "Przedpokój",
+      "nazwa": "Hallway",
       "strefa": "KOMUNIKACJA",
       "wymaga_okna": false,
       "priorytet_fasady": null,
@@ -47,61 +51,67 @@ W FloorPlan4_CPP skopiowano tylko Zestaw 1 (constraints). FloorPlan6 ma wszystki
 }
 ```
 
-**Co zawiera:** REGUŁY (constraints) — co MA BYĆ w mieszkaniu danego typu. **Bez geometrii.**
+**Contains:** RULES (constraints) — what MUST be in an apartment of a given
+type. **No geometry.**
 
-**Pola pokoju:**
+**Room fields:**
 - `min_powierzchnia` / `opt_powierzchnia` (m²)
 - `min_szerokosc` (m)
 - `max_proporcja` (aspect ratio)
-- `procent_powierzchni` [min%, max%] względem usable area
+- `procent_powierzchni` `[min%, max%]` relative to usable area
 - `wymaga_okna` (bool)
-- `priorytet_fasady` (int, niższy = wyższy priorytet)
-- `preferowana_orientacja` (lista: "S", "SW", "SE", …)
+- `priorytet_fasady` (int, lower = higher priority)
+- `preferowana_orientacja` (cleared in 2026-05-04 — kept as empty list for
+  backward compat; not used by the scorer)
 
-**Pola sąsiedztwa:**
-- `room_a`, `room_b` (id pokoju lub `"_outside"`)
+**Adjacency fields:**
+- `room_a`, `room_b` (room id or `"_outside"`)
 - `connection_type`: `"entry_door"` / `"door"` / `"opening"`
 
-**Pliki (7):**
-| Plik | Typ | Pokoje | Notes |
-|------|-----|--------|-------|
-| M1_standard.json | M1 | 4 (hub, łazienka, sypialnia, salon_aneks) | min |
-| M2_standard.json | M2 | 4 (hub, łazienka, sypialnia, salon_aneks) | |
-| M3_standard.json | M3 | 5 (+ sypialnia_2) | |
-| M3_wc.json | M3 | 6 (+ wc) | dla obrysu z miejscem na osobny WC |
+**Files (7):**
+| File | Type | Rooms | Notes |
+|------|------|-------|-------|
+| M1_standard.json | M1 | 4 (hub, bathroom, bedroom, living/kitchenette) | min |
+| M2_standard.json | M2 | 4 (hub, bathroom, bedroom, living/kitchenette) | |
+| M3_standard.json | M3 | 5 (+ bedroom_2) | |
+| M3_wc.json | M3 | 6 (+ wc) | for outlines with room for a separate WC |
 | M4_standard.json | M4 | 6 | |
-| M4_2laz.json | M4 | 7 (+ 2-ga łazienka) | dwa łazienki tylko w M4+ (F8) |
+| M4_2laz.json | M4 | 7 (+ 2nd bathroom) | two bathrooms only in M4+ (F8) |
 | M5_standard.json | M5 | 7-8 | max |
 
-**Po co:**
-- `core/cpsat_solver.py` używa tych constraint templates do generowania nowych rozkładów
-- `core/template_selector.py` wybiera kandydatów na podstawie typu mieszkania i rozmiaru obrysu
-- `core/validator.py` sprawdza czy wynik solvera spełnia constraints
+**Used by:**
+- `core/cpsat_solver.py` uses these constraint templates to generate new layouts
+- `core/template_selector.py` selects candidates based on apartment type and
+  outline size
+- `core/validator.py` checks the solver result against the constraints
 
-**Kiedy użyć:** **ZAWSZE w pipeline generowania**.
+**When to use:** **ALWAYS in the generation pipeline.**
 
 ---
 
-## ZESTAW 2: TRACED REAL APARTMENTS — bez wypełnionego grafu
+## SET 2: TRACED REAL APARTMENTS — without filled adjacency graph
 
-> **Status w FloorPlan6:** NIESKOPIOWANE (były w FP4 `rzuty/templates/`, 41 plików, edges to placeholdery `-1`).
+> **Status in FloorPlan6:** NOT COPIED (they were in FP4 `rzuty/templates/`,
+> 41 files, edges are `-1` placeholders).
 >
-> **Lokalizacja źródłowa:** `FloorPlan4/rzuty/templates/PL_*.json` (41 plików).
-> **W FP6:** folder `rzuty/` pusty — możemy zaimportować w przyszłości jeśli potrzebne.
+> **Source:** `FloorPlan4/rzuty/templates/PL_*.json` (41 files).
+> **In FP6:** `rzuty/` folder is empty — we can import on demand if needed.
 
-**Schema:** podobny do Zestawu 3, ALE pole `edges[].room_a_idx` i `room_b_idx` to wszystkie `-1` (placeholder).
+**Schema:** similar to Set 3, BUT `edges[].room_a_idx` and `room_b_idx`
+fields are all `-1` (placeholder).
 
-**Co zawiera:** geometria pokoi (polygons), facades, stretch — ALE BEZ grafu sąsiedztwa (graph szkielet jest, dane nie).
+**Contains:** room geometry (polygons), facades, stretch — BUT NO
+adjacency graph (the graph skeleton is there, the data isn't).
 
-**Po co:** miały być reference dataset, ale ktoś nie skończył wypełniać edges. **Niedokończona praca.** 14 z nich nie ma odpowiednika w Zestawie 3.
-
-**Kiedy użyć:** rzadko. Tylko jeśli potrzebujesz GEOMETRII pokoju którego nie ma w Zestawie 3 (14 takich: PL_NL_16, D14, D24, E11, F34, F40, G53, J25, J27, J41, K40, PL_TVR_17, 21, 23). Wtedy importuj z FP4 ad-hoc.
+**Use:** rarely. Only when you need GEOMETRY for a room not in Set 3
+(14 such: PL_NL_16, D14, D24, E11, F34, F40, G53, J25, J27, J41, K40,
+PL_TVR_17, 21, 23). Then import on demand from FP4.
 
 ---
 
-## ZESTAW 3: TRACED REAL APARTMENTS — Z WYPEŁNIONYM GRAFEM ⭐ (`data/plans/`)
+## SET 3: TRACED REAL APARTMENTS — WITH FILLED GRAPH ⭐ (`data/plans/`)
 
-**Lokalizacja:** `FloorPlan6/data/plans/PL_*.json` — 27 plików.
+**Location:** `FloorPlan6/data/plans/PL_*.json` — 27 files.
 
 **Schema:**
 ```json
@@ -128,76 +138,88 @@ W FloorPlan4_CPP skopiowano tylko Zestaw 1 (constraints). FloorPlan6 ma wszystki
   ],
   "edges": [
     {"room_a_idx": 0, "room_b_idx": -1, "edge_type": "entry_door"},  ← hub → outside
-    {"room_a_idx": 0, "room_b_idx": 2, "edge_type": "door"},          ← hub → pokój 2
+    {"room_a_idx": 0, "room_b_idx": 2, "edge_type": "door"},          ← hub → room 2
     {"room_a_idx": 0, "room_b_idx": 3, "edge_type": "door"},
     {"room_a_idx": 0, "room_b_idx": 1, "edge_type": "door"},
-    {"room_a_idx": 0, "room_b_idx": 4, "edge_type": "opening"}        ← hub → salon (otwór)
+    {"room_a_idx": 0, "room_b_idx": 4, "edge_type": "opening"}        ← hub → living (opening)
   ],
   "entry_position": {"x": 8.86, "y": 5.6},
-  "boundary_edges": [...]  ← wall_type per krawędź zewnętrzna
+  "boundary_edges": [...]  ← wall_type per outer edge
 }
 ```
 
-**Co zawiera:** GEOMETRIA pokoi + GRAF sąsiedztwa wypełniony + entry_position + boundary_edges.
+**Contains:** room GEOMETRY + filled adjacency GRAPH + entry_position +
+boundary_edges.
 
-**Mapowanie `room_type` → kategoria:** `data/dataset_loader.py` (`ROOM_TYPE_TO_CATEGORY`):
-- `1` → SYPIALNIA
-- `3` → LAZIENKA
+**Mapping `room_type` → category:** `data/dataset_loader.py`
+(`ROOM_TYPE_TO_CATEGORY`):
+- `1` → BEDROOM
+- `3` → BATHROOM
 - `4` → WC
 - `5`/`6` → HUB
-- `7` → GARDEROBA
-- `10` → SYPIALNIA (POKÓJ generic)
-- `13` → PRALNIA
-- `17` → SALON_ANEKS
+- `7` → WALK-IN CLOSET
+- `10` → BEDROOM (generic ROOM)
+- `13` → LAUNDRY
+- `17` → LIVING / KITCHENETTE
 
-**Pliki (27):**
+**Files (27):**
 - 21× PL_NL_* (Natura Life — Wrocław)
-- 6× PL_TVR_* (TVR Konopnickiej — Warszawa)
+- 6× PL_TVR_* (TVR Konopnickiej — Warsaw)
 
-**Pola edge:**
-- `room_a_idx`, `room_b_idx` — indeks pokoju w `rooms[]` (lub `-1` = outside)
+**Edge fields:**
+- `room_a_idx`, `room_b_idx` — index in `rooms[]` (or `-1` = outside)
 - `edge_type`: `"entry_door"` / `"door"` / `"opening"`
 
-**Pola stretch (jak elastyczna jest krawędź):**
-- `"FIX"` — krawędź się NIE rusza (np. ścianka w łazience z instalacjami)
-- `"STRETCH"` — można rozciągać proporcjonalnie
-- `"ADAPT"` — dopasowuje się do sąsiada
+**Stretch fields (how flexible the edge is):**
+- `"FIX"` — edge does NOT move (e.g. wall in a bathroom with installations)
+- `"STRETCH"` — can be stretched proportionally
+- `"ADAPT"` — adapts to neighbour
 
-**Po co:**
-1. **Reference dataset** dla `core/template_selector.py` — szuka rzutu o podobnej geometrii (aspect_ratio, area, n_rooms) do obrysu użytkownika
-2. **Walidacja solvera** — sprawdzamy że solver dla danego obrysu generuje rozkład PODOBNY do reference
-3. **Statystyki dla constraint templates** — `data/dataset_stats.py` używa tych 27 do obliczania statystyk (np. % powierzchni hub w mieszkaniach M3)
+**Used by:**
+1. **Reference dataset** for `core/template_selector.py` — looks for a plan
+   with similar geometry (aspect_ratio, area, n_rooms) to the user's outline
+2. **Solver validation** — check that the solver, for a given outline,
+   generates a layout SIMILAR to the reference
+3. **Statistics for constraint templates** — `data/dataset_stats.py` uses
+   these 27 to compute statistics (e.g. % of hub area in M3 apartments)
 
-**Kiedy użyć:** w `template_selector` i przy walidacji wyników solvera.
+**When to use:** in `template_selector` and when validating solver results.
 
 ---
 
-## DECYZJA: KIEDY UŻYĆ KTÓREGO
+## DECISION: WHEN TO USE WHICH
 
-| Scenariusz | Zestaw |
-|------------|--------|
-| Generuję NOWY rzut na obrysie z AC | **1** (constraints + solver) |
-| Walidacja czy wygenerowany rzut jest sensowny | **1** (validator) + **3** (porównanie z reference) |
-| Szukam najbliższego rzeczywistego rzutu do mojego obrysu | **3** (template_selector matching) |
-| Buduję statystyki "ile metrów ma typowy hub w M2" | **3** (dataset_stats) |
-| Potrzebuję GEOMETRII konkretnego rzutu z FP4 którego nie ma w Zestawie 3 | **2** — importuj ad-hoc z FP4 |
+| Scenario | Set |
+|----------|-----|
+| Generating a NEW plan from an AC outline | **1** (constraints + solver) |
+| Validating that a generated plan makes sense | **1** (validator) + **3** (compare with reference) |
+| Looking for the closest real plan to my outline | **3** (template_selector matching) |
+| Building stats "how many m² is a typical hub in M2" | **3** (dataset_stats) |
+| Need GEOMETRY of a specific FP4 plan not in Set 3 | **2** — import on demand from FP4 |
 
 ---
 
 ## ANTI-PATTERNS
 
-❌ **NIE łącz Zestawu 1 z Zestawem 3 w jednym pliku.** Były próby zrobienia "v3 z constraint i geometrią razem". Nie przyniosły wartości — różne moduły potrzebują różnych rzeczy.
+❌ **Do NOT merge Set 1 with Set 3 in one file.** There were attempts to
+build "v3 with constraint and geometry together". They added no value —
+different modules need different things.
 
-❌ **NIE modyfikuj Zestawu 3 ręcznie.** To dane referencyjne (rzeczywiste obtraced rzuty). Modyfikacja = utrata wiarygodności validatora.
+❌ **Do NOT modify Set 3 by hand.** That's reference data (real traced
+apartments). Modification = loss of validator credibility.
 
-❌ **NIE używaj Zestawu 2 jako głównego źródła grafu** — edges są placeholderem `-1`, NIE prawdziwymi danymi.
+❌ **Do NOT use Set 2 as the main graph source** — edges are `-1`
+placeholders, NOT real data.
 
-❌ **NIE dodawaj nowego pokoju do constraint template bez aktualizacji `sasiedztwo[]`** — solver wymaga że hub musi dotykać KAŻDEGO pokoju (F4/F5).
+❌ **Do NOT add a new room to a constraint template without updating
+`sasiedztwo[]`** — solver requires that the hub touches EVERY room (F4/F5).
 
 ---
 
 ## SUMMARY
 
-- **`templates/` (7 plików)** = constraints, używaj w solverze i validatorze
-- **`data/plans/` (27 plików)** = real reference z geometrią + grafem, używaj w template_selector i dataset_stats
-- **`rzuty/` (puste)** = niedokończony zestaw 2 z FP4, importuj ad-hoc tylko gdy potrzebujesz konkretnego brakującego rzutu
+- **`templates/` (7 files)** = constraints, use in solver and validator
+- **`data/plans/` (27 files)** = real reference with geometry + graph, use
+  in template_selector and dataset_stats
+- **`rzuty/` (empty)** = unfinished Set 2 from FP4, import on demand only
+  when you need a specific missing plan
