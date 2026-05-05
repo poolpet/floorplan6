@@ -46,6 +46,36 @@ to ArchiCAD as native Zone objects via the Tapir Add-On.
 - Walking distance validated by Dijkstra on the corridor graph
 - All UI controls in English
 
+## Screenshots
+
+### Stage 4 — apartment layout (working)
+
+Generated layouts on outlines loaded directly from ArchiCAD via Tapir.
+Colours: yellow = day zone, blue = night, purple = service, green =
+circulation. Bathroom area is hard-capped at 5 m² (F2 / WT § 81).
+
+| Trapezoidal outline (M3, 60.7 m²) | Convex polygon outline (M2, 56.8 m²) | L-shape cut-out (M3, 54.5 m²) |
+|---|---|---|
+| ![Stage 4 trapezoid](docs/images/04_stage4_trapezoid_archicad.png) | ![Stage 4 polygon](docs/images/05_stage4_polygon_archicad.png) | ![Stage 4 L-cutout](docs/images/06_stage4_lshape_cutout.png) |
+| Outline picked up from an ArchiCAD Zone (60.80 m², visible in the canvas behind the GUI). Variant 1 / 5, score 0.890. Hub 14.3 %. | 5-vertex outline read from AC (57.08 m²). Variant 2 / 5, score 0.883. Hub 9.2 %. | Manually-entered 10.10 × 6.00 m outline with a 6 × 4 cut-out (W=3, H=3). Variant 1 / 5, score 0.839. Hub 12.0 %. |
+
+### Stage 3 — floor layout
+
+| Rectangular floor (working MVP) | L-shape floor (known limitation) |
+|---|---|
+| ![Stage 3 OK](docs/images/03_stage3_floor_ok.png) | ![Stage 3 VIOLATIONS](docs/images/07_stage3_lshape_known_issue.png) |
+| 132.54 × 16 m floor, 2 121 m², class N, 2 stairwells, 25 apartments. Status **OK** — max walking distance 37.6 m (under WT § 256 limit of 40 m). | 90.5 × 60 m L-shape floor. Status **VIOLATIONS** — apartments are placed in a bounding box, ignoring the cut-out, so several end up with no path to a stairwell. Tracked as `help-wanted`; see *Looking for someone to take this further* below. |
+
+### Stage 1 / Stage 2 — placeholders
+
+These tabs ship as informational placeholders so anyone who downloads the app
+sees what's planned, what's already in the repo, and what a contributor would
+need to build.
+
+| Stage 1 — Plot Subdivision | Stage 2 — Volumetric Generator |
+|---|---|
+| ![Stage 1 placeholder](docs/images/01_stage1_placeholder.png) | ![Stage 2 placeholder](docs/images/02_stage2_placeholder.png) |
+
 ## Quick start
 
 ```bash
