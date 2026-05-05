@@ -1,0 +1,72 @@
+{
+  "id": "M1_standard",
+  "nazwa": "Kawalerka standardowa",
+  "typ_mieszkania": "M1",
+  "source": "extracted",
+  "n_source_plans": 3,
+  "pokoje": [
+    {
+      "id": "hub",
+      "nazwa": "Hallway",
+      "strefa": "KOMUNIKACJA",
+      "wymaga_okna": false,
+      "priorytet_fasady": null,
+      "min_powierzchnia": 4.0,
+      "opt_powierzchnia": 5.1,
+      "min_szerokosc": 1.2,
+      "max_proporcja": 2.0,
+      "procent_powierzchni": [
+        0.08,
+        0.18
+      ]
+    },
+    {
+      "id": "lazienka",
+      "nazwa": "Bathroom",
+      "strefa": "USŁUGOWA",
+      "wymaga_okna": false,
+      "priorytet_fasady": null,
+      "min_powierzchnia": 2.5,
+      "opt_powierzchnia": 5.1,
+      "min_szerokosc": 1.5,
+      "max_proporcja": 2.0,
+      "procent_powierzchni": [
+        0.1,
+        0.18
+      ]
+    },
+    {
+      "id": "salon_aneks",
+      "nazwa": "Pokój z aneksem kuchennym",
+      "strefa": "DZIENNA",
+      "wymaga_okna": true,
+      "priorytet_fasady": 1,
+      "preferowana_orientacja": [],
+      "min_powierzchnia": 25.0,
+      "opt_powierzchnia": 22.6,
+      "min_szerokosc": 3.2,
+      "max_proporcja": 2.0,
+      "procent_powierzchni": [
+        0.6,
+        0.75
+      ]
+    }
+  ],
+  "sasiedztwo": [
+    {
+      "room_a": "hub",
+      "room_b": "_outside",
+      "connection_type": "entry_door"
+    },
+    {
+      "room_a": "hub",
+      "room_b": "lazienka",
+      "connection_type": "door"
+    },
+    {
+      "room_a": "hub",
+      "room_b": "salon_aneks",
+      "connection_type": "opening"
+    }
+  ]
+}

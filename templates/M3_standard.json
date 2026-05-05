@@ -1,0 +1,114 @@
+{
+  "id": "M3_standard",
+  "nazwa": "3-room standard",
+  "typ_mieszkania": "M3",
+  "source": "extracted",
+  "n_source_plans": 10,
+  "pokoje": [
+    {
+      "id": "hub",
+      "nazwa": "Hallway",
+      "strefa": "KOMUNIKACJA",
+      "wymaga_okna": false,
+      "priorytet_fasady": null,
+      "min_powierzchnia": 5.0,
+      "opt_powierzchnia": 8.1,
+      "min_szerokosc": 1.2,
+      "max_proporcja": 2.0,
+      "procent_powierzchni": [
+        0.08,
+        0.15
+      ]
+    },
+    {
+      "id": "lazienka",
+      "nazwa": "Bathroom",
+      "strefa": "USŁUGOWA",
+      "wymaga_okna": false,
+      "priorytet_fasady": null,
+      "min_powierzchnia": 2.5,
+      "opt_powierzchnia": 4.7,
+      "min_szerokosc": 1.5,
+      "max_proporcja": 2.0,
+      "procent_powierzchni": [
+        0.06,
+        0.12
+      ]
+    },
+    {
+      "id": "sypialnia_1",
+      "nazwa": "Master bedroom",
+      "strefa": "NOCNA",
+      "wymaga_okna": true,
+      "priorytet_fasady": 2,
+      "preferowana_orientacja": [],
+      "min_powierzchnia": 9.0,
+      "opt_powierzchnia": 12.0,
+      "min_szerokosc": 2.4,
+      "max_proporcja": 2.0,
+      "procent_powierzchni": [
+        0.15,
+        0.25
+      ]
+    },
+    {
+      "id": "sypialnia_2",
+      "nazwa": "Room / Bedroom 2",
+      "strefa": "NOCNA",
+      "wymaga_okna": true,
+      "priorytet_fasady": 3,
+      "preferowana_orientacja": [],
+      "min_powierzchnia": 6.0,
+      "opt_powierzchnia": 10.0,
+      "min_szerokosc": 2.0,
+      "max_proporcja": 2.0,
+      "procent_powierzchni": [
+        0.12,
+        0.22
+      ]
+    },
+    {
+      "id": "salon_aneks",
+      "nazwa": "Living room with kitchenette",
+      "strefa": "DZIENNA",
+      "wymaga_okna": true,
+      "priorytet_fasady": 1,
+      "preferowana_orientacja": [],
+      "min_powierzchnia": 16.0,
+      "opt_powierzchnia": 23.5,
+      "min_szerokosc": 3.2,
+      "max_proporcja": 2.0,
+      "procent_powierzchni": [
+        0.3,
+        0.45
+      ]
+    }
+  ],
+  "sasiedztwo": [
+    {
+      "room_a": "hub",
+      "room_b": "_outside",
+      "connection_type": "entry_door"
+    },
+    {
+      "room_a": "hub",
+      "room_b": "lazienka",
+      "connection_type": "door"
+    },
+    {
+      "room_a": "hub",
+      "room_b": "sypialnia_1",
+      "connection_type": "door"
+    },
+    {
+      "room_a": "hub",
+      "room_b": "sypialnia_2",
+      "connection_type": "door"
+    },
+    {
+      "room_a": "hub",
+      "room_b": "salon_aneks",
+      "connection_type": "opening"
+    }
+  ]
+}

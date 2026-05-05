@@ -1,0 +1,2132 @@
+[
+  {
+    "id": "NL_01",
+    "mtype": "M2",
+    "area_m2": 47.96,
+    "floor": "PARTER",
+    "unit": "1",
+    "n_rooms": 4,
+    "rooms": [
+      {
+        "name": "HOL",
+        "area_m2": 4.77
+      },
+      {
+        "name": "POKÓJ",
+        "area_m2": 11.69
+      },
+      {
+        "name": "ŁAZIENKA",
+        "area_m2": 4.95
+      },
+      {
+        "name": "POKÓJ DZ. + A. KUCHENNY",
+        "area_m2": 26.55
+      }
+    ]
+  },
+  {
+    "id": "NL_02",
+    "mtype": "M2",
+    "area_m2": 45.61,
+    "floor": "PARTER",
+    "unit": "2",
+    "n_rooms": 4,
+    "rooms": [
+      {
+        "name": "HOL",
+        "area_m2": 6.65
+      },
+      {
+        "name": "ŁAZIENKA",
+        "area_m2": 4.62
+      },
+      {
+        "name": "POKÓJ",
+        "area_m2": 13.16
+      },
+      {
+        "name": "POKÓJ DZ. + A. KUCHENNY",
+        "area_m2": 21.18
+      }
+    ]
+  },
+  {
+    "id": "NL_08",
+    "mtype": "M3",
+    "area_m2": 66.83,
+    "floor": "1,2,3",
+    "unit": "8,12,16",
+    "n_rooms": 5,
+    "rooms": [
+      {
+        "name": "HOL",
+        "area_m2": 9.47
+      },
+      {
+        "name": "POKÓJ",
+        "area_m2": 16.11
+      },
+      {
+        "name": "POKÓJ",
+        "area_m2": 13.09
+      },
+      {
+        "name": "ŁAZIENKA",
+        "area_m2": 4.64
+      },
+      {
+        "name": "POKÓJ DZ. + A. KUCHENNY",
+        "area_m2": 23.52
+      }
+    ]
+  },
+  {
+    "id": "NL_13",
+    "mtype": "M3",
+    "area_m2": 54.6,
+    "floor": "1,2,3",
+    "unit": "5,9,13",
+    "n_rooms": 5,
+    "rooms": [
+      {
+        "name": "HOL",
+        "area_m2": 9.42
+      },
+      {
+        "name": "POKÓJ",
+        "area_m2": 9.97
+      },
+      {
+        "name": "POKÓJ DZ. + A. KUCHENNY",
+        "area_m2": 19.09
+      },
+      {
+        "name": "ŁAZIENKA",
+        "area_m2": 4.26
+      },
+      {
+        "name": "POKÓJ",
+        "area_m2": 11.86
+      }
+    ]
+  },
+  {
+    "id": "NL_14",
+    "mtype": "M1",
+    "area_m2": 34.25,
+    "floor": "1,2,3",
+    "unit": "6,10,14",
+    "n_rooms": 3,
+    "rooms": [
+      {
+        "name": "HOL",
+        "area_m2": 6.58
+      },
+      {
+        "name": "POKÓJ Z ANEKSEM KUCHENNYM",
+        "area_m2": 22.62
+      },
+      {
+        "name": "ŁAZIENKA",
+        "area_m2": 5.05
+      }
+    ]
+  },
+  {
+    "id": "NL_16",
+    "mtype": "M3",
+    "area_m2": 66.95,
+    "floor": "1,2,3",
+    "unit": "8,12,16",
+    "n_rooms": 5,
+    "rooms": [
+      {
+        "name": "HOL",
+        "area_m2": 9.49
+      },
+      {
+        "name": "POKÓJ",
+        "area_m2": 15.99
+      },
+      {
+        "name": "POKÓJ",
+        "area_m2": 13.16
+      },
+      {
+        "name": "ŁAZIENKA",
+        "area_m2": 4.66
+      },
+      {
+        "name": "POKÓJ DZ. + A. KUCHENNY",
+        "area_m2": 23.65
+      }
+    ]
+  },
+  {
+    "id": "NL_29",
+    "mtype": "M3",
+    "area_m2": 67.08,
+    "floor": "1,2,3",
+    "unit": "21,25,29",
+    "n_rooms": 5,
+    "rooms": [
+      {
+        "name": "HOL",
+        "area_m2": 8.49
+      },
+      {
+        "name": "POKÓJ",
+        "area_m2": 17.14
+      },
+      {
+        "name": "POKÓJ",
+        "area_m2": 13.15
+      },
+      {
+        "name": "ŁAZIENKA",
+        "area_m2": 4.66
+      },
+      {
+        "name": "POKÓJ DZ. + A. KUCHENNY",
+        "area_m2": 23.64
+      }
+    ]
+  },
+  {
+    "id": "NL_31",
+    "mtype": "M2",
+    "area_m2": 45.74,
+    "floor": "1,2,3",
+    "unit": "23,27,31",
+    "n_rooms": 4,
+    "rooms": [
+      {
+        "name": "HOL",
+        "area_m2": 6.61
+      },
+      {
+        "name": "ŁAZIENKA",
+        "area_m2": 4.59
+      },
+      {
+        "name": "POKÓJ",
+        "area_m2": 13.16
+      },
+      {
+        "name": "POKÓJ DZ. + A. KUCHENNY",
+        "area_m2": 21.38
+      }
+    ]
+  },
+  {
+    "id": "NL_32",
+    "mtype": "M2",
+    "area_m2": 47.58,
+    "floor": "1,2,3",
+    "unit": "24,28,32",
+    "n_rooms": 4,
+    "rooms": [
+      {
+        "name": "HOL",
+        "area_m2": 4.77
+      },
+      {
+        "name": "POKÓJ",
+        "area_m2": 11.68
+      },
+      {
+        "name": "ŁAZIENKA",
+        "area_m2": 4.91
+      },
+      {
+        "name": "POKÓJ DZ. + A. KUCHENNY",
+        "area_m2": 26.22
+      }
+    ]
+  },
+  {
+    "id": "NL_C17",
+    "mtype": "M3",
+    "area_m2": 57.19,
+    "floor": "2",
+    "unit": "17",
+    "n_rooms": 5,
+    "rooms": [
+      {
+        "name": "HOL",
+        "area_m2": 6.8
+      },
+      {
+        "name": "ŁAZIENKA",
+        "area_m2": 4.73
+      },
+      {
+        "name": "SYPIALNIA",
+        "area_m2": 11.42
+      },
+      {
+        "name": "SALON Z ANEKSEM KUCHENNYM",
+        "area_m2": 24.86
+      },
+      {
+        "name": "POKÓJ",
+        "area_m2": 9.38
+      }
+    ]
+  },
+  {
+    "id": "NL_C9",
+    "mtype": "M2",
+    "area_m2": 38.71,
+    "floor": "1",
+    "unit": "9",
+    "n_rooms": 4,
+    "rooms": [
+      {
+        "name": "HOL",
+        "area_m2": 4.5
+      },
+      {
+        "name": "ŁAZIENKA",
+        "area_m2": 4.73
+      },
+      {
+        "name": "SYPIALNIA",
+        "area_m2": 10.79
+      },
+      {
+        "name": "SALON Z ANEKSEM KUCHENNYM",
+        "area_m2": 18.69
+      }
+    ]
+  },
+  {
+    "id": "NL_D14",
+    "mtype": "M3",
+    "area_m2": 57.19,
+    "floor": "2",
+    "unit": "14",
+    "n_rooms": 5,
+    "rooms": [
+      {
+        "name": "HOL",
+        "area_m2": 6.79
+      },
+      {
+        "name": "ŁAZIENKA",
+        "area_m2": 4.73
+      },
+      {
+        "name": "SYPIALNIA",
+        "area_m2": 11.43
+      },
+      {
+        "name": "SALON Z ANEKSEM KUCHENNYM",
+        "area_m2": 24.87
+      },
+      {
+        "name": "POKÓJ",
+        "area_m2": 9.37
+      }
+    ]
+  },
+  {
+    "id": "NL_D15",
+    "mtype": "M2",
+    "area_m2": 38.71,
+    "floor": "2",
+    "unit": "15",
+    "n_rooms": 4,
+    "rooms": [
+      {
+        "name": "HOL",
+        "area_m2": 4.5
+      },
+      {
+        "name": "ŁAZIENKA",
+        "area_m2": 4.73
+      },
+      {
+        "name": "SYPIALNIA",
+        "area_m2": 10.79
+      },
+      {
+        "name": "SALON Z ANEKSEM KUCHENNYM",
+        "area_m2": 18.69
+      }
+    ]
+  },
+  {
+    "id": "NL_D24",
+    "mtype": "M3",
+    "area_m2": 57.19,
+    "floor": "3",
+    "unit": "24",
+    "n_rooms": 5,
+    "rooms": [
+      {
+        "name": "HOL",
+        "area_m2": 6.8
+      },
+      {
+        "name": "ŁAZIENKA",
+        "area_m2": 4.73
+      },
+      {
+        "name": "SYPIALNIA",
+        "area_m2": 11.42
+      },
+      {
+        "name": "SALON Z ANEKSEM KUCHENNYM",
+        "area_m2": 24.86
+      },
+      {
+        "name": "POKÓJ",
+        "area_m2": 9.38
+      }
+    ]
+  },
+  {
+    "id": "NL_E11",
+    "mtype": "M3",
+    "area_m2": 57.18,
+    "floor": "1",
+    "unit": "11",
+    "n_rooms": 5,
+    "rooms": [
+      {
+        "name": "HOL",
+        "area_m2": 6.79
+      },
+      {
+        "name": "ŁAZIENKA",
+        "area_m2": 4.73
+      },
+      {
+        "name": "SYPIALNIA",
+        "area_m2": 11.42
+      },
+      {
+        "name": "SALON Z ANEKSEM KUCHENNYM",
+        "area_m2": 24.86
+      },
+      {
+        "name": "POKÓJ",
+        "area_m2": 9.38
+      }
+    ]
+  },
+  {
+    "id": "NL_E14",
+    "mtype": "M3",
+    "area_m2": 57.19,
+    "floor": "2",
+    "unit": "14",
+    "n_rooms": 5,
+    "rooms": [
+      {
+        "name": "HOL",
+        "area_m2": 6.79
+      },
+      {
+        "name": "ŁAZIENKA",
+        "area_m2": 4.73
+      },
+      {
+        "name": "SYPIALNIA",
+        "area_m2": 11.43
+      },
+      {
+        "name": "SALON Z ANEKSEM KUCHENNYM",
+        "area_m2": 24.86
+      },
+      {
+        "name": "POKÓJ",
+        "area_m2": 9.38
+      }
+    ]
+  },
+  {
+    "id": "NL_E15",
+    "mtype": "M2",
+    "area_m2": 38.71,
+    "floor": "2",
+    "unit": "15",
+    "n_rooms": 4,
+    "rooms": [
+      {
+        "name": "HOL",
+        "area_m2": 4.5
+      },
+      {
+        "name": "ŁAZIENKA",
+        "area_m2": 4.73
+      },
+      {
+        "name": "SYPIALNIA",
+        "area_m2": 10.79
+      },
+      {
+        "name": "SALON Z ANEKSEM KUCHENNYM",
+        "area_m2": 18.69
+      }
+    ]
+  },
+  {
+    "id": "NL_E25",
+    "mtype": "M2",
+    "area_m2": 38.71,
+    "floor": "3",
+    "unit": "25",
+    "n_rooms": 4,
+    "rooms": [
+      {
+        "name": "HOL",
+        "area_m2": 4.5
+      },
+      {
+        "name": "ŁAZIENKA",
+        "area_m2": 4.74
+      },
+      {
+        "name": "SYPIALNIA",
+        "area_m2": 10.79
+      },
+      {
+        "name": "SALON Z ANEKSEM KUCHENNYM",
+        "area_m2": 18.68
+      }
+    ]
+  },
+  {
+    "id": "NL_F14",
+    "mtype": "M3",
+    "area_m2": 53.71,
+    "floor": "1",
+    "unit": "14",
+    "n_rooms": 5,
+    "rooms": [
+      {
+        "name": "HOL",
+        "area_m2": 6.1
+      },
+      {
+        "name": "ŁAZIENKA",
+        "area_m2": 4.74
+      },
+      {
+        "name": "SYPIALNIA",
+        "area_m2": 10.44
+      },
+      {
+        "name": "SALON Z ANEKSEM KUCHENNYM",
+        "area_m2": 23.37
+      },
+      {
+        "name": "POKÓJ",
+        "area_m2": 9.06
+      }
+    ]
+  },
+  {
+    "id": "NL_F20",
+    "mtype": "M2",
+    "area_m2": 37.7,
+    "floor": "1",
+    "unit": "20",
+    "n_rooms": 4,
+    "rooms": [
+      {
+        "name": "HOL",
+        "area_m2": 4.33
+      },
+      {
+        "name": "ŁAZIENKA",
+        "area_m2": 4.78
+      },
+      {
+        "name": "SYPIALNIA",
+        "area_m2": 10.44
+      },
+      {
+        "name": "SALON Z ANEKSEM KUCHENNYM",
+        "area_m2": 18.15
+      }
+    ]
+  },
+  {
+    "id": "NL_F28",
+    "mtype": "M3",
+    "area_m2": 53.74,
+    "floor": "2",
+    "unit": "28",
+    "n_rooms": 5,
+    "rooms": [
+      {
+        "name": "HOL",
+        "area_m2": 6.06
+      },
+      {
+        "name": "ŁAZIENKA",
+        "area_m2": 4.74
+      },
+      {
+        "name": "SYPIALNIA",
+        "area_m2": 10.44
+      },
+      {
+        "name": "SALON Z ANEKSEM KUCHENNYM",
+        "area_m2": 23.44
+      },
+      {
+        "name": "POKÓJ",
+        "area_m2": 9.06
+      }
+    ]
+  },
+  {
+    "id": "NL_F30",
+    "mtype": "M1",
+    "area_m2": 34.0,
+    "floor": "2",
+    "unit": "30",
+    "n_rooms": 3,
+    "rooms": [
+      {
+        "name": "HOL",
+        "area_m2": 4.19
+      },
+      {
+        "name": "ŁAZIENKA",
+        "area_m2": 4.99
+      },
+      {
+        "name": "SALON Z ANEKSEM KUCHENNYM",
+        "area_m2": 24.82
+      }
+    ]
+  },
+  {
+    "id": "NL_F34",
+    "mtype": "M2",
+    "area_m2": 41.55,
+    "floor": "2",
+    "unit": "34",
+    "n_rooms": 4,
+    "rooms": [
+      {
+        "name": "HOL",
+        "area_m2": 5.74
+      },
+      {
+        "name": "ŁAZIENKA",
+        "area_m2": 3.9
+      },
+      {
+        "name": "SYPIALNIA",
+        "area_m2": 10.86
+      },
+      {
+        "name": "SALON Z ANEKSEM KUCHENNYM",
+        "area_m2": 21.05
+      }
+    ]
+  },
+  {
+    "id": "NL_F40",
+    "mtype": "M3",
+    "area_m2": 58.51,
+    "floor": "3",
+    "unit": "40",
+    "n_rooms": 5,
+    "rooms": [
+      {
+        "name": "HOL",
+        "area_m2": 6.1
+      },
+      {
+        "name": "ŁAZIENKA",
+        "area_m2": 4.74
+      },
+      {
+        "name": "SYPIALNIA",
+        "area_m2": 10.45
+      },
+      {
+        "name": "SALON Z ANEKSEM KUCHENNYM",
+        "area_m2": 23.37
+      },
+      {
+        "name": "POKÓJ",
+        "area_m2": 13.85
+      }
+    ]
+  },
+  {
+    "id": "NL_G31",
+    "mtype": "M2",
+    "area_m2": 36.4,
+    "floor": "2",
+    "unit": "31",
+    "n_rooms": 4,
+    "rooms": [
+      {
+        "name": "HOL",
+        "area_m2": 4.4
+      },
+      {
+        "name": "POKÓJ Z ANEKSEM KUCHENNYM",
+        "area_m2": 16.83
+      },
+      {
+        "name": "SYPIALNIA",
+        "area_m2": 10.43
+      },
+      {
+        "name": "ŁAZIENKA",
+        "area_m2": 4.74
+      }
+    ]
+  },
+  {
+    "id": "NL_G32",
+    "mtype": "M2",
+    "area_m2": 36.94,
+    "floor": "2",
+    "unit": "32",
+    "n_rooms": 4,
+    "rooms": [
+      {
+        "name": "HOL",
+        "area_m2": 4.27
+      },
+      {
+        "name": "POKÓJ Z ANEKSEM KUCHENNYM",
+        "area_m2": 18.26
+      },
+      {
+        "name": "SYPIALNIA",
+        "area_m2": 9.93
+      },
+      {
+        "name": "ŁAZIENKA",
+        "area_m2": 4.48
+      }
+    ]
+  },
+  {
+    "id": "NL_G33",
+    "mtype": "M3",
+    "area_m2": 54.38,
+    "floor": "2",
+    "unit": "33",
+    "n_rooms": 6,
+    "rooms": [
+      {
+        "name": "HOL",
+        "area_m2": 3.32
+      },
+      {
+        "name": "HOL",
+        "area_m2": 6.13
+      },
+      {
+        "name": "POKÓJ Z ANEKSEM KUCHENNYM",
+        "area_m2": 20.98
+      },
+      {
+        "name": "SYPIALNIA",
+        "area_m2": 11.27
+      },
+      {
+        "name": "SYPIALNIA",
+        "area_m2": 8.06
+      },
+      {
+        "name": "ŁAZIENKA",
+        "area_m2": 4.62
+      }
+    ]
+  },
+  {
+    "id": "NL_G45",
+    "mtype": "M2",
+    "area_m2": 37.45,
+    "floor": "3",
+    "unit": "45",
+    "n_rooms": 4,
+    "rooms": [
+      {
+        "name": "HOL",
+        "area_m2": 4.38
+      },
+      {
+        "name": "POKÓJ Z ANEKSEM KUCHENNYM",
+        "area_m2": 18.02
+      },
+      {
+        "name": "SYPIALNIA",
+        "area_m2": 10.43
+      },
+      {
+        "name": "ŁAZIENKA",
+        "area_m2": 4.62
+      }
+    ]
+  },
+  {
+    "id": "NL_G50",
+    "mtype": "M3",
+    "area_m2": 57.25,
+    "floor": "3",
+    "unit": "50",
+    "n_rooms": 5,
+    "rooms": [
+      {
+        "name": "HOL",
+        "area_m2": 10.78
+      },
+      {
+        "name": "POKÓJ Z ANEKSEM KUCHENNYM",
+        "area_m2": 21.94
+      },
+      {
+        "name": "SYPIALNIA",
+        "area_m2": 10.96
+      },
+      {
+        "name": "SYPIALNIA",
+        "area_m2": 8.54
+      },
+      {
+        "name": "ŁAZIENKA",
+        "area_m2": 5.03
+      }
+    ]
+  },
+  {
+    "id": "NL_G51",
+    "mtype": "M2",
+    "area_m2": 36.56,
+    "floor": "3",
+    "unit": "51",
+    "n_rooms": 4,
+    "rooms": [
+      {
+        "name": "HOL",
+        "area_m2": 4.29
+      },
+      {
+        "name": "POKÓJ Z ANEKSEM KUCHENNYM",
+        "area_m2": 16.81
+      },
+      {
+        "name": "SYPIALNIA",
+        "area_m2": 10.57
+      },
+      {
+        "name": "ŁAZIENKA",
+        "area_m2": 4.89
+      }
+    ]
+  },
+  {
+    "id": "NL_G52",
+    "mtype": "M2",
+    "area_m2": 37.41,
+    "floor": "3",
+    "unit": "52",
+    "n_rooms": 4,
+    "rooms": [
+      {
+        "name": "HOL",
+        "area_m2": 4.31
+      },
+      {
+        "name": "POKÓJ Z ANEKSEM KUCHENNYM",
+        "area_m2": 17.9
+      },
+      {
+        "name": "SYPIALNIA",
+        "area_m2": 10.43
+      },
+      {
+        "name": "ŁAZIENKA",
+        "area_m2": 4.77
+      }
+    ]
+  },
+  {
+    "id": "NL_G53",
+    "mtype": "M3",
+    "area_m2": 68.68,
+    "floor": "3",
+    "unit": "53",
+    "n_rooms": 5,
+    "rooms": [
+      {
+        "name": "HOL",
+        "area_m2": 15.98
+      },
+      {
+        "name": "POKÓJ Z ANEKSEM KUCHENNYM",
+        "area_m2": 26.54
+      },
+      {
+        "name": "SYPIALNIA",
+        "area_m2": 12.0
+      },
+      {
+        "name": "SYPIALNIA",
+        "area_m2": 8.79
+      },
+      {
+        "name": "ŁAZIENKA",
+        "area_m2": 5.37
+      }
+    ]
+  },
+  {
+    "id": "NL_J13",
+    "mtype": "M1",
+    "area_m2": 31.81,
+    "floor": "1",
+    "unit": "13",
+    "n_rooms": 3,
+    "rooms": [
+      {
+        "name": "HOL",
+        "area_m2": 5.16
+      },
+      {
+        "name": "POKÓJ Z ANEKSEM KUCHENNYM",
+        "area_m2": 21.57
+      },
+      {
+        "name": "ŁAZIENKA",
+        "area_m2": 5.08
+      }
+    ]
+  },
+  {
+    "id": "NL_J25",
+    "mtype": "M3",
+    "area_m2": 57.7,
+    "floor": "2",
+    "unit": "25",
+    "n_rooms": 5,
+    "rooms": [
+      {
+        "name": "HOL",
+        "area_m2": 10.53
+      },
+      {
+        "name": "POKÓJ Z ANEKSEM KUCHENNYM",
+        "area_m2": 20.94
+      },
+      {
+        "name": "SYPIALNIA",
+        "area_m2": 11.93
+      },
+      {
+        "name": "SYPIALNIA",
+        "area_m2": 8.79
+      },
+      {
+        "name": "ŁAZIENKA",
+        "area_m2": 5.51
+      }
+    ]
+  },
+  {
+    "id": "NL_J27",
+    "mtype": "M3",
+    "area_m2": 46.78,
+    "floor": "2",
+    "unit": "27",
+    "n_rooms": 5,
+    "rooms": [
+      {
+        "name": "HOL",
+        "area_m2": 6.89
+      },
+      {
+        "name": "POKÓJ Z ANEKSEM KUCHENNYM",
+        "area_m2": 16.82
+      },
+      {
+        "name": "SYPIALNIA",
+        "area_m2": 10.12
+      },
+      {
+        "name": "SYPIALNIA",
+        "area_m2": 8.88
+      },
+      {
+        "name": "ŁAZIENKA",
+        "area_m2": 4.07
+      }
+    ]
+  },
+  {
+    "id": "NL_J37",
+    "mtype": "M1",
+    "area_m2": 32.88,
+    "floor": "3",
+    "unit": "37",
+    "n_rooms": 3,
+    "rooms": [
+      {
+        "name": "HOL",
+        "area_m2": 4.95
+      },
+      {
+        "name": "POKÓJ Z ANEKSEM KUCHENNYM",
+        "area_m2": 22.54
+      },
+      {
+        "name": "ŁAZIENKA",
+        "area_m2": 5.39
+      }
+    ]
+  },
+  {
+    "id": "NL_J40",
+    "mtype": "M4",
+    "area_m2": 70.08,
+    "floor": "3",
+    "unit": "40",
+    "n_rooms": 8,
+    "rooms": [
+      {
+        "name": "HOL",
+        "area_m2": 4.89
+      },
+      {
+        "name": "HOL",
+        "area_m2": 4.51
+      },
+      {
+        "name": "POKÓJ Z ANEKSEM KUCHENNYM",
+        "area_m2": 25.28
+      },
+      {
+        "name": "SYPIALNIA",
+        "area_m2": 9.96
+      },
+      {
+        "name": "SYPIALNIA",
+        "area_m2": 7.22
+      },
+      {
+        "name": "SYPIALNIA",
+        "area_m2": 9.68
+      },
+      {
+        "name": "ŁAZIENKA",
+        "area_m2": 4.62
+      },
+      {
+        "name": "WC",
+        "area_m2": 3.9
+      }
+    ]
+  },
+  {
+    "id": "NL_J41",
+    "mtype": "M4",
+    "area_m2": 70.23,
+    "floor": "3",
+    "unit": "41",
+    "n_rooms": 8,
+    "rooms": [
+      {
+        "name": "HOL",
+        "area_m2": 4.89
+      },
+      {
+        "name": "HOL",
+        "area_m2": 4.51
+      },
+      {
+        "name": "POKÓJ Z ANEKSEM KUCHENNYM",
+        "area_m2": 25.28
+      },
+      {
+        "name": "SYPIALNIA",
+        "area_m2": 9.96
+      },
+      {
+        "name": "SYPIALNIA",
+        "area_m2": 7.22
+      },
+      {
+        "name": "SYPIALNIA",
+        "area_m2": 9.68
+      },
+      {
+        "name": "ŁAZIENKA",
+        "area_m2": 4.7
+      },
+      {
+        "name": "WC",
+        "area_m2": 3.97
+      }
+    ]
+  },
+  {
+    "id": "NL_J43",
+    "mtype": "M2",
+    "area_m2": 36.88,
+    "floor": "3",
+    "unit": "43",
+    "n_rooms": 4,
+    "rooms": [
+      {
+        "name": "HOL",
+        "area_m2": 4.6
+      },
+      {
+        "name": "POKÓJ Z ANEKSEM KUCHENNYM",
+        "area_m2": 17.17
+      },
+      {
+        "name": "SYPIALNIA",
+        "area_m2": 10.43
+      },
+      {
+        "name": "ŁAZIENKA",
+        "area_m2": 4.69
+      }
+    ]
+  },
+  {
+    "id": "NL_J07",
+    "mtype": "M2",
+    "area_m2": 39.56,
+    "floor": "0",
+    "unit": "07",
+    "n_rooms": 4,
+    "rooms": [
+      {
+        "name": "HOL",
+        "area_m2": 4.65
+      },
+      {
+        "name": "POKÓJ Z ANEKSEM KUCHENNYM",
+        "area_m2": 19.78
+      },
+      {
+        "name": "SYPIALNIA",
+        "area_m2": 10.43
+      },
+      {
+        "name": "ŁAZIENKA",
+        "area_m2": 4.71
+      }
+    ]
+  },
+  {
+    "id": "NL_K01",
+    "mtype": "M2",
+    "area_m2": 60.98,
+    "floor": "0",
+    "unit": "01",
+    "n_rooms": 4,
+    "rooms": [
+      {
+        "name": "HOL",
+        "area_m2": 6.77
+      },
+      {
+        "name": "POKÓJ Z ANEKSEM KUCHENNYM",
+        "area_m2": 29.0
+      },
+      {
+        "name": "SYPIALNIA",
+        "area_m2": 17.85
+      },
+      {
+        "name": "ŁAZIENKA",
+        "area_m2": 7.35
+      }
+    ]
+  },
+  {
+    "id": "NL_K18",
+    "mtype": "M1",
+    "area_m2": 33.04,
+    "floor": "1",
+    "unit": "18",
+    "n_rooms": 3,
+    "rooms": [
+      {
+        "name": "HOL",
+        "area_m2": 5.39
+      },
+      {
+        "name": "POKÓJ Z ANEKSEM KUCHENNYM",
+        "area_m2": 22.01
+      },
+      {
+        "name": "ŁAZIENKA",
+        "area_m2": 5.64
+      }
+    ]
+  },
+  {
+    "id": "NL_K19",
+    "mtype": "M2",
+    "area_m2": 36.43,
+    "floor": "1",
+    "unit": "19",
+    "n_rooms": 4,
+    "rooms": [
+      {
+        "name": "HOL",
+        "area_m2": 4.4
+      },
+      {
+        "name": "POKÓJ Z ANEKSEM KUCHENNYM",
+        "area_m2": 16.86
+      },
+      {
+        "name": "SYPIALNIA",
+        "area_m2": 10.43
+      },
+      {
+        "name": "ŁAZIENKA",
+        "area_m2": 4.74
+      }
+    ]
+  },
+  {
+    "id": "NL_K33",
+    "mtype": "M2",
+    "area_m2": 39.13,
+    "floor": "2",
+    "unit": "33",
+    "n_rooms": 4,
+    "rooms": [
+      {
+        "name": "HOL",
+        "area_m2": 6.31
+      },
+      {
+        "name": "POKÓJ Z ANEKSEM KUCHENNYM",
+        "area_m2": 18.67
+      },
+      {
+        "name": "SYPIALNIA",
+        "area_m2": 10.05
+      },
+      {
+        "name": "ŁAZIENKA",
+        "area_m2": 4.09
+      }
+    ]
+  },
+  {
+    "id": "NL_K39",
+    "mtype": "M4",
+    "area_m2": 59.93,
+    "floor": "3",
+    "unit": "39",
+    "n_rooms": 6,
+    "rooms": [
+      {
+        "name": "HOL",
+        "area_m2": 10.36
+      },
+      {
+        "name": "POKÓJ Z ANEKSEM KUCHENNYM",
+        "area_m2": 18.67
+      },
+      {
+        "name": "SYPIALNIA",
+        "area_m2": 9.78
+      },
+      {
+        "name": "SYPIALNIA",
+        "area_m2": 7.21
+      },
+      {
+        "name": "SYPIALNIA",
+        "area_m2": 9.76
+      },
+      {
+        "name": "ŁAZIENKA",
+        "area_m2": 4.15
+      }
+    ]
+  },
+  {
+    "id": "NL_K40",
+    "mtype": "M4",
+    "area_m2": 59.93,
+    "floor": "3",
+    "unit": "40",
+    "n_rooms": 6,
+    "rooms": [
+      {
+        "name": "HOL",
+        "area_m2": 10.36
+      },
+      {
+        "name": "POKÓJ Z ANEKSEM KUCHENNYM",
+        "area_m2": 18.67
+      },
+      {
+        "name": "SYPIALNIA",
+        "area_m2": 9.78
+      },
+      {
+        "name": "SYPIALNIA",
+        "area_m2": 7.21
+      },
+      {
+        "name": "SYPIALNIA",
+        "area_m2": 9.76
+      },
+      {
+        "name": "ŁAZIENKA",
+        "area_m2": 4.15
+      }
+    ]
+  },
+  {
+    "id": "NL_K41",
+    "mtype": "M2",
+    "area_m2": 39.29,
+    "floor": "3",
+    "unit": "41",
+    "n_rooms": 4,
+    "rooms": [
+      {
+        "name": "HOL",
+        "area_m2": 4.4
+      },
+      {
+        "name": "POKÓJ Z ANEKSEM KUCHENNYM",
+        "area_m2": 20.39
+      },
+      {
+        "name": "SYPIALNIA",
+        "area_m2": 10.28
+      },
+      {
+        "name": "ŁAZIENKA",
+        "area_m2": 4.21
+      }
+    ]
+  },
+  {
+    "id": "NL_K42",
+    "mtype": "M3",
+    "area_m2": 39.62,
+    "floor": "3",
+    "unit": "42",
+    "n_rooms": 5,
+    "rooms": [
+      {
+        "name": "HOL",
+        "area_m2": 6.91
+      },
+      {
+        "name": "POKÓJ Z ANEKSEM KUCHENNYM",
+        "area_m2": 13.66
+      },
+      {
+        "name": "SYPIALNIA",
+        "area_m2": 8.74
+      },
+      {
+        "name": "SYPIALNIA",
+        "area_m2": 6.24
+      },
+      {
+        "name": "ŁAZIENKA",
+        "area_m2": 4.08
+      }
+    ]
+  },
+  {
+    "id": "TVR_10",
+    "mtype": "M3",
+    "area_m2": 113.48,
+    "floor": "5",
+    "unit": "2",
+    "n_rooms": 7,
+    "rooms": [
+      {
+        "name": "Pokój z aneksem",
+        "area_m2": 46.03
+      },
+      {
+        "name": "Przedpokój",
+        "area_m2": 13.8
+      },
+      {
+        "name": "Łazienka",
+        "area_m2": 4.73
+      },
+      {
+        "name": "Pokój",
+        "area_m2": 11.3
+      },
+      {
+        "name": "Pokój z aneksem",
+        "area_m2": 21.68
+      },
+      {
+        "name": "Pokój",
+        "area_m2": 10.43
+      },
+      {
+        "name": "WC",
+        "area_m2": 5.51
+      }
+    ]
+  },
+  {
+    "id": "TVR_11",
+    "mtype": "M4",
+    "area_m2": 98.04,
+    "floor": "6",
+    "unit": "155",
+    "n_rooms": 8,
+    "rooms": [
+      {
+        "name": "Przedpokój",
+        "area_m2": 16.59
+      },
+      {
+        "name": "Łazienka",
+        "area_m2": 3.56
+      },
+      {
+        "name": "Pokój z aneksem",
+        "area_m2": 31.3
+      },
+      {
+        "name": "Pokój",
+        "area_m2": 18.84
+      },
+      {
+        "name": "Pokój",
+        "area_m2": 7.97
+      },
+      {
+        "name": "Pokój",
+        "area_m2": 9.9
+      },
+      {
+        "name": "Łazienka",
+        "area_m2": 6.81
+      },
+      {
+        "name": "Garderoba",
+        "area_m2": 3.07
+      }
+    ]
+  },
+  {
+    "id": "TVR_12",
+    "mtype": "M3",
+    "area_m2": 72.43,
+    "floor": "?",
+    "unit": "1",
+    "n_rooms": 6,
+    "rooms": [
+      {
+        "name": "Przedpokój",
+        "area_m2": 8.88
+      },
+      {
+        "name": "Pokój z aneksem",
+        "area_m2": 29.35
+      },
+      {
+        "name": "Łazienka",
+        "area_m2": 5.44
+      },
+      {
+        "name": "Pokój",
+        "area_m2": 14.63
+      },
+      {
+        "name": "Pokój",
+        "area_m2": 11.85
+      },
+      {
+        "name": "WC",
+        "area_m2": 2.28
+      }
+    ]
+  },
+  {
+    "id": "TVR_13",
+    "mtype": "M3",
+    "area_m2": 55.77,
+    "floor": "?",
+    "unit": "2",
+    "n_rooms": 5,
+    "rooms": [
+      {
+        "name": "Przedpokój",
+        "area_m2": 7.47
+      },
+      {
+        "name": "Łazienka",
+        "area_m2": 4.42
+      },
+      {
+        "name": "Pokój",
+        "area_m2": 13.94
+      },
+      {
+        "name": "Pokój",
+        "area_m2": 11.85
+      },
+      {
+        "name": "Pokój z aneksem",
+        "area_m2": 18.09
+      }
+    ]
+  },
+  {
+    "id": "TVR_14",
+    "mtype": "M2",
+    "area_m2": 45.31,
+    "floor": "?",
+    "unit": "2",
+    "n_rooms": 4,
+    "rooms": [
+      {
+        "name": "Przedpokój",
+        "area_m2": 5.57
+      },
+      {
+        "name": "Łazienka",
+        "area_m2": 4.21
+      },
+      {
+        "name": "Pokój",
+        "area_m2": 11.07
+      },
+      {
+        "name": "Pokój z aneksem",
+        "area_m2": 24.46
+      }
+    ]
+  },
+  {
+    "id": "TVR_15",
+    "mtype": "M4",
+    "area_m2": 82.82,
+    "floor": "5",
+    "unit": "?",
+    "n_rooms": 7,
+    "rooms": [
+      {
+        "name": "Przedpokój",
+        "area_m2": 14.5
+      },
+      {
+        "name": "Łazienka",
+        "area_m2": 5.14
+      },
+      {
+        "name": "Pokój",
+        "area_m2": 14.86
+      },
+      {
+        "name": "Pokój z aneksem",
+        "area_m2": 20.99
+      },
+      {
+        "name": "Pokój",
+        "area_m2": 11.44
+      },
+      {
+        "name": "Pokój",
+        "area_m2": 11.92
+      },
+      {
+        "name": "Łazienka",
+        "area_m2": 3.97
+      }
+    ]
+  },
+  {
+    "id": "TVR_16",
+    "mtype": "M5",
+    "area_m2": 115.29,
+    "floor": "5",
+    "unit": "180",
+    "n_rooms": 9,
+    "rooms": [
+      {
+        "name": "Przedpokój",
+        "area_m2": 18.18
+      },
+      {
+        "name": "Pokój",
+        "area_m2": 8.66
+      },
+      {
+        "name": "WC",
+        "area_m2": 3.01
+      },
+      {
+        "name": "Pokój z aneksem",
+        "area_m2": 32.35
+      },
+      {
+        "name": "Pokój",
+        "area_m2": 18.84
+      },
+      {
+        "name": "Łazienka",
+        "area_m2": 3.76
+      },
+      {
+        "name": "Łazienka",
+        "area_m2": 4.44
+      },
+      {
+        "name": "Pokój",
+        "area_m2": 13.25
+      },
+      {
+        "name": "Pokój",
+        "area_m2": 12.8
+      }
+    ]
+  },
+  {
+    "id": "TVR_17",
+    "mtype": "M3",
+    "area_m2": 59.85,
+    "floor": "?",
+    "unit": "1",
+    "n_rooms": 5,
+    "rooms": [
+      {
+        "name": "Przedpokój",
+        "area_m2": 8.32
+      },
+      {
+        "name": "Pokój z aneksem",
+        "area_m2": 23.0
+      },
+      {
+        "name": "Łazienka",
+        "area_m2": 4.49
+      },
+      {
+        "name": "Pokój",
+        "area_m2": 12.69
+      },
+      {
+        "name": "Pokój",
+        "area_m2": 11.35
+      }
+    ]
+  },
+  {
+    "id": "TVR_18",
+    "mtype": "M4",
+    "area_m2": 101.97,
+    "floor": "?",
+    "unit": "2",
+    "n_rooms": 7,
+    "rooms": [
+      {
+        "name": "Przedpokój",
+        "area_m2": 10.87
+      },
+      {
+        "name": "Pokój",
+        "area_m2": 13.97
+      },
+      {
+        "name": "Pokój",
+        "area_m2": 15.14
+      },
+      {
+        "name": "Pokój",
+        "area_m2": 16.76
+      },
+      {
+        "name": "Pokój z aneksem",
+        "area_m2": 35.45
+      },
+      {
+        "name": "Łazienka",
+        "area_m2": 5.36
+      },
+      {
+        "name": "Łazienka",
+        "area_m2": 4.42
+      }
+    ]
+  },
+  {
+    "id": "TVR_19",
+    "mtype": "M5",
+    "area_m2": 127.14,
+    "floor": "?",
+    "unit": "?",
+    "n_rooms": 9,
+    "rooms": [
+      {
+        "name": "Przedpokój",
+        "area_m2": 17.11
+      },
+      {
+        "name": "Pokój",
+        "area_m2": 11.18
+      },
+      {
+        "name": "Pokój",
+        "area_m2": 11.48
+      },
+      {
+        "name": "Pokój",
+        "area_m2": 11.08
+      },
+      {
+        "name": "Pokój",
+        "area_m2": 16.78
+      },
+      {
+        "name": "Łazienka",
+        "area_m2": 4.5
+      },
+      {
+        "name": "Pokój z aneksem",
+        "area_m2": 45.23
+      },
+      {
+        "name": "Łazienka",
+        "area_m2": 5.36
+      },
+      {
+        "name": "Garderoba",
+        "area_m2": 4.42
+      }
+    ]
+  },
+  {
+    "id": "TVR_20",
+    "mtype": "M3",
+    "area_m2": 85.79,
+    "floor": "7",
+    "unit": "2",
+    "n_rooms": 6,
+    "rooms": [
+      {
+        "name": "Przedpokój",
+        "area_m2": 11.22
+      },
+      {
+        "name": "Pokój",
+        "area_m2": 18.11
+      },
+      {
+        "name": "Łazienka",
+        "area_m2": 4.2
+      },
+      {
+        "name": "Łazienka",
+        "area_m2": 6.01
+      },
+      {
+        "name": "Pokój",
+        "area_m2": 15.29
+      },
+      {
+        "name": "Pokój z aneksem",
+        "area_m2": 30.96
+      }
+    ]
+  },
+  {
+    "id": "TVR_21",
+    "mtype": "M2",
+    "area_m2": 48.67,
+    "floor": "?",
+    "unit": "?",
+    "n_rooms": 4,
+    "rooms": [
+      {
+        "name": "Przedpokój",
+        "area_m2": 2.04
+      },
+      {
+        "name": "Pokój z aneksem",
+        "area_m2": 27.11
+      },
+      {
+        "name": "Pokój",
+        "area_m2": 15.07
+      },
+      {
+        "name": "Łazienka",
+        "area_m2": 4.45
+      }
+    ]
+  },
+  {
+    "id": "TVR_22",
+    "mtype": "M1",
+    "area_m2": 42.48,
+    "floor": "?",
+    "unit": "?",
+    "n_rooms": 3,
+    "rooms": [
+      {
+        "name": "Przedpokój",
+        "area_m2": 5.07
+      },
+      {
+        "name": "Pokój z aneksem",
+        "area_m2": 32.12
+      },
+      {
+        "name": "Łazienka",
+        "area_m2": 5.29
+      }
+    ]
+  },
+  {
+    "id": "TVR_23",
+    "mtype": "M4",
+    "area_m2": 106.94,
+    "floor": "?",
+    "unit": "2",
+    "n_rooms": 7,
+    "rooms": [
+      {
+        "name": "Przedpokój",
+        "area_m2": 18.1
+      },
+      {
+        "name": "Łazienka",
+        "area_m2": 6.48
+      },
+      {
+        "name": "Łazienka",
+        "area_m2": 4.87
+      },
+      {
+        "name": "Pokój",
+        "area_m2": 15.36
+      },
+      {
+        "name": "Pokój",
+        "area_m2": 11.33
+      },
+      {
+        "name": "Pokój z aneksem",
+        "area_m2": 35.97
+      },
+      {
+        "name": "Pokój",
+        "area_m2": 14.83
+      }
+    ]
+  },
+  {
+    "id": "TVR_24",
+    "mtype": "M4",
+    "area_m2": 109.15,
+    "floor": "7",
+    "unit": "?",
+    "n_rooms": 7,
+    "rooms": [
+      {
+        "name": "Przedpokój",
+        "area_m2": 11.44
+      },
+      {
+        "name": "Łazienka",
+        "area_m2": 4.93
+      },
+      {
+        "name": "Łazienka",
+        "area_m2": 5.96
+      },
+      {
+        "name": "Pokój",
+        "area_m2": 15.97
+      },
+      {
+        "name": "Pokój",
+        "area_m2": 11.26
+      },
+      {
+        "name": "Pokój",
+        "area_m2": 11.13
+      },
+      {
+        "name": "Pokój z aneksem",
+        "area_m2": 48.46
+      }
+    ]
+  },
+  {
+    "id": "TVR_25",
+    "mtype": "M4",
+    "area_m2": 132.63,
+    "floor": "7",
+    "unit": "135",
+    "n_rooms": 8,
+    "rooms": [
+      {
+        "name": "Przedpokój",
+        "area_m2": 17.96
+      },
+      {
+        "name": "Pokój z aneksem",
+        "area_m2": 56.88
+      },
+      {
+        "name": "Pokój",
+        "area_m2": 13.82
+      },
+      {
+        "name": "Pokój",
+        "area_m2": 14.98
+      },
+      {
+        "name": "Pokój",
+        "area_m2": 17.07
+      },
+      {
+        "name": "Łazienka",
+        "area_m2": 6.06
+      },
+      {
+        "name": "Pralnia",
+        "area_m2": 2.11
+      },
+      {
+        "name": "Łazienka",
+        "area_m2": 3.75
+      }
+    ]
+  },
+  {
+    "id": "TVR_3",
+    "mtype": "M2",
+    "area_m2": 44.86,
+    "floor": "?",
+    "unit": "2",
+    "n_rooms": 4,
+    "rooms": [
+      {
+        "name": "Przedpokój",
+        "area_m2": 5.47
+      },
+      {
+        "name": "Pokój z aneksem",
+        "area_m2": 23.95
+      },
+      {
+        "name": "Pokój",
+        "area_m2": 10.88
+      },
+      {
+        "name": "Łazienka",
+        "area_m2": 4.56
+      }
+    ]
+  },
+  {
+    "id": "TVR_4",
+    "mtype": "M3",
+    "area_m2": 57.23,
+    "floor": "?",
+    "unit": "2",
+    "n_rooms": 5,
+    "rooms": [
+      {
+        "name": "Przedpokój",
+        "area_m2": 7.72
+      },
+      {
+        "name": "Łazienka",
+        "area_m2": 4.48
+      },
+      {
+        "name": "Pokój",
+        "area_m2": 14.17
+      },
+      {
+        "name": "Pokój",
+        "area_m2": 12.12
+      },
+      {
+        "name": "Pokój z aneksem",
+        "area_m2": 18.74
+      }
+    ]
+  },
+  {
+    "id": "TVR_5",
+    "mtype": "M3",
+    "area_m2": 55.61,
+    "floor": "?",
+    "unit": "2",
+    "n_rooms": 5,
+    "rooms": [
+      {
+        "name": "Przedpokój",
+        "area_m2": 7.89
+      },
+      {
+        "name": "Łazienka",
+        "area_m2": 5.19
+      },
+      {
+        "name": "Pokój",
+        "area_m2": 13.83
+      },
+      {
+        "name": "Pokój",
+        "area_m2": 10.27
+      },
+      {
+        "name": "Pokój z aneksem",
+        "area_m2": 18.43
+      }
+    ]
+  },
+  {
+    "id": "TVR_6",
+    "mtype": "M3",
+    "area_m2": 77.64,
+    "floor": "?",
+    "unit": "2",
+    "n_rooms": 6,
+    "rooms": [
+      {
+        "name": "Przedpokój",
+        "area_m2": 12.75
+      },
+      {
+        "name": "Pokój z aneksem",
+        "area_m2": 32.26
+      },
+      {
+        "name": "WC",
+        "area_m2": 3.24
+      },
+      {
+        "name": "Łazienka",
+        "area_m2": 4.19
+      },
+      {
+        "name": "Pokój",
+        "area_m2": 13.08
+      },
+      {
+        "name": "Pokój",
+        "area_m2": 12.12
+      }
+    ]
+  },
+  {
+    "id": "TVR_7",
+    "mtype": "M3",
+    "area_m2": 72.6,
+    "floor": "?",
+    "unit": "3",
+    "n_rooms": 6,
+    "rooms": [
+      {
+        "name": "Przedpokój",
+        "area_m2": 11.62
+      },
+      {
+        "name": "Pokój",
+        "area_m2": 12.21
+      },
+      {
+        "name": "Pokój",
+        "area_m2": 13.08
+      },
+      {
+        "name": "Łazienka",
+        "area_m2": 4.19
+      },
+      {
+        "name": "WC",
+        "area_m2": 3.24
+      },
+      {
+        "name": "Pokój z aneksem",
+        "area_m2": 28.26
+      }
+    ]
+  },
+  {
+    "id": "TVR_8",
+    "mtype": "M2",
+    "area_m2": 40.47,
+    "floor": "5",
+    "unit": "2",
+    "n_rooms": 4,
+    "rooms": [
+      {
+        "name": "Przedpokój",
+        "area_m2": 5.08
+      },
+      {
+        "name": "Łazienka",
+        "area_m2": 4.21
+      },
+      {
+        "name": "Pokój",
+        "area_m2": 10.12
+      },
+      {
+        "name": "Pokój z aneksem",
+        "area_m2": 21.06
+      }
+    ]
+  },
+  {
+    "id": "TVR_9",
+    "mtype": "M3",
+    "area_m2": 55.47,
+    "floor": "?",
+    "unit": "2",
+    "n_rooms": 5,
+    "rooms": [
+      {
+        "name": "Przedpokój",
+        "area_m2": 7.85
+      },
+      {
+        "name": "Łazienka",
+        "area_m2": 5.19
+      },
+      {
+        "name": "Pokój",
+        "area_m2": 13.83
+      },
+      {
+        "name": "Pokój",
+        "area_m2": 10.27
+      },
+      {
+        "name": "Pokój z aneksem",
+        "area_m2": 18.33
+      }
+    ]
+  }
+]

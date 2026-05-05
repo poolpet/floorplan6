@@ -1,0 +1,163 @@
+{
+  "id": "PL_NL_14",
+  "source": "traced_polish_apartments",
+  "original_id": "NL_14",
+  "copies": [
+    "NL_J13",
+    "NL_J37",
+    "NL_K18"
+  ],
+  "total_area_m2": 34.25,
+  "width_m": 5.5,
+  "height_m": 6.71,
+  "aspect_ratio": 0.82,
+  "apartment_type": "M1",
+  "n_rooms": 3,
+  "room_type_counts": {
+    "5": 1,
+    "3": 1,
+    "17": 1
+  },
+  "rooms": [
+    {
+      "room_type": 5,
+      "label": "HOL",
+      "polygon": [
+        {
+          "x": 0.0,
+          "y": 0.0
+        },
+        {
+          "x": 2.408,
+          "y": 0.0
+        },
+        {
+          "x": 2.408,
+          "y": 2.752
+        },
+        {
+          "x": 0.0,
+          "y": 2.752
+        }
+      ],
+      "area_m2": 6.58
+    },
+    {
+      "room_type": 3,
+      "label": "ŁAZIENKA",
+      "polygon": [
+        {
+          "x": 2.408,
+          "y": 2.752
+        },
+        {
+          "x": 5.503,
+          "y": 2.752
+        },
+        {
+          "x": 5.503,
+          "y": 0.86
+        },
+        {
+          "x": 2.408,
+          "y": 0.86
+        }
+      ],
+      "area_m2": 5.05
+    },
+    {
+      "room_type": 17,
+      "label": "POKÓJ Z ANEKSEM KUCHENNYM",
+      "polygon": [
+        {
+          "x": 0.0,
+          "y": 2.752
+        },
+        {
+          "x": 5.503,
+          "y": 2.752
+        },
+        {
+          "x": 5.503,
+          "y": 6.707
+        },
+        {
+          "x": 0.0,
+          "y": 6.707
+        }
+      ],
+      "area_m2": 22.62
+    }
+  ],
+  "edges": [
+    {
+      "room_a_idx": 0,
+      "room_b_idx": 2,
+      "edge_type": "opening"
+    },
+    {
+      "room_a_idx": 0,
+      "room_b_idx": 1,
+      "edge_type": "door"
+    },
+    {
+      "room_a_idx": 0,
+      "room_b_idx": -1,
+      "edge_type": "entry_door"
+    }
+  ],
+  "boundary_edges": [
+    {
+      "start": [
+        0,
+        0
+      ],
+      "end": [
+        5.5,
+        0
+      ],
+      "side": "south",
+      "wall_type": "FACADE"
+    },
+    {
+      "start": [
+        5.5,
+        0
+      ],
+      "end": [
+        5.5,
+        6.71
+      ],
+      "side": "east",
+      "wall_type": "FACADE"
+    },
+    {
+      "start": [
+        5.5,
+        6.71
+      ],
+      "end": [
+        0,
+        6.71
+      ],
+      "side": "north",
+      "wall_type": "INTERNAL"
+    },
+    {
+      "start": [
+        0,
+        6.71
+      ],
+      "end": [
+        0,
+        0
+      ],
+      "side": "west",
+      "wall_type": "FACADE"
+    }
+  ],
+  "entry_position": {
+    "x": 1.38,
+    "y": 6.71
+  }
+}

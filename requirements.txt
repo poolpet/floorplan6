@@ -1,0 +1,27 @@
+# FloorPlan6 — Python dependencies
+# Tested on Python 3.10+
+
+# Core algorithms
+ortools>=9.7
+shapely>=2.0
+numpy>=1.24
+
+# Visualization (KLUCZOWE dla debug — patrz docs/FUNDAMENTAL_RULES.md P3)
+matplotlib>=3.7
+
+# Local GUI (test bez AC)
+PyQt5>=5.15
+
+# ArchiCAD bridge
+archicad>=29.3000  # Graphisoft official Python API
+
+# Pathfinding (floor layout walking distance via Dijkstra)
+networkx>=3.0
+
+# Tests
+pytest>=7.0
+pytest-cov>=4.0
+
+# Optional — Jupyter dla iteracji algorytmów (etap 1 Plot Subdivision)
+jupyter>=1.0
+ipywidgets>=8.0

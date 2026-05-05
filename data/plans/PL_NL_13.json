@@ -1,0 +1,252 @@
+{
+  "id": "PL_NL_13",
+  "source": "traced_polish_apartments",
+  "original_id": "NL_13",
+  "copies": [
+    "NL_08",
+    "NL_16",
+    "NL_29"
+  ],
+  "total_area_m2": 54.6,
+  "width_m": 12.02,
+  "height_m": 5.84,
+  "aspect_ratio": 2.059,
+  "apartment_type": "M3",
+  "n_rooms": 5,
+  "room_type_counts": {
+    "5": 1,
+    "3": 1,
+    "10": 2,
+    "17": 1
+  },
+  "rooms": [
+    {
+      "room_type": 5,
+      "label": "HOL",
+      "polygon": [
+        {
+          "x": 5.321,
+          "y": 0.0
+        },
+        {
+          "x": 7.553,
+          "y": 0.0
+        },
+        {
+          "x": 7.553,
+          "y": 3.261
+        },
+        {
+          "x": 6.523,
+          "y": 3.261
+        },
+        {
+          "x": 6.523,
+          "y": 3.948
+        },
+        {
+          "x": 4.635,
+          "y": 3.948
+        },
+        {
+          "x": 4.635,
+          "y": 2.918
+        },
+        {
+          "x": 5.321,
+          "y": 2.918
+        }
+      ],
+      "area_m2": 9.42
+    },
+    {
+      "room_type": 3,
+      "label": "ŁAZIENKA",
+      "polygon": [
+        {
+          "x": 6.523,
+          "y": 3.948
+        },
+        {
+          "x": 6.523,
+          "y": 5.836
+        },
+        {
+          "x": 3.776,
+          "y": 5.836
+        },
+        {
+          "x": 3.776,
+          "y": 3.948
+        }
+      ],
+      "area_m2": 4.26
+    },
+    {
+      "room_type": 10,
+      "label": "POKÓJ",
+      "polygon": [
+        {
+          "x": 3.776,
+          "y": 5.836
+        },
+        {
+          "x": 0.0,
+          "y": 5.836
+        },
+        {
+          "x": 0.0,
+          "y": 2.918
+        },
+        {
+          "x": 4.635,
+          "y": 2.918
+        },
+        {
+          "x": 4.635,
+          "y": 3.948
+        },
+        {
+          "x": 3.776,
+          "y": 3.948
+        }
+      ],
+      "area_m2": 9.97
+    },
+    {
+      "room_type": 17,
+      "label": "POKÓJ DZ. + A. KUCHENNY",
+      "polygon": [
+        {
+          "x": 6.523,
+          "y": 3.261
+        },
+        {
+          "x": 6.523,
+          "y": 5.836
+        },
+        {
+          "x": 12.016,
+          "y": 5.836
+        },
+        {
+          "x": 12.016,
+          "y": 2.232
+        },
+        {
+          "x": 7.553,
+          "y": 2.232
+        },
+        {
+          "x": 7.553,
+          "y": 3.261
+        }
+      ],
+      "area_m2": 19.09
+    },
+    {
+      "room_type": 10,
+      "label": "POKÓJ",
+      "polygon": [
+        {
+          "x": 7.553,
+          "y": 2.232
+        },
+        {
+          "x": 12.016,
+          "y": 2.232
+        },
+        {
+          "x": 12.016,
+          "y": 0.0
+        },
+        {
+          "x": 7.553,
+          "y": 0.0
+        }
+      ],
+      "area_m2": 11.86
+    }
+  ],
+  "edges": [
+    {
+      "room_a_idx": 0,
+      "room_b_idx": -1,
+      "edge_type": "entry_door"
+    },
+    {
+      "room_a_idx": 0,
+      "room_b_idx": 4,
+      "edge_type": "door"
+    },
+    {
+      "room_a_idx": 0,
+      "room_b_idx": 1,
+      "edge_type": "door"
+    },
+    {
+      "room_a_idx": 0,
+      "room_b_idx": 2,
+      "edge_type": "door"
+    },
+    {
+      "room_a_idx": 0,
+      "room_b_idx": 3,
+      "edge_type": "opening"
+    }
+  ],
+  "boundary_edges": [
+    {
+      "start": [
+        0,
+        0
+      ],
+      "end": [
+        12.02,
+        0
+      ],
+      "side": "south",
+      "wall_type": "FACADE"
+    },
+    {
+      "start": [
+        12.02,
+        0
+      ],
+      "end": [
+        12.02,
+        5.84
+      ],
+      "side": "east",
+      "wall_type": "FACADE"
+    },
+    {
+      "start": [
+        12.02,
+        5.84
+      ],
+      "end": [
+        0,
+        5.84
+      ],
+      "side": "north",
+      "wall_type": "INTERNAL"
+    },
+    {
+      "start": [
+        0,
+        5.84
+      ],
+      "end": [
+        0,
+        0
+      ],
+      "side": "west",
+      "wall_type": "FACADE"
+    }
+  ],
+  "entry_position": {
+    "x": 7.04,
+    "y": 5.84
+  }
+}

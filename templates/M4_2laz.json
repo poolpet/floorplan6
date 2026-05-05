@@ -1,0 +1,155 @@
+{
+  "id": "M4_2laz",
+  "nazwa": "4-room with 2 bathrooms",
+  "typ_mieszkania": "M4",
+  "source": "extracted",
+  "n_source_plans": 3,
+  "pokoje": [
+    {
+      "id": "hub",
+      "nazwa": "Hallway",
+      "strefa": "KOMUNIKACJA",
+      "wymaga_okna": false,
+      "priorytet_fasady": null,
+      "min_powierzchnia": 4.5,
+      "opt_powierzchnia": 10.6,
+      "min_szerokosc": 1.2,
+      "max_proporcja": 2.0,
+      "procent_powierzchni": [
+        0.07,
+        0.17
+      ]
+    },
+    {
+      "id": "lazienka",
+      "nazwa": "Bathroom",
+      "strefa": "USŁUGOWA",
+      "wymaga_okna": false,
+      "priorytet_fasady": null,
+      "min_powierzchnia": 2.5,
+      "opt_powierzchnia": 4.7,
+      "min_szerokosc": 1.5,
+      "max_proporcja": 2.0,
+      "procent_powierzchni": [
+        0.05,
+        0.09
+      ]
+    },
+    {
+      "id": "wc",
+      "nazwa": "WC",
+      "strefa": "USŁUGOWA",
+      "wymaga_okna": false,
+      "priorytet_fasady": null,
+      "min_powierzchnia": 1.5,
+      "opt_powierzchnia": 3.9,
+      "min_szerokosc": 1.0,
+      "max_proporcja": 2.0,
+      "procent_powierzchni": [
+        0.03,
+        0.06
+      ]
+    },
+    {
+      "id": "sypialnia_1",
+      "nazwa": "Master bedroom",
+      "strefa": "NOCNA",
+      "wymaga_okna": true,
+      "priorytet_fasady": 2,
+      "preferowana_orientacja": [],
+      "min_powierzchnia": 9.0,
+      "opt_powierzchnia": 10.0,
+      "min_szerokosc": 2.4,
+      "max_proporcja": 2.0,
+      "procent_powierzchni": [
+        0.12,
+        0.2
+      ]
+    },
+    {
+      "id": "sypialnia_2",
+      "nazwa": "Room / Bedroom 2",
+      "strefa": "NOCNA",
+      "wymaga_okna": true,
+      "priorytet_fasady": 3,
+      "preferowana_orientacja": [],
+      "min_powierzchnia": 7.0,
+      "opt_powierzchnia": 9.7,
+      "min_szerokosc": 2.2,
+      "max_proporcja": 2.0,
+      "procent_powierzchni": [
+        0.1,
+        0.16
+      ]
+    },
+    {
+      "id": "sypialnia_3",
+      "nazwa": "Room / Bedroom 3",
+      "strefa": "NOCNA",
+      "wymaga_okna": true,
+      "priorytet_fasady": 4,
+      "preferowana_orientacja": [],
+      "min_powierzchnia": 7.0,
+      "opt_powierzchnia": 7.2,
+      "min_szerokosc": 2.2,
+      "max_proporcja": 2.0,
+      "procent_powierzchni": [
+        0.08,
+        0.14
+      ]
+    },
+    {
+      "id": "salon_aneks",
+      "nazwa": "Living room with kitchenette",
+      "strefa": "DZIENNA",
+      "wymaga_okna": true,
+      "priorytet_fasady": 1,
+      "preferowana_orientacja": [],
+      "min_powierzchnia": 18.0,
+      "opt_powierzchnia": 25.3,
+      "min_szerokosc": 3.2,
+      "max_proporcja": 2.0,
+      "procent_powierzchni": [
+        0.28,
+        0.42
+      ]
+    }
+  ],
+  "sasiedztwo": [
+    {
+      "room_a": "hub",
+      "room_b": "_outside",
+      "connection_type": "entry_door"
+    },
+    {
+      "room_a": "hub",
+      "room_b": "lazienka",
+      "connection_type": "door"
+    },
+    {
+      "room_a": "hub",
+      "room_b": "wc",
+      "connection_type": "door"
+    },
+    {
+      "room_a": "hub",
+      "room_b": "sypialnia_1",
+      "connection_type": "door"
+    },
+    {
+      "room_a": "hub",
+      "room_b": "sypialnia_2",
+      "connection_type": "door"
+    },
+    {
+      "room_a": "hub",
+      "room_b": "sypialnia_3",
+      "connection_type": "door"
+    },
+    {
+      "room_a": "hub",
+      "room_b": "salon_aneks",
+      "connection_type": "opening"
+    }
+  ]
+}

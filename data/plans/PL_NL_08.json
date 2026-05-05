@@ -1,0 +1,244 @@
+{
+  "id": "PL_NL_08",
+  "source": "traced_polish_apartments",
+  "original_id": "NL_08",
+  "copies": [
+    "NL_13",
+    "NL_16",
+    "NL_29"
+  ],
+  "total_area_m2": 66.83,
+  "width_m": 14.0,
+  "height_m": 7.27,
+  "aspect_ratio": 1.925,
+  "apartment_type": "M3",
+  "n_rooms": 5,
+  "room_type_counts": {
+    "17": 1,
+    "10": 2,
+    "3": 1,
+    "5": 1
+  },
+  "rooms": [
+    {
+      "room_type": 17,
+      "label": "POKÓJ DZ. + A. KUCHENNY",
+      "polygon": [
+        {
+          "x": 0.0,
+          "y": 0.0
+        },
+        {
+          "x": 6.728,
+          "y": 0.0
+        },
+        {
+          "x": 6.728,
+          "y": 3.455
+        },
+        {
+          "x": 0.0,
+          "y": 3.455
+        }
+      ],
+      "area_m2": 23.52
+    },
+    {
+      "room_type": 10,
+      "label": "POKÓJ",
+      "polygon": [
+        {
+          "x": 9.638,
+          "y": 0.0
+        },
+        {
+          "x": 9.638,
+          "y": 2.91
+        },
+        {
+          "x": 14.002,
+          "y": 2.91
+        },
+        {
+          "x": 14.002,
+          "y": 0.0
+        }
+      ],
+      "area_m2": 16.11
+    },
+    {
+      "room_type": 10,
+      "label": "POKÓJ",
+      "polygon": [
+        {
+          "x": 9.638,
+          "y": 2.91
+        },
+        {
+          "x": 9.638,
+          "y": 5.455
+        },
+        {
+          "x": 10.365,
+          "y": 5.455
+        },
+        {
+          "x": 10.365,
+          "y": 7.274
+        },
+        {
+          "x": 13.457,
+          "y": 7.274
+        },
+        {
+          "x": 13.457,
+          "y": 5.637
+        },
+        {
+          "x": 14.002,
+          "y": 5.637
+        },
+        {
+          "x": 14.002,
+          "y": 2.91
+        }
+      ],
+      "area_m2": 13.09
+    },
+    {
+      "room_type": 3,
+      "label": "ŁAZIENKA",
+      "polygon": [
+        {
+          "x": 6.728,
+          "y": 0.0
+        },
+        {
+          "x": 9.638,
+          "y": 0.0
+        },
+        {
+          "x": 9.638,
+          "y": 1.818
+        },
+        {
+          "x": 6.728,
+          "y": 1.818
+        }
+      ],
+      "area_m2": 4.64
+    },
+    {
+      "room_type": 5,
+      "label": "HOL",
+      "polygon": [
+        {
+          "x": 6.728,
+          "y": 1.818
+        },
+        {
+          "x": 9.638,
+          "y": 1.818
+        },
+        {
+          "x": 9.638,
+          "y": 5.455
+        },
+        {
+          "x": 7.638,
+          "y": 5.455
+        },
+        {
+          "x": 7.638,
+          "y": 3.455
+        },
+        {
+          "x": 6.728,
+          "y": 3.455
+        }
+      ],
+      "area_m2": 9.47
+    }
+  ],
+  "edges": [
+    {
+      "room_a_idx": 0,
+      "room_b_idx": 4,
+      "edge_type": "opening"
+    },
+    {
+      "room_a_idx": 2,
+      "room_b_idx": 4,
+      "edge_type": "door"
+    },
+    {
+      "room_a_idx": 1,
+      "room_b_idx": 4,
+      "edge_type": "door"
+    },
+    {
+      "room_a_idx": 3,
+      "room_b_idx": 4,
+      "edge_type": "door"
+    },
+    {
+      "room_a_idx": 4,
+      "room_b_idx": -1,
+      "edge_type": "entry_door"
+    }
+  ],
+  "boundary_edges": [
+    {
+      "start": [
+        0,
+        0
+      ],
+      "end": [
+        14.0,
+        0
+      ],
+      "side": "south",
+      "wall_type": "INTERNAL"
+    },
+    {
+      "start": [
+        14.0,
+        0
+      ],
+      "end": [
+        14.0,
+        7.27
+      ],
+      "side": "east",
+      "wall_type": "FACADE"
+    },
+    {
+      "start": [
+        14.0,
+        7.27
+      ],
+      "end": [
+        0,
+        7.27
+      ],
+      "side": "north",
+      "wall_type": "FACADE"
+    },
+    {
+      "start": [
+        0,
+        7.27
+      ],
+      "end": [
+        0,
+        0
+      ],
+      "side": "west",
+      "wall_type": "FACADE"
+    }
+  ],
+  "entry_position": {
+    "x": 8.91,
+    "y": 1.82
+  }
+}
