@@ -1,0 +1,43 @@
+name: Design question
+description: Architectural question that requires the project owner's decision
+labels: [design-question]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this template when you need a design decision before writing code.
+        Open architectural questions are tracked in `docs/OPEN_QUESTIONS.md`
+        as Q1, Q2, …. Once decided, the answer is recorded there and referenced
+        from the code.
+
+  - type: textarea
+    id: question
+    attributes:
+      label: The question
+      placeholder: "How should the algorithm handle apartments adjacent to a notch in an L-shaped floor?"
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Why does it matter?
+      description: What is blocked until this is decided?
+    validations:
+      required: true
+
+  - type: textarea
+    id: options
+    attributes:
+      label: Options you see
+      placeholder: |
+        (a) Treat notch as a hard exclusion zone
+        (b) Allow apartments to wrap around the notch
+        (c) Trim the floor outline to a rectangle
+    validations:
+      required: true
+
+  - type: textarea
+    id: recommendation
+    attributes:
+      label: Your recommendation (optional)

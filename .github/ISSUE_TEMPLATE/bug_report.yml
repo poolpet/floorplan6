@@ -1,0 +1,57 @@
+name: Bug report
+description: Something is broken or behaves unexpectedly
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: A clear, concise description of the problem.
+      placeholder: e.g. "Generator places bathroom outside the outline polygon"
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      description: How can someone else trigger this?
+      placeholder: |
+        1. Open GUI, Stage 4 tab
+        2. Manual outline 8 × 6 m, Type M2
+        3. Click Generate layouts
+        4. Bathroom appears at x=...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behaviour
+      placeholder: "Bathroom should be entirely inside the outline (rule F1, 100% coverage)."
+    validations:
+      required: true
+
+  - type: input
+    id: rule
+    attributes:
+      label: Which rule (if any) is violated?
+      description: F1–F10 from docs/FUNDAMENTAL_RULES.md, or N/A.
+      placeholder: "F1 (coverage equality)"
+
+  - type: textarea
+    id: env
+    attributes:
+      label: Environment
+      placeholder: |
+        - OS: macOS 14.5 / Windows 11 / Ubuntu 22.04
+        - Python: 3.13.3
+        - ArchiCAD version (if relevant): 28
+    validations:
+      required: true
+
+  - type: textarea
+    id: extras
+    attributes:
+      label: Screenshots, logs or test that reproduces it
+      description: Attach images or paste a minimal failing test.

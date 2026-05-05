@@ -1,0 +1,48 @@
+name: Feature request
+description: Propose a new feature or behaviour
+labels: [enhancement]
+body:
+  - type: textarea
+    id: motivation
+    attributes:
+      label: What problem are you solving?
+      description: Why does this feature matter? What's the architectural use case?
+      placeholder: "Architects often need to test sub-divisions of L-shaped plots, currently impossible because..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed approach
+      description: How would you implement it (sketch is fine)?
+    validations:
+      required: true
+
+  - type: dropdown
+    id: stage
+    attributes:
+      label: Which stage does this belong to?
+      options:
+        - Stage 1 — Plot subdivision
+        - Stage 2 — Volumetric generator
+        - Stage 3 — Floor layout
+        - Stage 4 — Apartment layout
+        - Cross-cutting (UI, ArchiCAD bridge, docs, tooling)
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: rules
+    attributes:
+      label: Compatibility with project rules
+      options:
+        - label: I have read docs/FUNDAMENTAL_RULES.md and this proposal does NOT bend rules F1–F10
+          required: true
+        - label: This requires a design decision the owner should approve before coding
+          required: false
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
