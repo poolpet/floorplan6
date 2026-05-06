@@ -606,12 +606,12 @@ def solve_cpsat(
 
     rooms = []
     for i, spec in enumerate(specs):
-        rx = solver.value(x[i]) / SCALE + bx0
-        ry = solver.value(y[i]) / SCALE + by0
-        rw = solver.value(w[i]) / SCALE
-        rh = solver.value(h[i]) / SCALE
+        rx0 = solver.value(x[i]) / SCALE + bx0
+        ry0 = solver.value(y[i]) / SCALE + by0
+        rx1 = solver.value(x_ends[i]) / SCALE + bx0
+        ry1 = solver.value(y_ends[i]) / SCALE + by0
 
-        poly = box(rx, ry, rx + rw, ry + rh)
+        poly = box(rx0, ry0, rx1, ry1)
         room = Room(spec=spec, polygon=poly)
         room.update_metrics()
         rooms.append(room)
