@@ -50,3 +50,13 @@ class TestPDFGeneration:
         generate_pdf(rd, out)
         reader = PdfReader(out)
         assert len(reader.pages) >= 5
+
+    def test_pdf_has_compliance_and_variants_pages(self, tmp_path):
+        from core.report_pdf import generate_pdf
+        rd = make_sample_report()
+        out = tmp_path / "report.pdf"
+        generate_pdf(rd, out)
+        reader = PdfReader(out)
+        assert len(reader.pages) >= 7
+        compliance_text = reader.pages[5].extract_text()
+        assert "wt_001" in compliance_text or "Odległość" in compliance_text

@@ -231,6 +231,58 @@ def indicators_page(rd: ReportData) -> List:
     return flowables
 
 
+def compliance_page(rd: ReportData) -> List:
+    """Page 6: compliance table (19 WT rules)."""
+    flowables: List = []
+    flowables.append(Paragraph("Compliance check — Warunki Techniczne 2002", H1_STYLE))
+
+    # Table header + rows
+    header = ["ID", "Reguła", "Wartość", "Wymóg", "Status", "Podstawa"]
+    rows = [header]
+    for r in rd.verification_results:
+        status_symbol = {
+            "ZGODNY": "OK", "NIEZGODNY": "X", "OSTRZEZENIE": "!",
+            "NIEWERYFIKOWANY": "?",
+        }.get(r.status, "?")
+        rows.append([
+            r.rule_id,
+            r.rule_name[:35] + ("…" if len(r.rule_name) > 35 else ""),
+            r.designed_value_str,
+            r.required_value_str,
+            status_symbol,
+            r.legal_basis[:25] + ("…" if len(r.legal_basis) > 25 else ""),
+        ])
+
+    table = Table(rows, colWidths=[1.5 * cm, 6 * cm, 2.5 * cm, 2.5 * cm, 1.5 * cm, 3 * cm])
+    table.setStyle(TableStyle([
+        ("FONTSIZE", (0, 0), (-1, -1), 7),
+        ("GRID", (0, 0), (-1, -1), 0.3, colors.grey),
+        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#E0E0E0")),
+        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+    ]))
+    flowables.append(table)
+    flowables.append(PageBreak())
+    return flowables
+
+
+def variants_page(rd: ReportData) -> List:
+    """Page 7: 3-up variants grid + estimated units."""
+    from core.report_renderer import variants_grid_figure
+    flowables: List = []
+    flowables.append(Paragraph("Warianty zabudowy + potencjalne mieszkania", H1_STYLE))
+    fig = variants_grid_figure(rd)
+    flowables.append(_figure_to_image(fig))
+    flowables.append(Spacer(1, 4 * mm))
+    flowables.append(Paragraph(
+        "<i>Szacunek liczby mieszkań</i> = PUM / 55 m² (średnia M3, PL standard). "
+        "Realna liczba zależy od konkretnego rozkładu w Stage 4.",
+        SMALL_STYLE,
+    ))
+    flowables.append(PageBreak())
+    return flowables
+
+
 def generate_pdf(rd: ReportData, output_path: Path) -> Path:
     """Generate the full 9-page feasibility report PDF."""
     rd.data_hash = compute_hash(rd)
@@ -250,6 +302,8 @@ def generate_pdf(rd: ReportData, output_path: Path) -> Path:
     flowables.extend(data_inputs_page(rd))
     flowables.extend(buildable_zone_page(rd))
     flowables.extend(indicators_page(rd))
+    flowables.extend(compliance_page(rd))
+    flowables.extend(variants_page(rd))
 
     doc.build(flowables)
     return output_path
