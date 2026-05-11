@@ -99,16 +99,89 @@ def cover_page(rd: ReportData) -> List:
     return flowables
 
 
+def exec_summary_page(rd: ReportData) -> List:
+    """Page 2: top-line numbers."""
+    flowables: List = []
+    flowables.append(Paragraph("Podsumowanie (Executive summary)", H1_STYLE))
+
+    wz_des = next((i.designed for i in rd.indicators if i.name == "WZ"), 0.0)
+    wiz_des = next((i.designed for i in rd.indicators if i.name == "WIZ"), 0.0)
+    pbc_des = next((i.designed for i in rd.indicators if i.name == "PBC"), 0.0)
+
+    max_footprint = rd.plot_area_m2 * rd.mpzp_summary.wz_max
+    max_pum = rd.plot_area_m2 * rd.mpzp_summary.wiz_max
+    min_bio = rd.plot_area_m2 * rd.mpzp_summary.pbc_min_percent / 100.0
+
+    n_errors = sum(1 for v in rd.verification_results if v.status == "NIEZGODNY")
+    n_warns = sum(1 for v in rd.verification_results if v.status == "OSTRZEZENIE")
+
+    summary_data = [
+        ["Maks. powierzchnia zabudowy",
+         f"{max_footprint:.0f} m²  (WZ max {rd.mpzp_summary.wz_max:.2f})"],
+        ["Maks. PUM",
+         f"{max_pum:.0f} m²  (WIZ max {rd.mpzp_summary.wiz_max:.2f})"],
+        ["Min. powierzchnia bio-czynna",
+         f"{min_bio:.0f} m²  (PBC min {rd.mpzp_summary.pbc_min_percent:.0f}%)"],
+        ["Zalecane warianty zabudowy", f"{len(rd.buildup_variants)} (patrz strona 7)"],
+        ["Naruszenia compliance", f"{n_errors} błędy / {n_warns} ostrzeżeń"],
+    ]
+    table = Table(summary_data, colWidths=[7 * cm, 9 * cm])
+    table.setStyle(TableStyle([
+        ("FONTSIZE", (0, 0), (-1, -1), 10),
+        ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
+        ("BACKGROUND", (0, 0), (0, -1), colors.HexColor("#F0F0F0")),
+        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+        ("LEFTPADDING", (0, 0), (-1, -1), 8),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 8),
+    ]))
+    flowables.append(table)
+    flowables.append(PageBreak())
+    return flowables
+
+
+def data_inputs_page(rd: ReportData) -> List:
+    """Page 3: plot geometry + MPZP parameters."""
+    flowables: List = []
+    flowables.append(Paragraph("Dane wejściowe", H1_STYLE))
+    flowables.append(Paragraph("<b>Działka</b>", BODY_STYLE))
+
+    plot_data = [
+        ["Powierzchnia", f"{rd.plot_area_m2:.1f} m²"],
+        ["Obwód", f"{rd.plot_perimeter_m:.1f} m"],
+        ["Strefa zabudowy", f"{rd.buildable_zone_m2:.0f} m² ({rd.buildable_zone_percent:.1f}%)"],
+    ]
+    t1 = Table(plot_data, colWidths=[5 * cm, 9 * cm])
+    t1.setStyle(TableStyle([
+        ("FONTSIZE", (0, 0), (-1, -1), 9),
+        ("GRID", (0, 0), (-1, -1), 0.3, colors.grey),
+    ]))
+    flowables.append(t1)
+    flowables.append(Spacer(1, 6 * mm))
+
+    flowables.append(Paragraph("<b>Parametry MPZP</b>", BODY_STYLE))
+    m = rd.mpzp_summary
+    mpzp_data = [
+        ["Przeznaczenie", m.przeznaczenie or "—"],
+        ["WZ max", f"{m.wz_max:.2f}"],
+        ["WIZ max", f"{m.wiz_max:.2f}"],
+        ["PBC min", f"{m.pbc_min_percent:.0f}%"],
+        ["Wysokość max", f"{m.max_height_m:.1f} m"],
+        ["Typ zabudowy", m.typ_zabudowy or "—"],
+        ["Linia zabudowy", f"{m.line_zabudowy_m:.1f} m"],
+        ["Infrastruktura miejska", "tak" if m.infrastructure_municipal else "nie"],
+    ]
+    t2 = Table(mpzp_data, colWidths=[5 * cm, 9 * cm])
+    t2.setStyle(TableStyle([
+        ("FONTSIZE", (0, 0), (-1, -1), 9),
+        ("GRID", (0, 0), (-1, -1), 0.3, colors.grey),
+    ]))
+    flowables.append(t2)
+    flowables.append(PageBreak())
+    return flowables
+
+
 def generate_pdf(rd: ReportData, output_path: Path) -> Path:
-    """Generate the full 9-page feasibility report PDF.
-
-    Args:
-        rd: Populated ReportData (compute_hash will be called).
-        output_path: Where to write the PDF file.
-
-    Returns:
-        output_path (for convenience).
-    """
+    """Generate the full 9-page feasibility report PDF."""
     rd.data_hash = compute_hash(rd)
 
     doc = SimpleDocTemplate(
@@ -122,6 +195,8 @@ def generate_pdf(rd: ReportData, output_path: Path) -> Path:
 
     flowables: List = []
     flowables.extend(cover_page(rd))
+    flowables.extend(exec_summary_page(rd))
+    flowables.extend(data_inputs_page(rd))
 
     doc.build(flowables)
     return output_path
