@@ -13,6 +13,11 @@ import sys
 import io
 from pathlib import Path
 
+# Allow `python3 ui/main_window.py` from project root without PYTHONPATH.
+_PROJECT_ROOT = Path(__file__).resolve().parent.parent
+if str(_PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(_PROJECT_ROOT))
+
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QGroupBox, QLabel, QComboBox, QDoubleSpinBox, QSpinBox,
@@ -199,13 +204,24 @@ class MainWindow(QMainWindow):
         self.tabs = QTabWidget()
         self.setCentralWidget(self.tabs)
 
-        # Stage 1 — plot subdivision (placeholder)
+        # Stage 1 — plot analyser (Mode A whole-plot + Mode B subdivision)
         try:
-            from ui.stage_placeholder import Stage1PlotPlaceholder, Stage2VolumePlaceholder
-            self.tabs.addTab(Stage1PlotPlaceholder(self), "Stage 1: Plot Subdivision")
+            from ui.stage1_window import Stage1Widget
+            self.tabs.addTab(Stage1Widget(self), "Stage 1: Plot Analyser")
+        except Exception as e:
+            print(f"[WARN] Stage 1 tab unavailable: {e}")
+            try:
+                from ui.stage_placeholder import Stage1PlotPlaceholder
+                self.tabs.addTab(Stage1PlotPlaceholder(self), "Stage 1: Plot Subdivision")
+            except Exception:
+                pass
+
+        # Stage 2 — volumetric generator (still placeholder)
+        try:
+            from ui.stage_placeholder import Stage2VolumePlaceholder
             self.tabs.addTab(Stage2VolumePlaceholder(self), "Stage 2: Volume Generator")
         except Exception as e:
-            print(f"[WARN] Stage 1/2 placeholders unavailable: {e}")
+            print(f"[WARN] Stage 2 placeholder unavailable: {e}")
 
         # Stage 3 — floor layout
         try:
