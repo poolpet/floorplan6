@@ -11,16 +11,32 @@ from typing import Optional
 
 from shapely.geometry import Polygon
 
-from config import (
-    APARTMENT_OPT_AREA, APARTMENT_MIN_AREA,
-    WT_STAIR_BIEG_WIDTH, WT_STAIR_SPOCZNIK_WIDTH, WT_STAIR_GAP_BIEGS,
-    WT_STAIR_STEP_HEIGHT_MAX, WT_STAIR_BLONDEL, WT_STAIR_STEP_WIDTH_MIN,
-    WT_ELEVATOR_HEIGHT_THRESHOLD, WT_ELEVATOR_SHAFT_W, WT_ELEVATOR_SHAFT_L,
-    WT_ELEVATOR_FIRE_W, WT_ELEVATOR_FIRE_L, WT_ELEVATOR_WALL_GAP,
-    WT_BUILDING_CLASS_THRESHOLDS, WT_PRZEDSIONEK_DEPTH,
-    WT_DOJSCIE_MAX_2KLATKI, WT_DOJSCIE_MAX_1KLATKA,
-    FLOOR_RESERVE_RATIO,
-)
+from rules._loader import get_default_pack
+
+_PACK = get_default_pack()
+APARTMENT_MIN_AREA = _PACK.constants["apartment_min_area"]
+APARTMENT_OPT_AREA = _PACK.constants["apartment_opt_area"]
+WT_BUILDING_CLASS_THRESHOLDS = {
+    "N": _PACK.constants["building_class"]["N_max_height_m"],
+    "SW": _PACK.constants["building_class"]["SW_max_height_m"],
+    "W": _PACK.constants["building_class"]["W_max_height_m"],
+}
+WT_STAIR_BIEG_WIDTH = _PACK.constants["wt_stair_bieg_width"]
+WT_STAIR_SPOCZNIK_WIDTH = _PACK.constants["wt_stair_spocznik_width"]
+WT_STAIR_GAP_BIEGS = _PACK.constants["wt_stair_gap_biegs"]
+WT_STAIR_STEP_HEIGHT_MAX = _PACK.constants["wt_stair_step_height_max"]
+WT_STAIR_BLONDEL = _PACK.constants["wt_stair_blondel"]
+WT_STAIR_STEP_WIDTH_MIN = _PACK.constants["wt_stair_step_width_min"]
+WT_ELEVATOR_HEIGHT_THRESHOLD = _PACK.constants["wt_elevator_height_threshold"]
+WT_ELEVATOR_SHAFT_W = _PACK.constants["wt_elevator_shaft_w"]
+WT_ELEVATOR_SHAFT_L = _PACK.constants["wt_elevator_shaft_l"]
+WT_ELEVATOR_FIRE_W = _PACK.constants["wt_elevator_fire_w"]
+WT_ELEVATOR_FIRE_L = _PACK.constants["wt_elevator_fire_l"]
+WT_ELEVATOR_WALL_GAP = _PACK.constants["wt_elevator_wall_gap"]
+WT_PRZEDSIONEK_DEPTH = _PACK.constants["wt_przedsionek_depth"]
+WT_DOJSCIE_MAX_1KLATKA = _PACK.constants["wt_dojscie_max_1klatka"]
+WT_DOJSCIE_MAX_2KLATKI = _PACK.constants["wt_dojscie_max_2klatki"]
+FLOOR_RESERVE_RATIO = _PACK.constants["floor_reserve_ratio"]
 
 
 def compute_building_class(height_total_m: float) -> str:

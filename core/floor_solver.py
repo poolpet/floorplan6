@@ -21,10 +21,13 @@ from typing import Optional
 from ortools.sat.python import cp_model
 from shapely.geometry import Polygon, box as sbox
 
-from config import (
-    APARTMENT_MIN_AREA, APARTMENT_OPT_AREA, APARTMENT_MAX_ASPECT,
-    DOOR_MIN_WIDTH,
-)
+from rules._loader import get_default_pack as _get_default_pack
+
+_PACK = _get_default_pack()
+APARTMENT_MIN_AREA = _PACK.constants["apartment_min_area"]
+APARTMENT_OPT_AREA = _PACK.constants["apartment_opt_area"]
+APARTMENT_MAX_ASPECT = _PACK.constants["apartment_max_aspect"]
+DOOR_MIN_WIDTH = _PACK.constants["door_min_width"]
 
 SCALE = 100  # m → cm
 DOOR_MIN_CM = round(DOOR_MIN_WIDTH * SCALE)

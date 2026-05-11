@@ -7,11 +7,16 @@ Reguły strefowe R1–R6 z feedbacku architekta.
 from __future__ import annotations
 
 from core.models import FloorPlan, Room, Strefa
-from config import (
-    WT_MIN_AREA, WT_MIN_WIDTH, WT_MAX_AREA,
-    PROPORTION_MAX, PROPORTION_ABSOLUTE_MAX,
-    HUB_MIN_PERCENT, HUB_MAX_PERCENT,
-)
+from rules._loader import get_default_pack
+
+_PACK = get_default_pack()
+WT_MIN_AREA = _PACK.constants["wt_min_area"]
+WT_MIN_WIDTH = _PACK.constants["wt_min_width"]
+WT_MAX_AREA = _PACK.constants["wt_max_area"]
+PROPORTION_MAX = _PACK.constants["proportion_max"]
+PROPORTION_ABSOLUTE_MAX = _PACK.constants["proportion_absolute_max"]
+HUB_MIN_PERCENT = _PACK.constants["hub_min_percent"]
+HUB_MAX_PERCENT = _PACK.constants["hub_max_percent"]
 
 
 def validate(plan: FloorPlan, strict_max_areas: bool = True) -> FloorPlan:

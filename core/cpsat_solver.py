@@ -21,7 +21,10 @@ from shapely.geometry import Polygon, box
 from core.models import (
     Boundary, Template, RoomSpec, Room, Strefa, WallType,
 )
-from config import WT_MAX_AREA
+from rules._loader import get_default_pack as _get_default_pack
+
+_PACK = _get_default_pack()
+WT_MAX_AREA = _PACK.constants["wt_max_area"]
 
 
 # Precyzja: 1 cm (wymiary w cm jako int dla CP-SAT)

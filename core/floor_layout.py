@@ -22,11 +22,17 @@ from typing import Optional
 from shapely.geometry import Polygon, box as sbox
 from shapely.ops import unary_union
 
-from config import (
-    APARTMENT_MIN_AREA, APARTMENT_OPT_AREA, APARTMENT_MAX_ASPECT,
-    APARTMENT_MIX_DEFAULT, FLOOR_RESERVE_RATIO,
-    WT_CORRIDOR_PUBLIC_MIN, WT_DOJSCIE_MAX_2KLATKI, DOOR_MIN_WIDTH,
-)
+from rules._loader import get_default_pack
+
+_PACK = get_default_pack()
+APARTMENT_MIN_AREA = _PACK.constants["apartment_min_area"]
+APARTMENT_OPT_AREA = _PACK.constants["apartment_opt_area"]
+APARTMENT_MAX_ASPECT = _PACK.constants["apartment_max_aspect"]
+APARTMENT_MIX_DEFAULT = _PACK.constants["apartment_mix_default"]
+FLOOR_RESERVE_RATIO = _PACK.constants["floor_reserve_ratio"]
+WT_CORRIDOR_PUBLIC_MIN = _PACK.constants["wt_corridor_public_min"]
+WT_DOJSCIE_MAX_2KLATKI = _PACK.constants["wt_dojscie_max_2klatki"]
+DOOR_MIN_WIDTH = _PACK.constants["door_min_width"]
 from core.floor_compute import (
     compute_stairwell_dimensions, compute_apartment_count,
 )
