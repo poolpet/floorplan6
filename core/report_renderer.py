@@ -62,3 +62,71 @@ def plot_zone_figure(rd: ReportData) -> Figure:
     ax.grid(True, linestyle=":", alpha=0.5)
     fig.tight_layout()
     return fig
+
+
+# Status color mapping (zielony/żółty/czerwony, plus text-friendly symbols).
+STATUS_COLOR = {
+    "OK": "#27AE60",
+    "WARN": "#F39C12",
+    "VIOLATION": "#E74C3C",
+    "ZGODNY": "#27AE60",
+    "OSTRZEZENIE": "#F39C12",
+    "NIEZGODNY": "#E74C3C",
+    "NIEWERYFIKOWANY": "#95A5A6",
+}
+
+STATUS_SYMBOL = {
+    "OK": "+",
+    "WARN": "!",
+    "VIOLATION": "X",
+    "ZGODNY": "+",
+    "OSTRZEZENIE": "!",
+    "NIEZGODNY": "X",
+    "NIEWERYFIKOWANY": "?",
+}
+
+
+def indicators_bar_chart(rd: ReportData) -> Figure:
+    """Horizontal bar chart: designed vs limit for WZ, WIZ, PBC.
+
+    Page 5 of the report. Each row shows a colored bar (length = designed
+    fraction of limit, capped at 1.0) plus the status icon and a numeric label.
+    """
+    fig, ax = plt.subplots(figsize=(A4_WIDTH_IN, 3.5))
+    rows = rd.indicators or []
+
+    if not rows:
+        ax.text(0.5, 0.5, "Brak wskaźników", ha="center", va="center",
+                transform=ax.transAxes, fontsize=12, color="gray")
+        ax.set_axis_off()
+        fig.tight_layout()
+        return fig
+
+    y_positions = list(range(len(rows)))
+    fractions = [
+        (row.designed / row.limit if row.limit > 0 else 0.0)
+        for row in rows
+    ]
+    colors = [STATUS_COLOR.get(row.status, "#888") for row in rows]
+
+    ax.barh(y_positions, fractions, color=colors, alpha=0.75, edgecolor="black")
+    ax.axvline(x=1.0, color="red", linestyle="--", linewidth=1, label="Limit")
+    ax.axvline(x=1.05, color="orange", linestyle=":", linewidth=1, label="Limit + 5% (Q14)")
+
+    # Labels
+    ax.set_yticks(y_positions)
+    ax.set_yticklabels([row.name for row in rows])
+    ax.invert_yaxis()
+    ax.set_xlim(0, 1.20)
+    ax.set_xlabel("Designed ÷ Limit")
+
+    for i, row in enumerate(rows):
+        symbol = STATUS_SYMBOL.get(row.status, "?")
+        label = f"{row.designed:.2f}{row.unit} / {row.limit:.2f}{row.unit}  [{symbol}]"
+        ax.text(1.21, i, label, va="center", fontsize=9)
+
+    ax.set_title("Wskaźniki MPZP — designed vs limit", fontsize=11)
+    ax.legend(loc="lower right", fontsize=8)
+    ax.grid(axis="x", linestyle=":", alpha=0.4)
+    fig.tight_layout()
+    return fig
