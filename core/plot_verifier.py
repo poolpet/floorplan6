@@ -2,8 +2,8 @@
 Stage 1 — plot verifier (ported from claude code/archicad-checker/verifier.py
 on 2026-05-07 with Q13/Q14/Q17 changes).
 
-Loads WT 2002 rules from rules/wt_rules.json + user MPZP overrides from
-rules/user_rules.json. Verifies a designed project against:
+Loads WT 2002 rules from rules/PL/wt_rules.json + user MPZP overrides from
+rules/PL/user_rules.json via rules._loader.load_pack. Verifies a designed project against:
   1. Indicators WZ/WIZ/PBC (wt_014, wt_015, wt_016)
   2. Wall setbacks from boundaries (wt_001, wt_002, wt_003)
   3. Site element distances — well/septic (wt_004–wt_008)  *** Q13/Q17 gated
@@ -20,21 +20,18 @@ takes a `strict` flag (default False) — when True, behaviour matches F10
 """
 from __future__ import annotations
 
-import json
 import logging
 from dataclasses import dataclass
 from enum import Enum
-from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional
 
 from core.plot_model import HousingType, Plot
 from core.plot_indicators import PlotIndicators
 from core.site_element_model import SiteElement, SiteElementType
 from core.site_wall_model import SiteWall, WallOpeningType
+from rules._loader import load_pack
 
 logger = logging.getLogger(__name__)
-
-RULES_DIR = Path(__file__).resolve().parent.parent / "rules" / "PL"
 
 
 class VerificationStatus(str, Enum):
@@ -117,39 +114,28 @@ class PlotVerifier:
                 Default False keeps the band (Q14a).
     """
 
-    def __init__(self, strict: bool = False):
+    def __init__(self, strict: bool = False, pack_id: str = "PL"):
         self.strict = strict
         self._wt_rules: List[Dict] = []
         self._user_rules: List[Dict] = []
-        self._load_rules()
+        self._load_rules(pack_id)
 
     # ------------------------------------------------------------------
     # Rule loading
     # ------------------------------------------------------------------
 
-    def _load_rules(self) -> None:
-        self._wt_rules = self._read_json(RULES_DIR / "wt_rules.json", "reguly")
+    def _load_rules(self, pack_id: str = "PL") -> None:
+        pack = load_pack(pack_id)
+        self._wt_rules = pack.rules.get("reguly", [])
+        user_overrides_raw = pack.user_overrides.get("reguly", [])
         self._user_rules = [
-            r for r in self._read_json(RULES_DIR / "user_rules.json", "reguly")
+            r for r in user_overrides_raw
             if r.get("aktywna", True)
         ]
         logger.info(
             "Loaded rules: %d WT, %d user MPZP.",
             len(self._wt_rules), len(self._user_rules),
         )
-
-    @staticmethod
-    def _read_json(path: Path, key: str) -> List[Dict]:
-        try:
-            with open(path, encoding="utf-8") as f:
-                data = json.load(f)
-            return data.get(key, [])
-        except FileNotFoundError:
-            logger.warning("Rules file missing: %s", path)
-            return []
-        except json.JSONDecodeError as e:
-            logger.error("JSON parse error in %s: %s", path, e)
-            return []
 
     # ------------------------------------------------------------------
     # Public API
