@@ -137,6 +137,11 @@ floor_reserve_ratio: 0.15
 # === Parking ===
 parking_ratio_per_unit: 1.5
 
+# === Usable area correction factor ===
+# Usable area as fraction of (footprint × floors). Accounts for wall
+# thicknesses, shafts, etc. Used in WIZ computation (site_planner, plot_indicators).
+usable_area_factor: 0.85
+
 # === Mode B (Stage 1 subdivision) ===
 min_subplot_front_m: 18.0
 

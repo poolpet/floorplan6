@@ -138,6 +138,9 @@ class PackConstants(BaseModel):
     # Parking
     parking_ratio_per_unit: float
 
+    # Usable area correction factor (accounts for wall thicknesses, shafts)
+    usable_area_factor: float
+
     # Mode B (Stage 1 subdivision)
     min_subplot_front_m: float
 
