@@ -13,6 +13,10 @@ from typing import Optional
 
 from shapely.geometry import Polygon, LineString, Point
 
+from rules._loader import get_default_pack as _get_default_pack
+
+_ORIENTATION_QUALITY: dict[str, float] = _get_default_pack().constants["orientation_quality"]
+
 
 # ============================================================
 # Enums
@@ -101,8 +105,7 @@ class FacadeSegment:
 
     def __post_init__(self):
         self.total_length = sum(e.length for e in self.edges)
-        from config import ORIENTATION_QUALITY
-        self.quality = ORIENTATION_QUALITY.get(self.orientation.value, 0.5)
+        self.quality = _ORIENTATION_QUALITY.get(self.orientation.value, 0.5)
 
     @property
     def score(self) -> float:

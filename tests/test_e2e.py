@@ -6,8 +6,10 @@ from shapely.geometry import Polygon
 
 from core.variant_generator import generate_variants
 from core.models import Strefa
-from config import PROPORTION_ABSOLUTE_MAX
+from rules._loader import get_default_pack as _get_default_pack
 from unittest.mock import patch
+
+PROPORTION_ABSOLUTE_MAX = _get_default_pack().constants["proportion_absolute_max"]
 
 
 class TestM2Rectangular:
