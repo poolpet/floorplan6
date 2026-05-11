@@ -283,6 +283,79 @@ def variants_page(rd: ReportData) -> List:
     return flowables
 
 
+def glossary_page(rd: ReportData) -> List:
+    """Page 8: glossary for non-specialist readers (developer, client)."""
+    from core.report_data import GLOSSARY
+    flowables: List = []
+    flowables.append(Paragraph("Słowniczek", H1_STYLE))
+    flowables.append(Paragraph(
+        "Krótkie wyjaśnienia terminów używanych w raporcie — dla architekta, "
+        "dewelopera i klienta.",
+        SMALL_STYLE,
+    ))
+    flowables.append(Spacer(1, 4 * mm))
+
+    rows = [["Termin", "Wyjaśnienie"]]
+    for term, definition in GLOSSARY.items():
+        rows.append([term, definition])
+
+    table = Table(rows, colWidths=[3 * cm, 14 * cm])
+    table.setStyle(TableStyle([
+        ("FONTSIZE", (0, 0), (-1, -1), 8),
+        ("GRID", (0, 0), (-1, -1), 0.3, colors.grey),
+        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#E0E0E0")),
+        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+        ("VALIGN", (0, 0), (-1, -1), "TOP"),
+        ("LEFTPADDING", (0, 0), (-1, -1), 4),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 4),
+        ("TOPPADDING", (0, 0), (-1, -1), 3),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+    ]))
+    flowables.append(table)
+    flowables.append(PageBreak())
+    return flowables
+
+
+DISCLAIMER_TEXT = (
+    "Niniejszy raport ma charakter <b>informacyjny</b>. Wartości oraz zgodność "
+    "z przepisami zostały obliczone na podstawie podanych parametrów MPZP i "
+    "geometrii działki. Raport nie zastępuje decyzji urzędu, opinii architekta "
+    "uprawnionego ani szczegółowego projektu budowlanego. FloorPlan6 nie "
+    "ponosi odpowiedzialności za decyzje podjęte wyłącznie na podstawie tego "
+    "raportu."
+)
+
+
+def metadata_page(rd: ReportData) -> List:
+    """Page 9: metadata footer + disclaimer."""
+    flowables: List = []
+    flowables.append(Paragraph("Metadata + Disclaimer", H1_STYLE))
+
+    meta_data = [
+        ["Wygenerowano", rd.generated_at.strftime("%Y-%m-%d %H:%M:%S")],
+        ["Wersja narzędzia", rd.tool_version],
+        ["Pack regulacji", rd.pack_version],
+        ["Hash danych wejściowych", rd.data_hash],
+        ["Identyfikator działki", rd.plot_id],
+    ]
+    if rd.logo_path:
+        meta_data.append(["Logo biura", str(rd.logo_path.name) if hasattr(rd.logo_path, "name") else str(rd.logo_path)])
+
+    table = Table(meta_data, colWidths=[6 * cm, 11 * cm])
+    table.setStyle(TableStyle([
+        ("FONTSIZE", (0, 0), (-1, -1), 9),
+        ("GRID", (0, 0), (-1, -1), 0.3, colors.grey),
+        ("BACKGROUND", (0, 0), (0, -1), colors.HexColor("#F0F0F0")),
+        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+    ]))
+    flowables.append(table)
+    flowables.append(Spacer(1, 10 * mm))
+
+    flowables.append(Paragraph("<b>Disclaimer</b>", BODY_STYLE))
+    flowables.append(Paragraph(DISCLAIMER_TEXT, BODY_STYLE))
+    return flowables  # No PageBreak — last page
+
+
 def generate_pdf(rd: ReportData, output_path: Path) -> Path:
     """Generate the full 9-page feasibility report PDF."""
     rd.data_hash = compute_hash(rd)
@@ -304,6 +377,8 @@ def generate_pdf(rd: ReportData, output_path: Path) -> Path:
     flowables.extend(indicators_page(rd))
     flowables.extend(compliance_page(rd))
     flowables.extend(variants_page(rd))
+    flowables.extend(glossary_page(rd))
+    flowables.extend(metadata_page(rd))
 
     doc.build(flowables)
     return output_path

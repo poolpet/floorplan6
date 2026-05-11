@@ -60,3 +60,17 @@ class TestPDFGeneration:
         assert len(reader.pages) >= 7
         compliance_text = reader.pages[5].extract_text()
         assert "wt_001" in compliance_text or "Odległość" in compliance_text
+
+    def test_pdf_has_glossary_and_metadata(self, tmp_path):
+        from core.report_pdf import generate_pdf
+        rd = make_sample_report()
+        out = tmp_path / "report.pdf"
+        generate_pdf(rd, out)
+        reader = PdfReader(out)
+        assert len(reader.pages) >= 9
+        glossary_text = reader.pages[7].extract_text()
+        assert "MPZP" in glossary_text
+        assert "WZ" in glossary_text
+        metadata_text = reader.pages[8].extract_text()
+        assert rd.data_hash in metadata_text
+        assert "disclaimer" in metadata_text.lower() or "informacyjny" in metadata_text.lower()
