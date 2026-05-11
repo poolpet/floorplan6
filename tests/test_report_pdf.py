@@ -75,6 +75,18 @@ class TestPDFGeneration:
         assert rd.data_hash in metadata_text
         assert "disclaimer" in metadata_text.lower() or "informacyjny" in metadata_text.lower()
 
+    def test_pdf_with_logo(self, tmp_path):
+        from core.report_pdf import generate_pdf
+        from tests.fixtures.sample_report import make_sample_logo
+        logo_path = make_sample_logo(tmp_path / "logo.png")
+        rd = make_sample_report()
+        rd.logo_path = logo_path
+        out = tmp_path / "report_with_logo.pdf"
+        generate_pdf(rd, out)
+        assert out.is_file()
+        # PDF with logo should be larger than without (image bytes embedded)
+        assert out.stat().st_size > 25000
+
 
 class TestCLI:
     def test_cli_generates_sample(self, tmp_path, monkeypatch):

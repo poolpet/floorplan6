@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+from pathlib import Path
 
 from core.report_data import (
     ComplianceRow, IndicatorRow, MPZPSummary, ReportData, SetbackInfo,
@@ -76,3 +77,18 @@ def make_sample_report() -> ReportData:
         generated_at=datetime(2026, 5, 11, 12, 0, 0),
         pack_version="PL/1.0",
     )
+
+
+def make_sample_logo(path: Path) -> Path:
+    """Generate a 200×80 white-label test logo. Returns the path."""
+    import matplotlib.pyplot as plt
+    fig, ax = plt.subplots(figsize=(2.0, 0.8))
+    ax.text(0.5, 0.5, "ARCHI STUDIO", ha="center", va="center",
+            fontsize=14, weight="bold", color="#333")
+    ax.set_xticks([])
+    ax.set_yticks([])
+    for spine in ax.spines.values():
+        spine.set_edgecolor("#999")
+    fig.savefig(path, dpi=100, bbox_inches="tight")
+    plt.close(fig)
+    return path
