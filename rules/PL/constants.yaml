@@ -1,0 +1,147 @@
+# Rule-driven constants extracted from config.py.
+# See rules/_schema.py PackConstants for the schema.
+
+# === WT 2002 — area/width limits per room type ===
+wt_min_area:
+  salon_kawalerka: 25.0
+  salon: 16.0
+  sypialnia_2os: 9.0
+  sypialnia_1os: 6.0
+  kuchnia: 6.0
+  aneks_kuchenny: 4.0
+  lazienka_wanna: 4.5
+  lazienka_prysznic: 2.5
+  wc: 1.5
+  hub: 0.0
+
+wt_max_area:
+  bathroom_m2: 5.0
+  wc_m2: 3.0
+  # Legacy room-prefix keys (used by validator startswith match):
+  lazienka: 5.0
+
+wt_min_width:
+  salon: 3.2
+  sypialnia_2os: 2.4
+  sypialnia_1os: 2.0
+  kuchnia: 2.4
+  lazienka: 1.5
+  wc: 1.0
+  hub: 1.2
+
+# === Setbacks (defaults when MPZP doesn't specify) ===
+setback_defaults:
+  front_m: 6.0
+  side_m: 4.0
+  rear_m: 4.0
+  well_to_boundary_m: 7.5
+
+# === Hub ===
+hub_min_percent:
+  M1: 0.08
+  M2: 0.10
+  M3: 0.10
+  M4: 0.12
+  M5: 0.12
+hub_max_percent: 0.15
+hub_min_area:
+  M1: 4.0
+  M2: 5.0
+  M3: 6.0
+  M4: 8.0
+  M5: 10.0
+
+# === Apartment types (Stage 3) ===
+apartment_min_area:
+  M1: 35.0
+  M2: 45.0
+  M3: 60.0
+  M4: 80.0
+  M5: 100.0
+apartment_opt_area:
+  M1: 40.0
+  M2: 55.0
+  M3: 75.0
+  M4: 100.0
+  M5: 130.0
+apartment_max_aspect: 3.0
+apartment_mix_default:
+  M1: 0.10
+  M2: 0.30
+  M3: 0.40
+  M4: 0.10
+  M5: 0.10
+
+# === Building height class (WT, dział VI) ===
+building_class:
+  N_max_height_m: 12.0
+  SW_max_height_m: 25.0
+  W_max_height_m: 55.0
+  WW_above_m: 55.0
+
+# === Corridors + escape ===
+wt_corridor_internal_min: 1.2
+wt_corridor_public_min: 1.4
+wt_dojscie_max_1klatka: 10.0
+wt_dojscie_max_2klatki: 40.0
+door_min_width: 0.9
+
+# === Stairs ===
+wt_stair_bieg_width: 0.9
+wt_stair_spocznik_width: 1.2
+wt_stair_step_height_max: 0.16
+wt_stair_blondel: 0.63
+wt_stair_step_width_min: 0.25
+
+# === Elevator ===
+wt_elevator_height_threshold: 9.5
+wt_elevator_shaft_w: 1.5
+wt_elevator_shaft_l: 1.7
+wt_elevator_fire_w: 2.0
+wt_elevator_fire_l: 2.4
+
+# === Wall thicknesses ===
+wall_thickness_structural: 0.24
+wall_thickness_partition: 0.12
+wall_thickness_bathroom: 0.10
+
+# === Proportions ===
+proportion_optimal: 1.3
+proportion_max: 2.0
+proportion_absolute_max: 2.5
+
+# === Orientation quality ===
+orientation_quality:
+  S: 1.0
+  SW: 0.95
+  SE: 0.90
+  W: 0.85
+  E: 0.80
+  NW: 0.65
+  NE: 0.60
+  N: 0.50
+
+# === Scorer weights (defaults; can be overridden by dataset_stats) ===
+default_scorer_weights:
+  proporcje_pokoi: 0.25
+  efektywnosc_huba: 0.20
+  orientacja_salonu: 0.15
+  powierzchnia_uzytkowa: 0.15
+  separacja_stref: 0.15
+  regularnosc_geometrii: 0.10
+
+# === Floor mode ===
+floor_reserve_ratio: 0.15
+
+# === Parking ===
+parking_ratio_per_unit: 1.5
+
+# === Mode B (Stage 1 subdivision) ===
+min_subplot_front_m: 18.0
+
+# === Przedsionek (vestibule) depth per building class ===
+wt_przedsionek_depth:
+  N: 0.0
+  SW: 1.0
+  W: 1.5
+  WW: 1.5

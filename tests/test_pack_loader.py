@@ -21,7 +21,6 @@ class TestLoadPackHappyPath:
         # 19 WT rules expected
         assert len(pack.rules["reguly"]) == 19
 
-    @pytest.mark.xfail(reason="constants.yaml not yet created — Week 2 Task 9")
     def test_pl_pack_has_constants(self):
         pack = load_pack("PL")
         assert isinstance(pack.constants, dict)
