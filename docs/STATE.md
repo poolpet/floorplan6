@@ -122,6 +122,27 @@ rewrite). Old modules removed:
 
 ---
 
+### Stage 1 — Phase 2 (Report Layer) — COMPLETED 2026-05-11
+
+| Component | Status |
+|---|---|
+| `core/report_data.py` | ✅ ReportData + nested dataclasses + estimate_units + compute_hash + GLOSSARY |
+| `core/report_renderer.py` | ✅ 3 matplotlib figures: plot_zone, indicators_bar, variants_grid |
+| `core/report_pdf.py` | ✅ 9-page reportlab assembly + CLI (`python -m core.report_pdf`) + logo support + Polish font (Arial Unicode on macOS) |
+| `tests/fixtures/sample_report.py` | ✅ Reusable test fixture + sample logo generator |
+| `tests/test_report_data.py` | ✅ 13 tests pass |
+| `tests/test_report_renderer.py` | ✅ 6 tests pass |
+| `tests/test_report_pdf.py` | ✅ 8 tests pass (incl. logo + CLI) |
+| `requirements.txt` | ✅ pypdf>=4.0 added |
+| momepy evaluation | ✅ NO-GO documented in notebooks/momepy_eval.py |
+
+**Tests:** 196 passed (172 Phase 1 baseline + 27 new Phase 2 tests; 31 skipped, 1 xpassed).
+**Deliverable:** `python -m core.report_pdf --fixture sample --out X.pdf` produces 9-page ~165KB PDF.
+**Known issue:** macOS-only Polish font (Arial Unicode TTF path). Cross-platform handling deferred to Phase 3.
+**Next:** Phase 3 — UI integration (Stage1ReportDialog) + multi-persona views + macOS CI.
+
+---
+
 ## What's next
 
 1. **Integration Stage 3 → Stage 4** — clicking an apartment in Stage 3 layout
