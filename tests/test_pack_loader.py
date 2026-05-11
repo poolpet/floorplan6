@@ -81,3 +81,20 @@ description: "Bad"
         pack = load_pack("PL")
         assert pack.path.name == "PL"
         assert (pack.path / "pack.yaml").is_file()
+
+
+class TestDefaultPack:
+    def test_default_pack_is_memoized(self):
+        from rules._loader import get_default_pack, reset_default_pack
+        reset_default_pack()
+        p1 = get_default_pack()
+        p2 = get_default_pack()
+        assert p1 is p2  # same instance
+
+    def test_set_default_pack_overrides(self):
+        from rules._loader import get_default_pack, set_default_pack, reset_default_pack
+        reset_default_pack()
+        original = get_default_pack()
+        set_default_pack(original)
+        assert get_default_pack() is original
+        reset_default_pack()

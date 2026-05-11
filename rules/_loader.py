@@ -112,3 +112,31 @@ def load_pack(pack_id: str = "PL") -> CodePack:
         user_overrides=user_overrides,
         path=pack_dir,
     )
+
+
+_default_pack: CodePack | None = None
+
+
+def get_default_pack() -> CodePack:
+    """Return the default code pack (PL), memoized for the process lifetime.
+
+    Use this in core modules that need pack constants but don't take a pack
+    argument. To use a different pack, call `set_default_pack(load_pack("UK"))`
+    at session start (Phase 2+ feature).
+    """
+    global _default_pack
+    if _default_pack is None:
+        _default_pack = load_pack("PL")
+    return _default_pack
+
+
+def set_default_pack(pack: CodePack) -> None:
+    """Replace the memoized default pack. Call at session start only."""
+    global _default_pack
+    _default_pack = pack
+
+
+def reset_default_pack() -> None:
+    """Clear the memoized default pack. For tests."""
+    global _default_pack
+    _default_pack = None
