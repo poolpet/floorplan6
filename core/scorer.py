@@ -7,12 +7,15 @@ Wagi domyślne z config.py, docelowo optymalizowane z danych (RYZYKO 6).
 from __future__ import annotations
 
 from core.models import FloorPlan, Room, Strefa
-from config import (
-    DEFAULT_SCORER_WEIGHTS,
-    PROPORTION_OPTIMAL, PROPORTION_MAX,
-    HUB_MIN_PERCENT, HUB_MAX_PERCENT,
-    ORIENTATION_QUALITY,
-)
+from rules._loader import get_default_pack
+
+_PACK = get_default_pack()
+DEFAULT_SCORER_WEIGHTS = _PACK.constants["default_scorer_weights"]
+PROPORTION_OPTIMAL = _PACK.constants["proportion_optimal"]
+PROPORTION_MAX = _PACK.constants["proportion_max"]
+HUB_MIN_PERCENT = _PACK.constants["hub_min_percent"]
+HUB_MAX_PERCENT = _PACK.constants["hub_max_percent"]
+ORIENTATION_QUALITY = _PACK.constants["orientation_quality"]
 
 
 def score(plan: FloorPlan) -> FloorPlan:
