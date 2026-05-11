@@ -130,3 +130,42 @@ def indicators_bar_chart(rd: ReportData) -> Figure:
     ax.grid(axis="x", linestyle=":", alpha=0.4)
     fig.tight_layout()
     return fig
+
+
+def variants_grid_figure(rd: ReportData) -> Figure:
+    """3-up grid showing each buildup variant with WZ + units estimate.
+
+    Page 7 of the report. Each panel = one variant. Shows polygon shape,
+    footprint area, WZ, and estimated apartment count.
+    """
+    variants = rd.buildup_variants or []
+    n = max(1, len(variants))
+    fig, axes = plt.subplots(1, n, figsize=(A4_WIDTH_IN, 3.5), squeeze=False)
+    axes = axes.flatten()
+
+    for i, variant in enumerate(variants):
+        ax = axes[i]
+        # Simple placeholder: draw a rectangle proportional to footprint area.
+        # If we have an actual polygon WKT per variant in future, render that.
+        side = (variant.footprint_area_m2) ** 0.5
+        ax.add_patch(mpatches.Rectangle((0, 0), side, side,
+                                          facecolor="#90CAF9", edgecolor="black"))
+        ax.set_xlim(-5, side + 5)
+        ax.set_ylim(-5, side + 5)
+        ax.set_aspect("equal")
+        ax.set_title(f"Wariant {chr(ord('A') + variant.number - 1)}", fontsize=10)
+        ax.text(0.5, -0.15,
+                f"{variant.footprint_area_m2:.0f} m²\n"
+                f"WZ {variant.wz:.2f}\n"
+                f"~{variant.estimated_units} mieszkań",
+                transform=ax.transAxes, ha="center", va="top", fontsize=9)
+        ax.set_xticks([])
+        ax.set_yticks([])
+
+    # Hide unused panels
+    for j in range(len(variants), n):
+        axes[j].set_axis_off()
+
+    fig.suptitle("Warianty zabudowy + szacunek liczby mieszkań", fontsize=11)
+    fig.tight_layout(rect=(0, 0.1, 1, 0.95))
+    return fig

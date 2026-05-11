@@ -41,3 +41,24 @@ class TestIndicatorsBarChart:
         rd = ReportData(plot_id="x", plot_address="x", plot_area_m2=100.0)
         fig = indicators_bar_chart(rd)
         assert fig is not None  # graceful handling
+
+
+class TestVariantsGrid:
+    def test_returns_figure(self):
+        from core.report_renderer import variants_grid_figure
+        from matplotlib.figure import Figure
+        rd = make_sample_report()
+        fig = variants_grid_figure(rd)
+        assert isinstance(fig, Figure)
+
+    def test_handles_fewer_than_3_variants(self):
+        from core.report_data import ReportData, VariantInfo
+        from core.report_renderer import variants_grid_figure
+        rd = ReportData(plot_id="x", plot_address="x", plot_area_m2=100.0,
+                          buildup_variants=[
+                              VariantInfo(number=1, footprint_area_m2=50.0,
+                                          wz=0.5, wiz=0.5, pbc_percent=30.0,
+                                          estimated_units=1),
+                          ])
+        fig = variants_grid_figure(rd)
+        assert fig is not None
