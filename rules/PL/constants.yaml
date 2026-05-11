@@ -17,8 +17,9 @@ wt_min_area:
 wt_max_area:
   bathroom_m2: 5.0
   wc_m2: 3.0
-  # Legacy room-prefix keys (used by validator startswith match):
+  # Legacy room-prefix keys (used by validator/solver startswith match):
   lazienka: 5.0
+  wc: 3.0
 
 wt_min_width:
   salon: 3.2
