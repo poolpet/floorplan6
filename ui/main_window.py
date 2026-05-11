@@ -1052,7 +1052,17 @@ def run_gui():
     app = QApplication(sys.argv)
     app.setStyle("Fusion")
     window = MainWindow()
+    # Center on primary screen + force foreground (macOS Python framework workaround).
+    primary = app.primaryScreen().geometry()
+    win_w, win_h = 1200, 800
+    window.setGeometry(
+        primary.x() + (primary.width() - win_w) // 2,
+        primary.y() + (primary.height() - win_h) // 2,
+        win_w, win_h,
+    )
     window.show()
+    window.raise_()
+    window.activateWindow()
     sys.exit(app.exec_())
 
 
