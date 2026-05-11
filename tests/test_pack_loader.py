@@ -42,3 +42,43 @@ class TestLoadPackErrors:
     def test_default_pack_is_pl(self):
         pack = load_pack()  # no arg
         assert pack.pack_id == "PL"
+
+
+class TestLoadPackEdgeCases:
+    def test_missing_manifest_raises(self, tmp_path, monkeypatch):
+        # Create a pack dir with no pack.yaml
+        bad_pack = tmp_path / "BAD"
+        bad_pack.mkdir()
+        monkeypatch.setattr("rules._loader.RULES_ROOT", tmp_path)
+        with pytest.raises(CodePackError, match="Missing pack.yaml"):
+            load_pack("BAD")
+
+    def test_invalid_manifest_raises(self, tmp_path, monkeypatch):
+        bad_pack = tmp_path / "BAD"
+        bad_pack.mkdir()
+        # Manifest missing required fields
+        (bad_pack / "pack.yaml").write_text("code_pack_id: BAD\n")
+        monkeypatch.setattr("rules._loader.RULES_ROOT", tmp_path)
+        with pytest.raises(CodePackError, match="Invalid pack.yaml"):
+            load_pack("BAD")
+
+    def test_missing_rules_file_raises(self, tmp_path, monkeypatch):
+        bad_pack = tmp_path / "BAD"
+        bad_pack.mkdir()
+        (bad_pack / "pack.yaml").write_text("""
+code_pack_id: BAD
+country_code: BAD
+locale: xx_XX
+version: "1.0"
+version_compat: ">=0.0.0"
+display_name: "Bad pack"
+description: "Bad"
+""")
+        monkeypatch.setattr("rules._loader.RULES_ROOT", tmp_path)
+        with pytest.raises(CodePackError, match="Missing rules file"):
+            load_pack("BAD")
+
+    def test_pack_path_attribute_set(self):
+        pack = load_pack("PL")
+        assert pack.path.name == "PL"
+        assert (pack.path / "pack.yaml").is_file()
