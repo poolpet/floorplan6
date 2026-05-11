@@ -24,6 +24,8 @@ from reportlab.platypus import (
 )
 from reportlab.lib import colors
 
+from matplotlib.figure import Figure
+
 from core.report_data import ReportData, compute_hash
 
 
@@ -58,6 +60,21 @@ SMALL_STYLE = ParagraphStyle(
     name="Small", parent=_styles["BodyText"], fontSize=8, leading=10, textColor=colors.grey,
     fontName=_UNICODE_FONT,
 )
+
+
+# --- Matplotlib → reportlab helper ---
+
+def _figure_to_image(fig: Figure, max_width_cm: float = 17.0) -> Image:
+    """Convert a matplotlib Figure to a reportlab Image flowable (in-memory)."""
+    buf = io.BytesIO()
+    fig.savefig(buf, format="png", dpi=150, bbox_inches="tight")
+    buf.seek(0)
+    # Compute height by aspect ratio
+    w_in, h_in = fig.get_size_inches()
+    aspect = h_in / w_in
+    width_cm = max_width_cm
+    height_cm = width_cm * aspect
+    return Image(buf, width=width_cm * cm, height=height_cm * cm)
 
 
 # --- Page builders ---
@@ -180,6 +197,40 @@ def data_inputs_page(rd: ReportData) -> List:
     return flowables
 
 
+def buildable_zone_page(rd: ReportData) -> List:
+    """Page 4: buildable zone figure + setback summary."""
+    from core.report_renderer import plot_zone_figure
+    flowables: List = []
+    flowables.append(Paragraph("Strefa zabudowy (Buildable zone)", H1_STYLE))
+    fig = plot_zone_figure(rd)
+    flowables.append(_figure_to_image(fig))
+    flowables.append(Spacer(1, 4 * mm))
+    flowables.append(Paragraph(
+        f"Strefa zabudowy: <b>{rd.buildable_zone_m2:.0f} m²</b> "
+        f"({rd.buildable_zone_percent:.1f}% działki).",
+        BODY_STYLE,
+    ))
+    flowables.append(PageBreak())
+    return flowables
+
+
+def indicators_page(rd: ReportData) -> List:
+    """Page 5: indicators bar chart + Q14 5% band explanation."""
+    from core.report_renderer import indicators_bar_chart
+    flowables: List = []
+    flowables.append(Paragraph("Wskaźniki MPZP (WZ / WIZ / PBC)", H1_STYLE))
+    fig = indicators_bar_chart(rd)
+    flowables.append(_figure_to_image(fig))
+    flowables.append(Spacer(1, 4 * mm))
+    flowables.append(Paragraph(
+        "<b>Pasmo 5% tolerancji (Q14):</b> wartości w zakresie limit … limit×1.05 "
+        "są oznaczane jako ostrzeżenie. Powyżej 1.05×limit — naruszenie.",
+        SMALL_STYLE,
+    ))
+    flowables.append(PageBreak())
+    return flowables
+
+
 def generate_pdf(rd: ReportData, output_path: Path) -> Path:
     """Generate the full 9-page feasibility report PDF."""
     rd.data_hash = compute_hash(rd)
@@ -197,6 +248,8 @@ def generate_pdf(rd: ReportData, output_path: Path) -> Path:
     flowables.extend(cover_page(rd))
     flowables.extend(exec_summary_page(rd))
     flowables.extend(data_inputs_page(rd))
+    flowables.extend(buildable_zone_page(rd))
+    flowables.extend(indicators_page(rd))
 
     doc.build(flowables)
     return output_path

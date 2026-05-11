@@ -42,3 +42,11 @@ class TestPDFGeneration:
         # Data inputs should mention MPZP
         text3 = reader.pages[2].extract_text()
         assert "MPZP" in text3
+
+    def test_pdf_has_buildable_and_indicators_pages(self, tmp_path):
+        from core.report_pdf import generate_pdf
+        rd = make_sample_report()
+        out = tmp_path / "report.pdf"
+        generate_pdf(rd, out)
+        reader = PdfReader(out)
+        assert len(reader.pages) >= 5
