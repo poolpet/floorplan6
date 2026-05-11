@@ -1,0 +1,18 @@
+code_pack_id: PL
+country_code: PL
+locale: pl_PL
+version: "1.0"
+version_compat: ">=0.4.0"
+display_name: "Polska — Warunki Techniczne 2002"
+display_name_en: "Poland — WT 2002"
+description: "Polski pack: 19 reguł WT 2002, MPZP defaults, constants z config.py"
+references:
+  - id: WT_2002
+    title: "Rozporządzenie Ministra Infrastruktury z 12 kwietnia 2002 (Dz.U. 2022 poz. 1225)"
+    url: "https://isap.sejm.gov.pl/isap.nsf/DocDetails.xsp?id=WDU20020750690"
+  - id: KP_KOMUNIKACJA
+    title: "WT § 237 — minimalne szerokości komunikacji"
+files:
+  rules: wt_rules.json
+  constants: constants.yaml
+  user_overrides: user_rules.json
