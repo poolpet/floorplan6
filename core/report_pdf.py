@@ -31,14 +31,23 @@ from core.report_data import ReportData, compute_hash
 
 # --- Font registration (Latin Extended / Polish diacritics support) ---
 # Arial Unicode covers full Latin-Extended-A (Polish ą ę ó ś ź ż ć ł ń).
-# Falls back gracefully to Helvetica if the font file is missing (non-macOS).
+# Arial Bold gives visual emphasis with same Polish coverage.
+# Falls back gracefully to Helvetica if the font files are missing (non-macOS).
 _ARIAL_UNICODE_PATH = "/System/Library/Fonts/Supplemental/Arial Unicode.ttf"
-_UNICODE_FONT = "Helvetica"  # fallback
+_ARIAL_BOLD_PATH = "/System/Library/Fonts/Supplemental/Arial Bold.ttf"
+_UNICODE_FONT = "Helvetica"          # fallback
+_UNICODE_FONT_BOLD = "Helvetica-Bold"  # fallback
 try:
     pdfmetrics.registerFont(TTFont("ArialUnicode", _ARIAL_UNICODE_PATH))
     _UNICODE_FONT = "ArialUnicode"
 except Exception:
-    pass  # font file absent — Helvetica fallback (garbled diacritics but no crash)
+    pass
+try:
+    pdfmetrics.registerFont(TTFont("ArialBold", _ARIAL_BOLD_PATH))
+    _UNICODE_FONT_BOLD = "ArialBold"
+except Exception:
+    # Bold variant missing — fall back to regular Unicode font (still readable PL chars).
+    _UNICODE_FONT_BOLD = _UNICODE_FONT
 
 
 # --- Style setup (module-level — reused across pages) ---
@@ -144,6 +153,7 @@ def exec_summary_page(rd: ReportData) -> List:
     ]
     table = Table(summary_data, colWidths=[7 * cm, 9 * cm])
     table.setStyle(TableStyle([
+        ("FONTNAME", (0, 0), (-1, -1), _UNICODE_FONT),
         ("FONTSIZE", (0, 0), (-1, -1), 10),
         ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
         ("BACKGROUND", (0, 0), (0, -1), colors.HexColor("#F0F0F0")),
@@ -169,6 +179,7 @@ def data_inputs_page(rd: ReportData) -> List:
     ]
     t1 = Table(plot_data, colWidths=[5 * cm, 9 * cm])
     t1.setStyle(TableStyle([
+        ("FONTNAME", (0, 0), (-1, -1), _UNICODE_FONT),
         ("FONTSIZE", (0, 0), (-1, -1), 9),
         ("GRID", (0, 0), (-1, -1), 0.3, colors.grey),
     ]))
@@ -189,6 +200,7 @@ def data_inputs_page(rd: ReportData) -> List:
     ]
     t2 = Table(mpzp_data, colWidths=[5 * cm, 9 * cm])
     t2.setStyle(TableStyle([
+        ("FONTNAME", (0, 0), (-1, -1), _UNICODE_FONT),
         ("FONTSIZE", (0, 0), (-1, -1), 9),
         ("GRID", (0, 0), (-1, -1), 0.3, colors.grey),
     ]))
@@ -255,10 +267,11 @@ def compliance_page(rd: ReportData) -> List:
 
     table = Table(rows, colWidths=[1.5 * cm, 6 * cm, 2.5 * cm, 2.5 * cm, 1.5 * cm, 3 * cm])
     table.setStyle(TableStyle([
+        ("FONTNAME", (0, 0), (-1, -1), _UNICODE_FONT),
+        ("FONTNAME", (0, 0), (-1, 0), _UNICODE_FONT_BOLD),
         ("FONTSIZE", (0, 0), (-1, -1), 7),
         ("GRID", (0, 0), (-1, -1), 0.3, colors.grey),
         ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#E0E0E0")),
-        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
         ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
     ]))
     flowables.append(table)
@@ -301,10 +314,11 @@ def glossary_page(rd: ReportData) -> List:
 
     table = Table(rows, colWidths=[3 * cm, 14 * cm])
     table.setStyle(TableStyle([
+        ("FONTNAME", (0, 0), (-1, -1), _UNICODE_FONT),
+        ("FONTNAME", (0, 0), (-1, 0), _UNICODE_FONT_BOLD),
         ("FONTSIZE", (0, 0), (-1, -1), 8),
         ("GRID", (0, 0), (-1, -1), 0.3, colors.grey),
         ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#E0E0E0")),
-        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
         ("VALIGN", (0, 0), (-1, -1), "TOP"),
         ("LEFTPADDING", (0, 0), (-1, -1), 4),
         ("RIGHTPADDING", (0, 0), (-1, -1), 4),
@@ -343,6 +357,7 @@ def metadata_page(rd: ReportData) -> List:
 
     table = Table(meta_data, colWidths=[6 * cm, 11 * cm])
     table.setStyle(TableStyle([
+        ("FONTNAME", (0, 0), (-1, -1), _UNICODE_FONT),
         ("FONTSIZE", (0, 0), (-1, -1), 9),
         ("GRID", (0, 0), (-1, -1), 0.3, colors.grey),
         ("BACKGROUND", (0, 0), (0, -1), colors.HexColor("#F0F0F0")),
