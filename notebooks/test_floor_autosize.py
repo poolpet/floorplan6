@@ -11,7 +11,8 @@ from shapely.geometry import Polygon, box as sbox
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 
-from config import APARTMENT_MIX_DEFAULT
+from rules._loader import get_default_pack as _get_default_pack
+APARTMENT_MIX_DEFAULT = _get_default_pack().constants["apartment_mix_default"]
 from core.floor_compute import (
     compute_stairwell_dimensions, compute_apartment_count, compute_min_stairwells,
 )
