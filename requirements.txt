@@ -21,6 +21,7 @@ networkx>=3.0
 # Tests
 pytest>=7.0
 pytest-cov>=4.0
+pypdf>=4.0  # PDF inspection for tests
 
 # Optional — Jupyter dla iteracji algorytmów (etap 1 Plot Subdivision)
 jupyter>=1.0

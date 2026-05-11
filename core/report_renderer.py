@@ -1,0 +1,222 @@
+"""Report Renderer — matplotlib figures embedded into the PDF report.
+
+Each figure is a Figure object. Caller (report_pdf.py) saves to PNG buffer,
+embeds into reportlab Image flowable.
+
+Convention:
+    - All figures use figsize tuned for A4 portrait page width (8.27 in).
+    - White background, dark text — PDF-print friendly.
+    - No emoji icons in figures — pure ASCII / matplotlib markers (broader font compat).
+"""
+from __future__ import annotations
+
+from typing import List
+
+import matplotlib.patches as mpatches
+import matplotlib.pyplot as plt
+from matplotlib.figure import Figure
+from shapely import wkt
+
+from core.report_data import ComplianceRow, IndicatorRow, ReportData, VariantInfo
+
+# A4 portrait usable width minus margins (in inches).
+A4_WIDTH_IN = 7.0
+
+
+def plot_zone_figure(rd: ReportData) -> Figure:
+    """Plot polygon + buildable zone overlay + setback annotations.
+
+    Page 4 of the report. Shows the plot outline (black), buildable zone
+    (green fill), and labels for setback distances.
+    """
+    fig, ax = plt.subplots(figsize=(A4_WIDTH_IN, 5.0))
+
+    if rd.plot_polygon_wkt:
+        plot_poly = wkt.loads(rd.plot_polygon_wkt)
+        x, y = plot_poly.exterior.xy
+        ax.plot(x, y, color="black", linewidth=1.5, label="Granica działki")
+        ax.fill(x, y, color="#FFFAF0", alpha=0.3)
+
+    if rd.buildable_polygon_wkt:
+        bz_poly = wkt.loads(rd.buildable_polygon_wkt)
+        bx, by = bz_poly.exterior.xy
+        ax.fill(bx, by, color="#C8E6C9", alpha=0.6, label="Buildable zone")
+        ax.plot(bx, by, color="#2E7D32", linewidth=1.0, linestyle="--")
+
+    # Setback annotations
+    sb = rd.setbacks
+    ax.text(
+        0.02, 0.98,
+        f"Linia zabudowy:\n  od drogi: {sb.front_m} m\n"
+        f"  od boku: {sb.side_m} m\n  od tyłu: {sb.rear_m} m",
+        transform=ax.transAxes,
+        va="top", fontsize=9,
+        bbox=dict(facecolor="white", edgecolor="gray", boxstyle="round,pad=0.5"),
+    )
+
+    ax.set_aspect("equal", adjustable="box")
+    ax.set_title(f"Działka {rd.plot_id} — strefa zabudowy", fontsize=11)
+    ax.set_xlabel("X [m]")
+    ax.set_ylabel("Y [m]")
+    ax.legend(loc="lower right", fontsize=9)
+    ax.grid(True, linestyle=":", alpha=0.5)
+    fig.tight_layout()
+    return fig
+
+
+# Status color mapping (zielony/żółty/czerwony, plus text-friendly symbols).
+STATUS_COLOR = {
+    "OK": "#27AE60",
+    "WARN": "#F39C12",
+    "VIOLATION": "#E74C3C",
+    "ZGODNY": "#27AE60",
+    "OSTRZEZENIE": "#F39C12",
+    "NIEZGODNY": "#E74C3C",
+    "NIEWERYFIKOWANY": "#95A5A6",
+}
+
+STATUS_SYMBOL = {
+    "OK": "+",
+    "WARN": "!",
+    "VIOLATION": "X",
+    "ZGODNY": "+",
+    "OSTRZEZENIE": "!",
+    "NIEZGODNY": "X",
+    "NIEWERYFIKOWANY": "?",
+}
+
+
+def indicators_bar_chart(rd: ReportData) -> Figure:
+    """Horizontal bar chart: designed vs limit for WZ, WIZ, PBC.
+
+    Page 5 of the report. Each row shows a colored bar (length = designed
+    fraction of limit, capped at 1.0) plus the status icon and a numeric label.
+    """
+    fig, ax = plt.subplots(figsize=(A4_WIDTH_IN, 3.5))
+    rows = rd.indicators or []
+
+    if not rows:
+        ax.text(0.5, 0.5, "Brak wskaźników", ha="center", va="center",
+                transform=ax.transAxes, fontsize=12, color="gray")
+        ax.set_axis_off()
+        fig.tight_layout()
+        return fig
+
+    y_positions = list(range(len(rows)))
+    fractions = [
+        (row.designed / row.limit if row.limit > 0 else 0.0)
+        for row in rows
+    ]
+    colors = [STATUS_COLOR.get(row.status, "#888") for row in rows]
+
+    ax.barh(y_positions, fractions, color=colors, alpha=0.75, edgecolor="black")
+    ax.axvline(x=1.0, color="red", linestyle="--", linewidth=1, label="Limit")
+    ax.axvline(x=1.05, color="orange", linestyle=":", linewidth=1, label="Limit + 5% (Q14)")
+
+    # Labels
+    ax.set_yticks(y_positions)
+    ax.set_yticklabels([row.name for row in rows])
+    ax.invert_yaxis()
+    ax.set_xlim(0, 1.20)
+    ax.set_xlabel("Designed ÷ Limit")
+
+    for i, row in enumerate(rows):
+        symbol = STATUS_SYMBOL.get(row.status, "?")
+        label = f"{row.designed:.2f}{row.unit} / {row.limit:.2f}{row.unit}  [{symbol}]"
+        ax.text(1.21, i, label, va="center", fontsize=9)
+
+    ax.set_title("Wskaźniki MPZP — designed vs limit", fontsize=11)
+    ax.legend(loc="lower right", fontsize=8)
+    ax.grid(axis="x", linestyle=":", alpha=0.4)
+    fig.tight_layout()
+    return fig
+
+
+def variants_grid_figure(rd: ReportData) -> Figure:
+    """3-up grid showing each buildup variant with the plot polygon as context.
+
+    Page 7 of the report. Each panel = one variant. Shows:
+      - The plot polygon (light gray, faded) as ground reference
+      - The buildable zone (green dashed outline)
+      - A building rectangle scaled to the variant's footprint, placed near
+        the centroid of the buildable zone (visual approximation; real shape
+        comes from the site planner in Stage 1)
+      - Title with variant letter + headline numbers (WZ, footprint, units)
+    """
+    variants = rd.buildup_variants or []
+    n = max(1, len(variants))
+    fig, axes = plt.subplots(1, n, figsize=(A4_WIDTH_IN, 3.8), squeeze=False)
+    axes = axes.flatten()
+
+    plot_poly = wkt.loads(rd.plot_polygon_wkt) if rd.plot_polygon_wkt else None
+    bz_poly = wkt.loads(rd.buildable_polygon_wkt) if rd.buildable_polygon_wkt else None
+
+    for i, variant in enumerate(variants):
+        ax = axes[i]
+
+        # 1. Plot polygon as faded context
+        if plot_poly is not None:
+            xs, ys = plot_poly.exterior.xy
+            ax.fill(xs, ys, color="#F5F5F5", edgecolor="#666", linewidth=0.8)
+
+        # 2. Buildable zone as green dashed outline
+        if bz_poly is not None:
+            bxs, bys = bz_poly.exterior.xy
+            ax.plot(bxs, bys, color="#2E7D32", linewidth=0.8, linestyle="--", alpha=0.6)
+
+        # 3. Building rectangle, scaled to footprint, placed at buildable centroid
+        if bz_poly is not None:
+            cx, cy = bz_poly.centroid.x, bz_poly.centroid.y
+            minx, miny, maxx, maxy = bz_poly.bounds
+            zone_w = maxx - minx
+            zone_h = maxy - miny
+            # Building aspect: try to match zone aspect, but cap to fit
+            target_aspect = zone_w / zone_h if zone_h > 0 else 1.0
+            # Solve: w*h = footprint, w/h = target_aspect → w = sqrt(footprint*aspect)
+            bw = (variant.footprint_area_m2 * target_aspect) ** 0.5
+            bh = variant.footprint_area_m2 / bw if bw > 0 else 0
+            # Cap to fit inside zone (with margin)
+            margin = 1.0
+            bw = min(bw, zone_w - 2 * margin)
+            bh = min(bh, zone_h - 2 * margin)
+            ax.add_patch(mpatches.Rectangle(
+                (cx - bw / 2, cy - bh / 2), bw, bh,
+                facecolor="#1976D2", edgecolor="black", alpha=0.85,
+            ))
+        else:
+            # Fallback: bare rectangle
+            side = variant.footprint_area_m2 ** 0.5
+            ax.add_patch(mpatches.Rectangle((0, 0), side, side,
+                                              facecolor="#1976D2", edgecolor="black"))
+            ax.set_xlim(-2, side + 2)
+            ax.set_ylim(-2, side + 2)
+
+        if plot_poly is not None:
+            pminx, pminy, pmaxx, pmaxy = plot_poly.bounds
+            pad = max(pmaxx - pminx, pmaxy - pminy) * 0.05
+            ax.set_xlim(pminx - pad, pmaxx + pad)
+            ax.set_ylim(pminy - pad, pmaxy + pad)
+
+        ax.set_aspect("equal")
+        letter = chr(ord("A") + variant.number - 1)
+        ax.set_title(f"Wariant {letter}\n{variant.description.split('—')[-1].strip() if '—' in variant.description else variant.description}",
+                       fontsize=9)
+        # Headline numbers under the panel
+        unit_word = "mieszk." if variant.estimated_units != 1 else "mieszk."
+        ax.text(
+            0.5, -0.12,
+            f"Footprint: {variant.footprint_area_m2:.0f} m²   |   PUM: {variant.pum_m2:.0f} m²\n"
+            f"WZ {variant.wz:.2f}   WIZ {variant.wiz:.2f}   PBC {variant.pbc_percent:.0f}%\n"
+            f"{variant.num_storeys} kond. ({variant.height_m:.1f} m)   |   ~{variant.estimated_units} {unit_word}",
+            transform=ax.transAxes, ha="center", va="top", fontsize=8,
+            family="DejaVu Sans",
+        )
+        ax.set_xticks([])
+        ax.set_yticks([])
+
+    for j in range(len(variants), n):
+        axes[j].set_axis_off()
+
+    fig.suptitle("Warianty zabudowy — propozycje z analizy MPZP", fontsize=11)
+    fig.tight_layout(rect=(0, 0.18, 1, 0.95))
+    return fig
