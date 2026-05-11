@@ -143,3 +143,64 @@ def estimate_units(
     if avg_apartment_m2 <= 0:
         raise ValueError(f"avg_apartment_m2 must be positive, got {avg_apartment_m2}")
     return int(pum_m2 // avg_apartment_m2)
+
+
+def compute_hash(rd: ReportData) -> str:
+    """Compute deterministic 16-hex-char hash of input data (excludes timestamp).
+
+    Used in PDF metadata so the architect can prove the report corresponds to
+    a specific plot + MPZP parameter set, regardless of when it was generated.
+    """
+    payload = {
+        "plot_id": rd.plot_id,
+        "plot_address": rd.plot_address,
+        "plot_area_m2": rd.plot_area_m2,
+        "plot_polygon_wkt": rd.plot_polygon_wkt,
+        "mpzp": asdict(rd.mpzp_summary),
+        "setbacks": asdict(rd.setbacks),
+        "indicators": [asdict(i) for i in rd.indicators],
+        "verification": [asdict(v) for v in rd.verification_results],
+        "variants": [asdict(v) for v in rd.buildup_variants],
+        "pack_version": rd.pack_version,
+        # generated_at NOT included — same data, different time = same hash
+    }
+    serialized = json.dumps(payload, sort_keys=True, default=str)
+    digest = hashlib.sha256(serialized.encode("utf-8")).hexdigest()
+    return digest[:16]
+
+
+GLOSSARY: Dict[str, str] = {
+    "MPZP": (
+        "Miejscowy Plan Zagospodarowania Przestrzennego — uchwała rady gminy "
+        "określająca przeznaczenie terenu i zasady jego zabudowy."
+    ),
+    "WZ": (
+        "Wskaźnik powierzchni Zabudowy. Stosunek powierzchni zabudowanej "
+        "(rzut budynku na grunt) do powierzchni działki. Im wyższy, tym więcej "
+        "ziemi pokryte budynkiem."
+    ),
+    "WIZ": (
+        "Wskaźnik Intensywności Zabudowy. Stosunek sumy powierzchni wszystkich "
+        "kondygnacji nadziemnych do powierzchni działki. WIZ 0.45 = 45% "
+        "powierzchni działki sumarycznie w kondygnacjach."
+    ),
+    "PBC": (
+        "Powierzchnia Biologicznie Czynna. Minimalny udział terenu pokrytego "
+        "trawą, krzewami, drzewami lub przepuszczalną nawierzchnią — typowo "
+        "30-40% działki w MN."
+    ),
+    "PUM": (
+        "Powierzchnia Użytkowa Mieszkaniowa. Suma powierzchni użytkowych "
+        "wszystkich mieszkań — bez ścian, klatek, korytarzy ogólnych."
+    ),
+    "linia zabudowy": (
+        "Linia (wyznaczona w MPZP) określająca minimalną odległość elewacji "
+        "budynku od granicy działki — typowo 6 m od drogi."
+    ),
+    "MN": "Zabudowa mieszkaniowa jednorodzinna.",
+    "MW": "Zabudowa mieszkaniowa wielorodzinna.",
+    "Klasa wysokości": (
+        "Klasyfikacja WT: N (do 12 m), SW (12-25 m), W (25-55 m), WW (>55 m). "
+        "Wpływa na wymagania ewakuacyjne, windy, klatki schodowe."
+    ),
+}

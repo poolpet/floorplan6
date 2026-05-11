@@ -63,3 +63,42 @@ class TestEstimateUnits:
         from core.report_data import estimate_units
         with pytest.raises(ValueError, match="non-negative"):
             estimate_units(pum_m2=-10.0)
+
+
+class TestComputeHash:
+    def test_hash_deterministic(self):
+        from core.report_data import ReportData, compute_hash
+        rd = ReportData(plot_id="dz. 1234", plot_address="x", plot_area_m2=100.0)
+        h1 = compute_hash(rd)
+        h2 = compute_hash(rd)
+        assert h1 == h2
+        assert len(h1) == 16  # short hex prefix
+
+    def test_hash_changes_with_plot_id(self):
+        from core.report_data import ReportData, compute_hash
+        rd1 = ReportData(plot_id="dz. 1234", plot_address="x", plot_area_m2=100.0)
+        rd2 = ReportData(plot_id="dz. 5678", plot_address="x", plot_area_m2=100.0)
+        assert compute_hash(rd1) != compute_hash(rd2)
+
+    def test_hash_ignores_generated_at(self):
+        """Same input data + different timestamp = same hash."""
+        from datetime import datetime
+        from core.report_data import ReportData, compute_hash
+        rd1 = ReportData(plot_id="x", plot_address="x", plot_area_m2=100.0,
+                          generated_at=datetime(2026, 1, 1))
+        rd2 = ReportData(plot_id="x", plot_address="x", plot_area_m2=100.0,
+                          generated_at=datetime(2026, 12, 31))
+        assert compute_hash(rd1) == compute_hash(rd2)
+
+
+class TestGlossary:
+    def test_glossary_has_required_terms(self):
+        from core.report_data import GLOSSARY
+        required = {"WZ", "WIZ", "PBC", "MPZP", "linia zabudowy", "PUM"}
+        assert required.issubset(GLOSSARY.keys()), \
+            f"Missing terms: {required - set(GLOSSARY.keys())}"
+
+    def test_glossary_entries_are_non_empty(self):
+        from core.report_data import GLOSSARY
+        for term, definition in GLOSSARY.items():
+            assert definition.strip(), f"Empty definition for term: {term}"
