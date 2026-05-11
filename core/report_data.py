@@ -117,3 +117,29 @@ class ReportData:
 
     # === Computed at render time ===
     data_hash: str = ""                     # set by compute_hash()
+
+
+def estimate_units(
+    pum_m2: float,
+    avg_apartment_m2: float = DEFAULT_AVG_APARTMENT_M2,
+) -> int:
+    """Estimate number of apartments fitting in usable area.
+
+    PUM (Powierzchnia Użytkowa Mieszkaniowa) divided by typical apartment size.
+    Floor division — partial apartments do not count.
+
+    Args:
+        pum_m2: Total usable area in m².
+        avg_apartment_m2: Average apartment size (m²). Default 55 m² ≈ PL M3 standard.
+
+    Returns:
+        Estimated whole apartments. Always non-negative integer.
+
+    Raises:
+        ValueError: if pum_m2 is negative.
+    """
+    if pum_m2 < 0:
+        raise ValueError(f"pum_m2 must be non-negative, got {pum_m2}")
+    if avg_apartment_m2 <= 0:
+        raise ValueError(f"avg_apartment_m2 must be positive, got {avg_apartment_m2}")
+    return int(pum_m2 // avg_apartment_m2)
