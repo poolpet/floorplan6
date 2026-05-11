@@ -382,3 +382,32 @@ def generate_pdf(rd: ReportData, output_path: Path) -> Path:
 
     doc.build(flowables)
     return output_path
+
+
+def _cli() -> int:
+    """CLI entry point. Usage:
+        python -m core.report_pdf --fixture sample --out /tmp/report.pdf
+    """
+    import argparse
+    parser = argparse.ArgumentParser(description="Generate FloorPlan6 feasibility PDF report")
+    parser.add_argument("--fixture", choices=["sample"], default="sample",
+                          help="Use built-in fixture data (sample only for now).")
+    parser.add_argument("--out", required=True, type=Path,
+                          help="Output PDF path.")
+    args = parser.parse_args()
+
+    if args.fixture == "sample":
+        from tests.fixtures.sample_report import make_sample_report
+        rd = make_sample_report()
+    else:
+        print(f"Unknown fixture: {args.fixture}")
+        return 2
+
+    generate_pdf(rd, args.out)
+    print(f"Generated: {args.out} ({args.out.stat().st_size} bytes)")
+    return 0
+
+
+if __name__ == "__main__":
+    import sys
+    sys.exit(_cli())

@@ -74,3 +74,18 @@ class TestPDFGeneration:
         metadata_text = reader.pages[8].extract_text()
         assert rd.data_hash in metadata_text
         assert "disclaimer" in metadata_text.lower() or "informacyjny" in metadata_text.lower()
+
+
+class TestCLI:
+    def test_cli_generates_sample(self, tmp_path, monkeypatch):
+        """Running `python -m core.report_pdf --fixture sample --out X` works."""
+        import subprocess
+        out = tmp_path / "cli_sample.pdf"
+        result = subprocess.run(
+            ["python3", "-m", "core.report_pdf", "--fixture", "sample", "--out", str(out)],
+            cwd=Path(__file__).resolve().parent.parent,
+            capture_output=True, text=True,
+        )
+        assert result.returncode == 0, f"stderr: {result.stderr}"
+        assert out.is_file()
+        assert out.stat().st_size > 20000  # at least 20 KB for 9 pages
