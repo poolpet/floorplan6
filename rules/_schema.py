@@ -108,6 +108,7 @@ class PackConstants(BaseModel):
     wt_stair_step_height_max: float
     wt_stair_blondel: float
     wt_stair_step_width_min: float
+    wt_stair_gap_biegs: float
 
     # Elevator
     wt_elevator_height_threshold: float
@@ -115,6 +116,7 @@ class PackConstants(BaseModel):
     wt_elevator_shaft_l: float
     wt_elevator_fire_w: float
     wt_elevator_fire_l: float
+    wt_elevator_wall_gap: float
 
     # Wall thicknesses
     wall_thickness_structural: float

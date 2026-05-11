@@ -93,6 +93,7 @@ wt_stair_spocznik_width: 1.2
 wt_stair_step_height_max: 0.16
 wt_stair_blondel: 0.63
 wt_stair_step_width_min: 0.25
+wt_stair_gap_biegs: 0.10
 
 # === Elevator ===
 wt_elevator_height_threshold: 9.5
@@ -100,6 +101,7 @@ wt_elevator_shaft_w: 1.5
 wt_elevator_shaft_l: 1.7
 wt_elevator_fire_w: 2.0
 wt_elevator_fire_l: 2.4
+wt_elevator_wall_gap: 0.20
 
 # === Wall thicknesses ===
 wall_thickness_structural: 0.24
