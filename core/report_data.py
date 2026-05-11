@@ -64,8 +64,17 @@ class VariantInfo:
     wz: float
     wiz: float
     pbc_percent: float
-    estimated_units: int      # PUM ÷ DEFAULT_AVG_APARTMENT_M2
-    description: str = ""
+    estimated_units: int            # PUM ÷ DEFAULT_AVG_APARTMENT_M2 (apartments OR houses)
+    description: str = ""           # short label, e.g. "Wariant A — kompaktowy"
+
+    # === Detailed metrics (added in Phase 2 polish) ===
+    pum_m2: float = 0.0             # Powierzchnia Użytkowa Mieszkaniowa (footprint × storeys × usable_factor)
+    num_storeys: int = 1            # liczba kondygnacji nadziemnych
+    height_m: float = 0.0           # szacunkowa wysokość budynku [m]
+    wz_headroom_percent: float = 0.0  # ile % poniżej WZ max — rezerwa
+    pbc_headroom_percent: float = 0.0 # ile p.p. powyżej PBC min — rezerwa
+    parking_spaces: int = 0         # zaprojektowane miejsca postojowe
+    long_description: str = ""      # 2-3 zdania charakteryzujące wariant
 
 
 @dataclass

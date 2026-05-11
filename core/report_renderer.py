@@ -133,39 +133,90 @@ def indicators_bar_chart(rd: ReportData) -> Figure:
 
 
 def variants_grid_figure(rd: ReportData) -> Figure:
-    """3-up grid showing each buildup variant with WZ + units estimate.
+    """3-up grid showing each buildup variant with the plot polygon as context.
 
-    Page 7 of the report. Each panel = one variant. Shows polygon shape,
-    footprint area, WZ, and estimated apartment count.
+    Page 7 of the report. Each panel = one variant. Shows:
+      - The plot polygon (light gray, faded) as ground reference
+      - The buildable zone (green dashed outline)
+      - A building rectangle scaled to the variant's footprint, placed near
+        the centroid of the buildable zone (visual approximation; real shape
+        comes from the site planner in Stage 1)
+      - Title with variant letter + headline numbers (WZ, footprint, units)
     """
     variants = rd.buildup_variants or []
     n = max(1, len(variants))
-    fig, axes = plt.subplots(1, n, figsize=(A4_WIDTH_IN, 3.5), squeeze=False)
+    fig, axes = plt.subplots(1, n, figsize=(A4_WIDTH_IN, 3.8), squeeze=False)
     axes = axes.flatten()
+
+    plot_poly = wkt.loads(rd.plot_polygon_wkt) if rd.plot_polygon_wkt else None
+    bz_poly = wkt.loads(rd.buildable_polygon_wkt) if rd.buildable_polygon_wkt else None
 
     for i, variant in enumerate(variants):
         ax = axes[i]
-        # Simple placeholder: draw a rectangle proportional to footprint area.
-        # If we have an actual polygon WKT per variant in future, render that.
-        side = (variant.footprint_area_m2) ** 0.5
-        ax.add_patch(mpatches.Rectangle((0, 0), side, side,
-                                          facecolor="#90CAF9", edgecolor="black"))
-        ax.set_xlim(-5, side + 5)
-        ax.set_ylim(-5, side + 5)
+
+        # 1. Plot polygon as faded context
+        if plot_poly is not None:
+            xs, ys = plot_poly.exterior.xy
+            ax.fill(xs, ys, color="#F5F5F5", edgecolor="#666", linewidth=0.8)
+
+        # 2. Buildable zone as green dashed outline
+        if bz_poly is not None:
+            bxs, bys = bz_poly.exterior.xy
+            ax.plot(bxs, bys, color="#2E7D32", linewidth=0.8, linestyle="--", alpha=0.6)
+
+        # 3. Building rectangle, scaled to footprint, placed at buildable centroid
+        if bz_poly is not None:
+            cx, cy = bz_poly.centroid.x, bz_poly.centroid.y
+            minx, miny, maxx, maxy = bz_poly.bounds
+            zone_w = maxx - minx
+            zone_h = maxy - miny
+            # Building aspect: try to match zone aspect, but cap to fit
+            target_aspect = zone_w / zone_h if zone_h > 0 else 1.0
+            # Solve: w*h = footprint, w/h = target_aspect → w = sqrt(footprint*aspect)
+            bw = (variant.footprint_area_m2 * target_aspect) ** 0.5
+            bh = variant.footprint_area_m2 / bw if bw > 0 else 0
+            # Cap to fit inside zone (with margin)
+            margin = 1.0
+            bw = min(bw, zone_w - 2 * margin)
+            bh = min(bh, zone_h - 2 * margin)
+            ax.add_patch(mpatches.Rectangle(
+                (cx - bw / 2, cy - bh / 2), bw, bh,
+                facecolor="#1976D2", edgecolor="black", alpha=0.85,
+            ))
+        else:
+            # Fallback: bare rectangle
+            side = variant.footprint_area_m2 ** 0.5
+            ax.add_patch(mpatches.Rectangle((0, 0), side, side,
+                                              facecolor="#1976D2", edgecolor="black"))
+            ax.set_xlim(-2, side + 2)
+            ax.set_ylim(-2, side + 2)
+
+        if plot_poly is not None:
+            pminx, pminy, pmaxx, pmaxy = plot_poly.bounds
+            pad = max(pmaxx - pminx, pmaxy - pminy) * 0.05
+            ax.set_xlim(pminx - pad, pmaxx + pad)
+            ax.set_ylim(pminy - pad, pmaxy + pad)
+
         ax.set_aspect("equal")
-        ax.set_title(f"Wariant {chr(ord('A') + variant.number - 1)}", fontsize=10)
-        ax.text(0.5, -0.15,
-                f"{variant.footprint_area_m2:.0f} m²\n"
-                f"WZ {variant.wz:.2f}\n"
-                f"~{variant.estimated_units} mieszkań",
-                transform=ax.transAxes, ha="center", va="top", fontsize=9)
+        letter = chr(ord("A") + variant.number - 1)
+        ax.set_title(f"Wariant {letter}\n{variant.description.split('—')[-1].strip() if '—' in variant.description else variant.description}",
+                       fontsize=9)
+        # Headline numbers under the panel
+        unit_word = "mieszk." if variant.estimated_units != 1 else "mieszk."
+        ax.text(
+            0.5, -0.12,
+            f"Footprint: {variant.footprint_area_m2:.0f} m²   |   PUM: {variant.pum_m2:.0f} m²\n"
+            f"WZ {variant.wz:.2f}   WIZ {variant.wiz:.2f}   PBC {variant.pbc_percent:.0f}%\n"
+            f"{variant.num_storeys} kond. ({variant.height_m:.1f} m)   |   ~{variant.estimated_units} {unit_word}",
+            transform=ax.transAxes, ha="center", va="top", fontsize=8,
+            family="DejaVu Sans",
+        )
         ax.set_xticks([])
         ax.set_yticks([])
 
-    # Hide unused panels
     for j in range(len(variants), n):
         axes[j].set_axis_off()
 
-    fig.suptitle("Warianty zabudowy + szacunek liczby mieszkań", fontsize=11)
-    fig.tight_layout(rect=(0, 0.1, 1, 0.95))
+    fig.suptitle("Warianty zabudowy — propozycje z analizy MPZP", fontsize=11)
+    fig.tight_layout(rect=(0, 0.18, 1, 0.95))
     return fig

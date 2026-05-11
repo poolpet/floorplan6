@@ -280,16 +280,76 @@ def compliance_page(rd: ReportData) -> List:
 
 
 def variants_page(rd: ReportData) -> List:
-    """Page 7: 3-up variants grid + estimated units."""
+    """Page 7: 3-up variants grid + 3-column comparison table + per-variant
+    narrative. Compact layout to fit on a single A4 page."""
     from core.report_renderer import variants_grid_figure
     flowables: List = []
     flowables.append(Paragraph("Warianty zabudowy + potencjalne mieszkania", H1_STYLE))
+
+    # Top: visual 3-up grid (plot context + building scale)
     fig = variants_grid_figure(rd)
-    flowables.append(_figure_to_image(fig))
-    flowables.append(Spacer(1, 4 * mm))
+    flowables.append(_figure_to_image(fig, max_width_cm=17.0))
+    flowables.append(Spacer(1, 2 * mm))
+
+    # Compact 3-column comparison: rows = metrics, columns = variants
+    variants = rd.buildup_variants or []
+    letters = [chr(ord("A") + v.number - 1) for v in variants]
+    header = ["Parametr"] + [f"Wariant {l}" for l in letters]
+    metric_rows = [header]
+
+    def fmt(v, attr, suffix=""):
+        val = getattr(v, attr)
+        if isinstance(val, float):
+            return f"{val:.0f}{suffix}" if val >= 10 else f"{val:.2f}{suffix}"
+        return f"{val}{suffix}"
+
+    metric_rows.append(["Powierzchnia zabudowy"] + [f"{v.footprint_area_m2:.0f} m²" for v in variants])
+    metric_rows.append(["Powierzchnia użytkowa (PUM)"] + [f"{v.pum_m2:.0f} m²" for v in variants])
+    metric_rows.append(["Wskaźnik zabudowy (WZ)"] + [f"{v.wz:.3f}" for v in variants])
+    metric_rows.append(["Wskaźnik intensywności (WIZ)"] + [f"{v.wiz:.3f}" for v in variants])
+    metric_rows.append(["Powierzchnia bio-czynna (PBC)"] + [f"{v.pbc_percent:.0f}%" for v in variants])
+    metric_rows.append(["Rezerwa WZ"] + [f"{v.wz_headroom_percent:.0f}%" for v in variants])
+    metric_rows.append(["Liczba kondygnacji"] + [f"{v.num_storeys}" for v in variants])
+    metric_rows.append(["Wysokość budynku"] + [f"{v.height_m:.1f} m" for v in variants])
+    metric_rows.append(["Potencjalne mieszkania"] + [f"~{v.estimated_units}" for v in variants])
+    metric_rows.append(["Miejsca postojowe"] + [f"{v.parking_spaces}" for v in variants])
+
+    n_cols = 1 + len(variants)
+    col_widths = [5.5 * cm] + [(11.5 / len(variants)) * cm for _ in variants]
+    t = Table(metric_rows, colWidths=col_widths)
+    t.setStyle(TableStyle([
+        ("FONTNAME", (0, 0), (-1, -1), _UNICODE_FONT),
+        ("FONTNAME", (0, 0), (-1, 0), _UNICODE_FONT_BOLD),
+        ("FONTNAME", (0, 0), (0, -1), _UNICODE_FONT_BOLD),
+        ("FONTSIZE", (0, 0), (-1, -1), 8),
+        ("GRID", (0, 0), (-1, -1), 0.3, colors.grey),
+        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#E0E0E0")),
+        ("BACKGROUND", (0, 1), (0, -1), colors.HexColor("#F0F0F0")),
+        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+        ("ALIGN", (1, 1), (-1, -1), "CENTER"),
+        ("LEFTPADDING", (0, 0), (-1, -1), 4),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 4),
+        ("TOPPADDING", (0, 0), (-1, -1), 2),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 2),
+    ]))
+    flowables.append(t)
+    flowables.append(Spacer(1, 3 * mm))
+
+    # Per-variant narrative (compact, 1-2 lines each)
+    for v in variants:
+        letter = chr(ord("A") + v.number - 1)
+        if v.long_description:
+            flowables.append(Paragraph(
+                f"<b>Wariant {letter}:</b> <i>{v.long_description}</i>",
+                SMALL_STYLE,
+            ))
+            flowables.append(Spacer(1, 1 * mm))
+
+    flowables.append(Spacer(1, 1 * mm))
     flowables.append(Paragraph(
-        "<i>Szacunek liczby mieszkań</i> = PUM / 55 m² (średnia M3, PL standard). "
-        "Realna liczba zależy od konkretnego rozkładu w Stage 4.",
+        "<i>Potencjalne mieszkania</i> = PUM / 55 m² (średnia M3, PL standard). "
+        "Realna liczba zależy od rozkładu pokoi w Stage 4. "
+        "<i>Rezerwa WZ</i> — ile % poniżej limitu MPZP — bufor na korekty projektowe.",
         SMALL_STYLE,
     ))
     flowables.append(PageBreak())

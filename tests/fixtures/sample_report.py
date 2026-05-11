@@ -206,15 +206,72 @@ def make_sample_report() -> ReportData:
         ],
         verification_results=_full_wt_compliance_rows(),
         buildup_variants=[
-            VariantInfo(number=1, footprint_area_m2=245.0, wz=0.196, wiz=0.30,
-                        pbc_percent=48.0, estimated_units=2,
-                        description="Wariant A — kompaktowy, 1 kondygnacja + poddasze"),
-            VariantInfo(number=2, footprint_area_m2=320.0, wz=0.257, wiz=0.39,
-                        pbc_percent=41.0, estimated_units=3,
-                        description="Wariant B — średni, 2 kondygnacje"),
-            VariantInfo(number=3, footprint_area_m2=374.0, wz=0.30, wiz=0.45,
-                        pbc_percent=35.0, estimated_units=4,
-                        description="Wariant C — maksymalny WZ, 2 kondygnacje + użytkowe poddasze"),
+            VariantInfo(
+                number=1,
+                footprint_area_m2=245.0,
+                wz=0.196,
+                wiz=0.30,
+                pbc_percent=48.0,
+                estimated_units=2,
+                description="Wariant A — kompaktowy",
+                pum_m2=312.0,
+                num_storeys=1,
+                height_m=4.5,
+                wz_headroom_percent=34.7,
+                pbc_headroom_percent=13.0,
+                parking_spaces=2,
+                long_description=(
+                    "Niski budynek parterowy z poddaszem użytkowym, lokalizowany "
+                    "w głębi działki. Maksymalna rezerwa terenów zielonych "
+                    "(48% bio-czynnej) i dużo miejsca na ogród. Polecany przy "
+                    "wymogu wysokiej PBC lub przy zabudowie szeregowo-bliźniaczej "
+                    "w MPZP."
+                ),
+            ),
+            VariantInfo(
+                number=2,
+                footprint_area_m2=320.0,
+                wz=0.257,
+                wiz=0.39,
+                pbc_percent=41.0,
+                estimated_units=3,
+                description="Wariant B — średni",
+                pum_m2=485.0,
+                num_storeys=2,
+                height_m=7.5,
+                wz_headroom_percent=14.3,
+                pbc_headroom_percent=6.0,
+                parking_spaces=3,
+                long_description=(
+                    "Dwukondygnacyjna bryła z dachem dwuspadowym. Balans między "
+                    "powierzchnią użytkową a terenami zielonymi. Pozwala na "
+                    "komfortowy dom jednorodzinny z osobnym wejściem dla najemcy "
+                    "lub niewielki dom + budynek gospodarczy. Najlepszy stosunek "
+                    "ceny do powierzchni mieszkalnej."
+                ),
+            ),
+            VariantInfo(
+                number=3,
+                footprint_area_m2=374.0,
+                wz=0.30,
+                wiz=0.45,
+                pbc_percent=35.0,
+                estimated_units=4,
+                description="Wariant C — maksymalny WZ",
+                pum_m2=648.0,
+                num_storeys=2,
+                height_m=9.5,
+                wz_headroom_percent=0.0,
+                pbc_headroom_percent=0.0,
+                parking_spaces=4,
+                long_description=(
+                    "Maksymalne wykorzystanie MPZP — dwie pełne kondygnacje + "
+                    "poddasze użytkowe. Idealny pod budynek bliźniaczy lub "
+                    "wielorodzinny niski (do 4 mieszkań). Brak rezerwy na "
+                    "ewentualne błędy projektowe — wskaźniki na granicy limitu, "
+                    "wymaga starannego kosztorysu wykonawczego."
+                ),
+            ),
         ],
         generated_at=datetime(2026, 5, 11, 12, 0, 0),
         pack_version="PL/1.0",

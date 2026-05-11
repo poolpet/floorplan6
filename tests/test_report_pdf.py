@@ -68,12 +68,16 @@ class TestPDFGeneration:
         generate_pdf(rd, out)
         reader = PdfReader(out)
         assert len(reader.pages) >= 9
-        glossary_text = reader.pages[7].extract_text()
-        assert "MPZP" in glossary_text
-        assert "WZ" in glossary_text
-        metadata_text = reader.pages[8].extract_text()
-        assert rd.data_hash in metadata_text
-        assert "disclaimer" in metadata_text.lower() or "informacyjny" in metadata_text.lower()
+        # Locate by content (page index may shift as variants/etc. grow).
+        all_text = [p.extract_text() for p in reader.pages]
+        glossary = next(
+            (t for t in all_text if "Słowniczek" in t and "MPZP" in t and "WZ" in t),
+            None,
+        )
+        assert glossary is not None, "Glossary page not found"
+        metadata = next((t for t in all_text if rd.data_hash in t), None)
+        assert metadata is not None, "Metadata page (with hash) not found"
+        assert "disclaimer" in metadata.lower() or "informacyjny" in metadata.lower()
 
     def test_pdf_with_logo(self, tmp_path):
         from core.report_pdf import generate_pdf
