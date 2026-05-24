@@ -53,6 +53,9 @@ data/stats_cache.json
 # Local Claude Code state
 .claude/
 
+# Superpowers brainstorm mockups (local only)
+.superpowers/
+
 # Notebook outputs (PNG renders kept out of repo)
 notebooks/output/
 

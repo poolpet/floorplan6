@@ -139,7 +139,42 @@ rewrite). Old modules removed:
 **Tests:** 196 passed (172 Phase 1 baseline + 27 new Phase 2 tests; 31 skipped, 1 xpassed).
 **Deliverable:** `python -m core.report_pdf --fixture sample --out X.pdf` produces 9-page ~165KB PDF.
 **Known issue:** macOS-only Polish font (Arial Unicode TTF path). Cross-platform handling deferred to Phase 3.
-**Next:** Phase 3 — UI integration (Stage1ReportDialog) + multi-persona views + macOS CI.
+
+---
+
+### Stage 1 — Phase 3 (UI Integration) — PLAN READY 2026-05-14, NOT IMPLEMENTED
+
+**Scope decisions (z brainstormingu):**
+- Phase 3 zwężone do samego Stage1ReportDialog. Multi-persona views → Phase 3.1. macOS CI → Phase 3.2.
+- Tylko Mode A (Mode B report — Phase 4).
+- Trigger: osobny przycisk "Eksport PDF" pod Generate (disabled aż Mode A zwróci wynik).
+- Sync generation z busy state (Qt.WaitCursor + processEvents).
+- `QFileDialog` z prefilled filename `Raport_<plot_id>_<YYYY-MM-DD>.pdf`.
+- Pre-save mały dialog "Dane raportu" zbierający `plot_id` / `plot_address` / optional `logo_path` (QSettings persistence).
+
+**Doprecyzowania z sesji 2026-05-14:**
+- `variants=[]` → `ValueError` (szybki fail, nie graceful).
+- QApplication test fixture: ręczny session-scoped w `tests/conftest.py` (bez `pytest-qt`).
+- QSettings test isolation: `IniFormat` + `setPath` na `tmp_path` (`isolated_qsettings` fixture).
+- Filename sanitization: jednolinijka regex inline, manual smoke wystarczy.
+- `VariantInfo.long_description` = reuse `BuildupVariant.description` (krótkie opisy do Phase 4).
+- `SetbackInfo`: front=`mpzp.setback_from_road`, side/rear=`BOUNDARY_SETBACK[SASIAD_NIEZABUDOWANY][0]`.
+
+**Spec self-review 2026-05-14 — 8 niespójności naprawionych:**
+- `MPZPSummary` field names: `max_wz/max_wiz/min_pbc_percent` → `wz_max/wiz_max/pbc_min_percent`
+- `PlotIndicators` fields: `.wz/.wiz/.pbc_percent` → `.wz_designed/.wiz_designed/.pbc_percent`
+- `ReportData.cover.logo_path` → `.logo_path` (top-level)
+- `datetime.now()` vs `date.today()` → ujednolicone
+- "Cancel returns None" wording → `dlg.exec_() == Rejected`, no `get_metadata()` call
+- `pbc_headroom_percent` musi być policzony przez adapter (brak w `BuildupVariant`)
+- PUM source: `main_building.footprint_area × .floors × USABLE_AREA_FACTOR`
+- `VerificationResult.name` → `ComplianceRow.rule_name` (field rename)
+
+**Spec:** `docs/superpowers/specs/2026-05-13-stage1-phase3-ui-integration-design.md` (READY — sekcje 1-5 zatwierdzone, self-review pass zamknięty).
+**Plan:** `docs/superpowers/plans/2026-05-14-stage1-phase3-ui-integration.md` (19 tasków TDD: 1 conftest + 8 builder + 5 dialog + 4 window + 1 manual smoke).
+**Status implementacji:** ⏸️ NIE rozpoczęta. Plan napisany, ale execution nie odpalony.
+**Pytest baseline (2026-05-14):** 198 passed, 29 skipped, 1 xpassed (Session 9 + Phase 2 wszystko green — gotowe do commit'u jako baseline w następnej sesji).
+**Next:** ustalić branch strategy → commit Session 9 modules + Phase 3 docs jako baseline na main → `git checkout -b feature/stage1-phase3-ui-integration` → odpalić `superpowers:subagent-driven-development` na plan.
 
 ---
 

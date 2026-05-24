@@ -15,6 +15,7 @@
 | FloorPlan4 (Python) | `claude code/FloorPlan4/` | Abandoned 2026-04-26 | Python 3.10 OR-Tools CP-SAT + Shapely | **36/36 tests pass, 27 parameterised plans with adjacency graph** |
 | FloorPlan4_CPP | `claude code/FloorPlan4_CPP/` | **Retained as UI/AC bridge reference** | C++20 OR-Tools + ACAPI | Stage 3 Floor mode works, Stage 1 MPZP analyser numerically works, **bathroom 13 m² and Plot Subdivider buggy — abandoned** |
 | FloorPlan5 | `claude code/FloorPlan5/` | Documentation only | — | Strategy + rules (consolidated here) |
+| archicad-checker | `claude code/archicad-checker/` | External codebase, MIT | Python 3.9+ Shapely + PyQt5 | **Stage 1 foundation candidate (audit 2026-05-07):** `zone_builder.py`, `verifier.py` (WT 2002 — 19 rules), `models/plot.py`, `rules/*.json`. Whole-plot analysis (Mode A) ready 1:1; subdivision (Mode B) needs net-new algorithm. |
 | **FloorPlan6** | `claude code/FloorPlan6/` | **Active** | Python 3.10 OR-Tools + Shapely + matplotlib | This repo |
 
 ---

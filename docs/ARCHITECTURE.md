@@ -12,10 +12,12 @@
 
 ```
 ┌──────────────────────────────────────────────────────────────────────┐
-│  STAGE 1: PLOT ANALYSER                                              │
-│  Input:   plot from ArchiCAD (polygon) + MPZP zoning parameters      │
-│  Output:  building zone, building footprint(s), sub-plots            │
-│  Status:  ⏸️  ON HOLD (waiting for decisions Q1–Q5)                  │
+│  STAGE 1: PLOT ANALYSER (Mode A whole-plot + Mode B subdivision)     │
+│  Input:   plot from ArchiCAD + MPZP zoning + housing type            │
+│  Output:  building zone, indicators (WZ/WIZ/PBC), sub-plots (B only) │
+│  Status:  🟡 PLANNING — archicad-checker as foundation candidate     │
+│           Mode A: both housing types. Mode B: single-family only.    │
+│           Blocked on Q1–Q18 (see docs/OPEN_QUESTIONS.md).            │
 └──────────────────────────────────────────────────────────────────────┘
                               ↓
 ┌──────────────────────────────────────────────────────────────────────┐

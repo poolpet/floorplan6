@@ -15,6 +15,9 @@
 > **Stage status:** ⏸️ ON HOLD in FloorPlan6 until a separate session.
 > Stage 4 (apartment layout) first.
 >
+> **Scope note (2026-05-07):** Q1–Q5 below apply ONLY to **Mode B**
+> (subdivision, single-family only). See Q12 for the mode framework.
+>
 > **Context:** in C++ Plot Subdivider had 4 known bugs (sub-plots overflow
 > boundary, roads overflow, building zone ignored, 36 zones for ~10 possible).
 > Re-implementation in Python with Shapely + matplotlib. These decisions are
@@ -34,7 +37,47 @@ the main plot boundary (or outside the building zone)?
 **Recommendation:** (a) — trapezoid handler infrastructure already exists.
 But it's the project owner's call.
 
-**Status:** OPEN
+**Status:** PARTIALLY DECIDED 2026-05-07
+**Owner's decision:** option (a) — clip to boundary as trapezoid using
+`core/trapezoid_handler.py`. **Additional constraint:** if the resulting
+trapezoid falls below the minimum sub-plot size (Q15 front + minimum area
+from MPZP), the algorithm must adjust to bring it back to minimum, NOT
+reject silently. Mechanism for the adjustment is a follow-up sub-question
+(Q1.1, OPEN — see below).
+
+### Q1.1 — How to "increase" a too-small clipped sub-plot? (follow-up to Q1)
+**Question:** when option (a) from Q1 produces a sub-plot below the minimum
+size, how does the algorithm bring it back?
+
+**Options:**
+- (a) **Shift the grid** — adjust grid spacing so all sub-plots ≥ min,
+  accepting fewer sub-plots overall
+- (b) **Merge with neighbour** — combine the small sub-plot with an adjacent
+  one to form one larger irregular sub-plot
+- (c) **Push the internal boundary** — shrink the neighbour's area to grow
+  the small one (breaks grid uniformity)
+- (d) **Promote to nieużytek** — drop the sub-plot entirely as explicit
+  waste polygon under Q16(a)
+
+**Status:** DECIDED 2026-05-07
+**Owner's decision:** option (c) — push the internal boundary, **with the
+hard constraint that the donor neighbour also stays ≥ minimum** (Q15
+front + minimum area). If a single push cannot satisfy both sub-plots
+above their minima, the layout is INFEASIBLE at this orientation/spacing
+and the Q5(c) outer optimisation must escalate (try a different grid
+orientation, different spacing, or fewer rows). Per E2 spirit: NEVER
+shrink below the minimum to "make it fit".
+
+**Implementation note (Session 5, 2026-05-07):** the production port in
+`core/plot_subdivider.py` currently uses Q1.1(d) drop-to-nieużytek as
+fallback rather than full (c) push. The owner's hard constraint ("no
+sub-plot below minimum") IS satisfied — too-small clipped cells are
+moved to the explicit `nieużytek` polygon under Q16(a). The full (c)
+push (move column boundaries between adjacent cells) is deferred
+because: (i) on tested L-shape cases, push doesn't recover notch-cut
+cells; (ii) push for slanted-edge plots requires non-uniform grid
+generation, which is a separate feature. Marked as open follow-up;
+Q1.1(d) is a safe interim that does not violate the owner's spec.
 
 ### Q2 — Internal road layout
 **Question:** how to lay out roads between sub-plots?
@@ -47,7 +90,19 @@ But it's the project owner's call.
 **Recommendation:** none — purely architectural. The owner knows what real
 projects look like.
 
-**Status:** OPEN
+**Status:** DECIDED 2026-05-07
+**Owner's decision:** **road = hub-analogue** (cross-stage pattern from F4).
+Treat the internal road system the same way the apartment-layout solver
+treats the hub: occupy minimum area, default minimum width **4.5 m**
+(allows two-way passenger-car traffic without a separate footpath:
+2 × 1.5 m car lane + 1.5 m clearance), **user-editable upward** in the UI.
+This is closer to option (b) (spine + spurs) than (a) (parallel strips),
+but with the explicit minimisation constraint inherited from F4.
+
+**Note:** WT §15 ust. 1 requires a 5 m fire road *if* fire-access is
+required. The 4.5 m default is for purely residential internal roads
+where fire access is satisfied by other means (e.g. external road on the
+plot edge). The verifier must surface this conflict when relevant.
 
 ### Q3 — Must the sub-plot front face the road?
 **Question:** must every sub-plot have its shorter side (front) towards
@@ -58,7 +113,11 @@ the road?
 - (b) **NO** — can be the other way (deeper plot longer along the street)
 - (c) **Depends on building type** — terraced YES, detached doesn't matter
 
-**Status:** OPEN
+**Status:** DECIDED 2026-05-07
+**Owner's decision:** option (c) — depends on building type. Terraced and
+twin-house: shorter side = front (mandatory). Free-standing detached:
+orientation free. Implementation: building-type flag drives the front
+constraint per sub-plot.
 
 ### Q4 — TWIN-HOUSE (BLIZNIACZA) — sub-plot definition
 **Question:** how to count a sub-plot for a twin-house development?
@@ -68,7 +127,10 @@ the road?
   with a shared wall. (currently in C++)
 - (b) **1 sub-plot = 1 whole twin building** (2 units in one building)
 
-**Status:** OPEN
+**Status:** DECIDED 2026-05-07
+**Owner's decision:** option (a) — 1 sub-plot = 1 segment (1 unit). A pair
+of twins = 2 adjacent sub-plots with a shared wall. Matches the C++
+approach. Each sub-plot is independently verifiable.
 
 ### Q5 — Sub-plot grid orientation
 **Question:** what orientation should the sub-plot grid have?
@@ -82,7 +144,15 @@ the road?
 **Recommendation:** (b) — gives user control, simple UX (one click "mark
 access to the road" — already in the C++ palette).
 
-**Status:** OPEN
+**Status:** DECIDED 2026-05-07
+**Owner's decision:** option (c) — optimisation for maximum plot
+utilisation. The algorithm searches multiple orientations (e.g. align with
+each plot edge, rotated grids) and picks the one that maximises the number
+of valid sub-plots subject to Q15 (min front), Q16 (strict coverage), Q3
+(front-to-road for terraced/twin), Q1.1 (small-sub-plot adjustment) and
+the road-as-hub minimisation from Q2. This is a multi-objective search —
+likely CP-SAT or generative + scorer, with mandatory matplotlib
+visualisation per Stage 1 prototype iteration (E6).
 
 ---
 
@@ -197,6 +267,151 @@ the WT cap). How to handle this?
 strict for plans generated by the solver. False for reference plans from
 `data/plans/` (real PL apartments may have bathrooms > 5 m²). Consistent
 with the existing dynamic-tolerance pattern in `_check_area_coverage`.
+
+---
+
+## STAGE 1 — MODE FRAMEWORK & ADDITIONS (2026-05-07)
+
+> **Context:** evaluation of `claude code/archicad-checker/` as a foundation
+> for Stage 1 surfaced the need to formalise application modes and several
+> threshold decisions. Q12 frames the modes; Q13–Q18 are sub-decisions that
+> gate concrete implementation.
+
+### Q12 — Stage 1 application modes
+**Question:** is Stage 1 a single workflow or two distinct modes?
+
+**Status:** DECIDED 2026-05-07
+**Owner's decision:**
+- **Mode A — whole-plot analysis (no subdivision).** Available for BOTH
+  single-family (jednorodzinna) AND multi-family (wielorodzinna) housing.
+  This is what `archicad-checker` does today end-to-end: read plot, classify
+  boundaries, compute buildable zone, verify WZ/WIZ/PBC + WT 2002 rules,
+  optionally place auxiliary site elements (well, septic, parking).
+- **Mode B — subdivided-plot analysis.** Available ONLY for single-family.
+  Subdivides one plot into N sub-plots, then runs Mode-A analysis per
+  sub-plot. Multi-family on subdivided plots makes no architectural sense
+  and is excluded.
+
+**Implication:** Q1–Q5 (subdivision specifics) gate Mode B only. Mode A can
+ship independently as soon as `archicad-checker` is integrated.
+
+### Q13 — Mode B infrastructure: per-house or site-wide?
+**Question:** in Mode B (single-family subdivision), are well/septic/parking
+modeled per individual house or as shared site infrastructure?
+
+**Options:**
+- (a) **Per house** — each sub-plot has its own well + septic (rural)
+- (b) **Site-wide** — city water/sewer; only `wt_009/010` (parking) per
+  sub-plot; `wt_004–008` (well/septic) skipped
+- (c) **Flag in `ParametryMPZP`** — UI asks at start, default = (b)
+
+**Recommendation:** (c) — most flexible, matches PL practice variance.
+
+**Status:** DECIDED 2026-05-07
+**Owner's decision:** option (c) — flag in `ParametryMPZP`. Default value
+is **(b) site-wide (city water/sewer)** — wt_004–008 (well/septic
+distance rules) skipped. UI offers a checkbox for rural projects to flip
+the flag and re-enable per-house infrastructure analysis.
+
+### Q14 — 5% warning band in `_sprawdz_max` / `_sprawdz_min`
+**Question:** archicad-checker uses a 5% tolerance band: `≤ limit` = OK,
+`limit < val ≤ 1.05 × limit` = WARNING, `> 1.05 × limit` = VIOLATION. Is
+this compatible with F10 (validator strict)?
+
+**Options:**
+- (a) **Keep band** — UI-level warning is useful for human-driven verification
+- (b) **Strict per F10** — `≤ limit` = OK, `> limit` = VIOLATION, no band
+- (c) **Flag `strict_check`** — default True (matching `strict_max_areas`
+  pattern from Q11); False only for reference/exploratory data
+
+**Recommendation:** (c) — analogous to existing Q11 dynamic-tolerance pattern.
+
+**Status:** DECIDED 2026-05-07
+**Owner's decision:** option (a) — keep the 5% band. Stage 1 verifier is
+intended to verify human-designed projects (not solver-generated), so a
+graduated UI feedback (OK / WARNING / VIOLATION) is more useful than a
+binary cut-off. F10 strict applies to FP6 solver-generated outputs in
+Stage 4 — different code path. Plain-language re-statement
+(WZ=0.305 vs limit 0.30 → WARNING with "in 5% tolerance band" note)
+confirmed by owner.
+
+### Q15 — Minimum sub-plot front (Mode B)
+**Question:** what is the minimum sub-plot front width when MPZP does not
+specify it?
+
+**Options:**
+- (a) **Default 18 m** + MPZP override via `ParametryMPZP.min_front_m`
+- (b) **Default 16 m** (allows twin-house with 8 m × 2 segments)
+- (c) **Other value** (specify)
+
+**Cross-ref:** analogue of E2 (MIN_SHARED_EDGE 90 cm) — below this threshold
+the sub-plot is INFEASIBLE and must be rejected, NOT shrunk.
+
+**Status:** DECIDED 2026-05-07
+**Owner's decision:** option (a) — default 18 m (PL standard for detached
+single-family) + override via `ParametryMPZP.min_front_m` when the local
+MPZP specifies a different value. Below this threshold the sub-plot is
+INFEASIBLE and Q1.1 adjustment kicks in.
+
+### Q16 — Subdivision coverage (analogue of F1/P1)
+**Question:** in Mode B, must `Σ sub_plot.area + roads.area == parent.area`
+hold strictly, or are unused fragments allowed?
+
+**Options:**
+- (a) **Strict ==** — every m² accounted for: sub-plots + roads + an
+  explicit `nieużytek` (waste) polygon
+- (b) **<= implicit** — unused fragments are dropped silently
+- (c) **<= with reporting** — unused fragments allowed but MUST be surfaced
+  in the UI as `nieużytek X m² (Y%)`
+
+**Recommendation:** (c) — preserves the spirit of E1 (do not absorb
+uncovered polygon → no "rectangles from nowhere") while admitting that real
+plots have leftover triangles that aren't worth subdividing.
+
+**Status:** DECIDED 2026-05-07
+**Owner's decision:** option (a) — strict equality. Every m² of the parent
+plot must be accounted for as one of: `sub_plot`, `road`, or explicit
+`nieużytek` polygon. No silent waste. This is the direct analogue of F1
+for Stage 1 and matches the spirit of P1 (sacred equality). Forces the
+algorithm to make the leftover triangle decisions visible in the output.
+
+### Q17 — Mode A multi-family adapter for `optimizer.py`
+**Question:** `archicad-checker/optimizer.py` assumes one well + one septic
++ a small parking. For Mode A multi-family (e.g. 60-unit building) this
+shape doesn't fit.
+
+**Options:**
+- (a) **Adapter** — multi-family skips well/septic, focuses on N-stall parking
+- (b) **Flag `infrastruktura_miejska`** — default True for multi-family,
+  False for single-family; skip wt_004–008 when True
+- (c) **Two separate optimisers** — one for single-family, one for multi-family
+
+**Recommendation:** (b) — minimal divergence, single code path.
+
+**Status:** DECIDED 2026-05-07
+**Owner's decision:** **skip well/septic entirely for multi-family**
+("nierealne albo skrajnie niewykonalne"). Implementation: when housing
+type = wielorodzinna, the `optimizer.py` codepath omits well/septic
+placement and the verifier skips wt_004–008. Parking placement remains
+active and is the dominant constraint for multi-family. Effectively a
+hybrid of (a) and (b) — single flag drives the skip.
+
+### Q18 — Stage 1 UI entry point
+**Question:** how does the user pick mode (A/B) and housing type?
+
+**Options:**
+- (a) **Radio at start** — first "housing type" (single/multi), then for
+  single-family "mode" (whole-plot / subdivision)
+- (b) **Auto-detect from MPZP** — `przeznaczenie` in `ParametryMPZP`
+  (MN → single, MW → multi); mode (A/B) always asked
+- (c) **Tabs in UI** — separate tabs "Whole plot", "Subdivision", "Settings"
+
+**Status:** DECIDED 2026-05-07
+**Owner's decision:** option (a) — radio at start. First the user picks
+housing type (jednorodzinna / wielorodzinna). For wielorodzinna, mode A
+(whole-plot) is the only available option (Q12). For jednorodzinna, a
+second radio offers mode A (whole-plot) or mode B (subdivision). Explicit,
+no auto-detection from MPZP fields.
 
 ---
 
