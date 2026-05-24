@@ -232,6 +232,20 @@ class Stage1Widget(QWidget):
         self.info_lbl.setMinimumHeight(160)
         left.addWidget(self.info_lbl)
 
+        # 7. Export PDF (Stage 1 Phase 3) — disabled until Mode A success
+        self.export_pdf_btn = QPushButton("Eksport raportu PDF")
+        self.export_pdf_btn.setMinimumHeight(32)
+        self.export_pdf_btn.setEnabled(False)
+        self.export_pdf_btn.setToolTip(
+            "Wygeneruj 9-stronicowy raport PDF na podstawie wyników Mode A.\n"
+            "Aktywny po wygenerowaniu wariantów (przycisk Generate)."
+        )
+        self.export_pdf_btn.clicked.connect(self._on_export_pdf)
+        left.addWidget(self.export_pdf_btn)
+
+        # Cache wyników Mode A do generacji raportu (Phase 3)
+        self._mode_a_results = None  # tuple(plot, variants, indicators, verification)
+
         left.addStretch()
         left_widget = QWidget(); left_widget.setLayout(left)
         left_widget.setMaximumWidth(360)
@@ -515,6 +529,8 @@ class Stage1Widget(QWidget):
             ]
             variants = SitePlanner().propose_max_buildup(plot, requested_elements)
             if not variants:
+                self._mode_a_results = None
+                self.export_pdf_btn.setEnabled(False)
                 QMessageBox.warning(self, "No variants", "Site planner produced no variants.")
                 return
             v = variants[0]
@@ -523,7 +539,12 @@ class Stage1Widget(QWidget):
                                                   indicators=indicators)
             self._render_mode_a(plot, v)
             self._show_mode_a_info(v, indicators, verification)
+            # Cache dla Phase 3 PDF export
+            self._mode_a_results = (plot, variants, indicators, verification)
+            self.export_pdf_btn.setEnabled(True)
         except Exception as e:
+            self._mode_a_results = None
+            self.export_pdf_btn.setEnabled(False)
             QMessageBox.critical(self, "Mode A failed", f"{e}")
 
     def _render_mode_a(self, plot, variant):
@@ -629,6 +650,9 @@ class Stage1Widget(QWidget):
     # ------------------------------------------------------------------
 
     def _run_mode_b(self, plot):
+        # Invalidate Mode A cache — Mode B uses different pipeline
+        self._mode_a_results = None
+        self.export_pdf_btn.setEnabled(False)
         bt_text = self.bt_combo.currentText().split(" ")[0]
         building_type = BuildingType[bt_text]
         try:
@@ -639,6 +663,73 @@ class Stage1Widget(QWidget):
             self._show_mode_b_info(result)
         except Exception as e:
             QMessageBox.critical(self, "Mode B failed", f"{e}")
+
+    # ------------------------------------------------------------------
+    # Stage 1 Phase 3 — Export PDF report
+    # ------------------------------------------------------------------
+
+    def _on_export_pdf(self):
+        """Open metadata dialog, build ReportData, generate PDF.
+
+        Wymaga że Mode A został uruchomiony (_mode_a_results != None).
+        """
+        if self._mode_a_results is None:
+            QMessageBox.warning(
+                self, "Eksport PDF",
+                "Najpierw wygeneruj warianty przyciskiem Generate (Mode A)."
+            )
+            return
+
+        from datetime import date
+        from PyQt5.QtCore import Qt
+        from PyQt5.QtWidgets import QApplication, QDialog, QFileDialog
+
+        from core.report_builder import build_report_data
+        from core.report_pdf import generate_pdf
+        from ui.report_metadata_dialog import ReportMetadataDialog
+
+        plot, variants, indicators, verification = self._mode_a_results
+
+        # 1. Metadata dialog
+        default_pid = f"Działka {date.today():%Y-%m-%d}"
+        dlg = ReportMetadataDialog(self, default_plot_id=default_pid)
+        if dlg.exec_() != QDialog.Accepted:
+            self.status.showMessage("Eksport PDF anulowany.", 3000)
+            return
+        meta = dlg.get_metadata()
+
+        # 2. Save path picker
+        suggested = f"Raport_{meta['plot_id'].replace('/', '-').replace(' ', '_')}_{date.today():%Y-%m-%d}.pdf"
+        path, _ = QFileDialog.getSaveFileName(
+            self, "Zapisz raport jako…", suggested, "PDF (*.pdf)",
+        )
+        if not path:
+            self.status.showMessage("Eksport PDF anulowany.", 3000)
+            return
+
+        # 3. Build + render (synchronous z busy state)
+        QApplication.setOverrideCursor(Qt.WaitCursor)
+        try:
+            rd = build_report_data(
+                plot, variants, indicators, verification,
+                plot_id=meta["plot_id"],
+                plot_address=meta["plot_address"],
+                logo_path=meta["logo_path"],
+            )
+            generate_pdf(rd, output_path=path)
+            self.status.showMessage(f"PDF zapisany: {path}", 5000)
+            QMessageBox.information(
+                self, "Eksport PDF",
+                f"Raport wygenerowany:\n{path}",
+            )
+        except Exception as e:
+            QMessageBox.critical(
+                self, "Eksport PDF — błąd",
+                f"{type(e).__name__}: {e}",
+            )
+            self.status.showMessage("Eksport PDF nieudany.", 5000)
+        finally:
+            QApplication.restoreOverrideCursor()
 
     def _render_mode_b(self, plot, result):
         self.fig.clear()
