@@ -16,6 +16,270 @@ from core.models import Boundary, WallType
 SEGMENT_TOLERANCE = 0.05  # 5cm tolerancja łączenia segmentów
 
 
+def read_boundary_from_point(
+    x: float,
+    y: float,
+    tapir: Optional[TapirConnection] = None,
+) -> tuple[Polygon, tuple[float, float], list[WallType]]:
+    """Auto-detect obrys mieszkania klikając w punkt wewnątrz pustej przestrzeni.
+
+    Workflow (Tapir 1.4.0, równoważny C++ ACAPI_UserInput_GetPoint + auto-zone):
+        1. CreateZones z geometry.referencePosition=(x,y) → AC tworzy Zone
+           z manual=false → automatycznie wykrywa zamknięty obrys wokół punktu
+        2. GetDetailsOfElements → odczytaj polygonOutline tej Zone
+        3. DeleteElements → usuń temp Zone (cleanup)
+        4. Detect drzwi wejściowych + klasyfikacja ścian (jak w trybie Slab/Zone)
+
+    Args:
+        x, y: Punkt referencyjny w metrach (world coords ArchiCAD).
+        tapir: Połączenie Tapir (opcjonalne).
+
+    Returns:
+        (polygon, entry_point, wall_types) — jak read_boundary_from_archicad.
+
+    Raises:
+        ValueError jeśli AC nie znalazł zamkniętego obrysu wokół punktu.
+    """
+    if tapir is None:
+        tapir = TapirConnection()
+        tapir.connect()
+
+    temp_guid: Optional[str] = None
+    try:
+        temp_guid = tapir.create_temp_zone_at_point(x, y)
+        if not temp_guid:
+            raise ValueError(
+                f"ArchiCAD nie znalazł zamkniętego obrysu wokół punktu "
+                f"({x:.3f}, {y:.3f}).\n"
+                "Sprawdź czy punkt leży WEWNĄTRZ obrysu ścian i ściany "
+                "tworzą zamkniętą pętlę."
+            )
+
+        outline_points = tapir.get_zone_polygon(temp_guid)
+        if len(outline_points) < 3:
+            raise ValueError(
+                f"Temp Zone (GUID {temp_guid[:8]}...) ma <3 punktów polygonu."
+            )
+    finally:
+        # Cleanup: usuń temp Zone (nawet przy błędzie)
+        if temp_guid:
+            try:
+                tapir.delete_elements([temp_guid])
+            except Exception:
+                pass  # Nie blokuj raportu jak cleanup padnie
+
+    return _finalize_boundary_from_outline(outline_points, tapir)
+
+
+def _finalize_boundary_from_outline(
+    outline_points: list[tuple[float, float]],
+    tapir: TapirConnection,
+) -> tuple[Polygon, tuple[float, float], list[WallType]]:
+    """Wspólny post-processing surowych wierzchołków polygonu:
+    usuń kolinearne, zbuduj shapely Polygon, auto-detect drzwi + walls.
+    Używany przez read_boundary_from_point i read_boundary_from_new_zone.
+    """
+    from core.boundary_analyzer import _remove_collinear_vertices
+    points = _remove_collinear_vertices(outline_points)
+    if len(points) < 3:
+        raise ValueError("Polygon ma <3 punkty po usunięciu kolinearnych")
+
+    polygon = Polygon(points)
+    if not polygon.is_valid:
+        polygon = polygon.buffer(0)
+
+    entry_point, wall_types = _detect_entry_and_walls_from_archicad(
+        tapir, polygon, points
+    )
+    return polygon, entry_point, wall_types
+
+
+def read_boundary_from_new_zone(
+    tapir: Optional[TapirConnection] = None,
+    before_guids: Optional[set[str]] = None,
+    cleanup: bool = True,
+) -> tuple[Polygon, tuple[float, float], list[WallType]]:
+    """Auto-detect obrysu z NOWEJ Zone utworzonej w AC przez user'a.
+
+    Workflow użytkownika (natywny Inner Edge tool w AC):
+        1. (przed wywołaniem skryptu) Snapshot bieżących Zone GUIDs.
+        2. User w AC: skrót Z → klik w pustym miejscu mieszkania.
+           AC sam wykrywa zamknięty obrys (Inner Edge) i tworzy Zone.
+        3. Wywołanie tej funkcji: porównuje aktualne Zone z snapshotem,
+           bierze nową Zone, czyta polygon, opcjonalnie usuwa.
+
+    Args:
+        tapir: Połączenie Tapir.
+        before_guids: GUID-y Zone które istniały PRZED akcją user'a.
+            Jeśli None → bierzemy wszystkie aktualne Zone jako "nowe"
+            (przydatne tylko gdy projekt nie miał żadnych Zone).
+        cleanup: Jeśli True (default), usuń wykrytą Zone po odczycie.
+
+    Returns:
+        (polygon, entry_point, wall_types) — jak read_boundary_from_point.
+
+    Raises:
+        ValueError jeśli nie wykryto nowej Zone (user nic nie zrobił).
+    """
+    if tapir is None:
+        tapir = TapirConnection()
+        tapir.connect()
+
+    current_zones = tapir.get_elements_by_type("Zone")
+    current_guids: set[str] = set()
+    for z in current_zones:
+        if isinstance(z, dict):
+            eid = z.get("elementId", z)
+            guid = eid.get("guid") if isinstance(eid, dict) else str(eid)
+            if guid:
+                current_guids.add(guid)
+
+    if before_guids is None:
+        before_guids = set()
+    new_guids = current_guids - before_guids
+    if not new_guids:
+        raise ValueError(
+            "Nie wykryto nowej Zone w AC.\n"
+            "W AC: naciśnij Z (Zone tool) → klik w pustym miejscu mieszkania "
+            "→ wróć tutaj i potwierdź."
+        )
+
+    new_guid = next(iter(new_guids))
+
+    try:
+        outline_points = tapir.get_zone_polygon(new_guid)
+        if len(outline_points) < 3:
+            raise ValueError(
+                f"Nowa Zone (GUID {new_guid[:8]}...) ma <3 punkty polygonu."
+            )
+    finally:
+        if cleanup and new_guid:
+            try:
+                tapir.delete_elements([new_guid])
+            except Exception:
+                pass  # nie blokuj importu jeśli cleanup padnie
+
+    return _finalize_boundary_from_outline(outline_points, tapir)
+
+
+def read_boundary_from_wall_pick(
+    tapir: Optional[TapirConnection] = None,
+    offset_m: float = 0.30,
+    min_area_m2: float = 8.0,
+    max_area_m2: float = 500.0,
+) -> tuple[Polygon, tuple[float, float], list[WallType]]:
+    """Auto-detect obrysu mieszkania na podstawie ZAZNACZONEJ ściany w AC.
+
+    User w ArchiCAD klika dowolną ścianę mieszkania (1 klik, można dowolnie
+    zoomować). Liczymy midpoint ściany, próbujemy CreateZones (auto-zone)
+    po obu stronach ściany z offsetem 30cm. Strona dająca polygon w
+    sensownym zakresie (8-500 m²) wygrywa.
+
+    Workflow:
+        1. GetSelectedElements → bierzemy 1 ścianę
+        2. begC/endC → midpoint + wektor prostopadły
+        3. Dla obu kierunków (sign = ±1):
+             pt = midpoint + sign × offset × perpendicular
+             read_boundary_from_point(pt) → polygon
+        4. Wybieramy polygon o najmniejszej "sensownej" powierzchni
+           (mieszkanie zwykle 30-150m², nie pomylimy z całym piętrem 3000m²)
+
+    Args:
+        tapir: Połączenie Tapir (opcjonalne).
+        offset_m: Odległość od midpoint ściany w głąb pokoju (default 30cm).
+        min_area_m2: Polygon o powierzchni mniejszej odrzucamy (artefakt).
+        max_area_m2: Polygon o powierzchni większej odrzucamy (cale piętro).
+
+    Returns:
+        (polygon, entry_point, wall_types) — jak read_boundary_from_archicad.
+
+    Raises:
+        ValueError jeśli żadna strona nie dała sensownego polygonu.
+    """
+    import math
+
+    if tapir is None:
+        tapir = TapirConnection()
+        tapir.connect()
+
+    # 1. Pobierz zaznaczenie - oczekujemy 1 ściany
+    selected = tapir.get_selected_elements()
+    if not selected:
+        raise ValueError(
+            "Brak zaznaczonych elementów w AC.\n"
+            "Zaznacz dowolną ścianę mieszkania (1 klik) i spróbuj ponownie."
+        )
+    guids = []
+    for elem in selected:
+        if isinstance(elem, dict):
+            eid = elem.get("elementId", elem)
+            guid = eid.get("guid") if isinstance(eid, dict) else str(eid)
+            if guid:
+                guids.append(guid)
+
+    details = tapir.get_element_details(guids)
+    wall_detail = next(
+        (d for d in details if isinstance(d, dict) and d.get("type") == "Wall"),
+        None,
+    )
+    if wall_detail is None:
+        types = [d.get("type", "?") for d in details if isinstance(d, dict)]
+        raise ValueError(
+            f"Wybrane elementy nie zawierają ściany. Typy: {types}.\n"
+            "Zaznacz dowolną ścianę mieszkania (Wall) i spróbuj ponownie."
+        )
+
+    inner = wall_detail.get("details", {})
+    beg = inner.get("begCoordinate") or wall_detail.get("begCoordinate")
+    end = inner.get("endCoordinate") or wall_detail.get("endCoordinate")
+    if not beg or not end:
+        raise ValueError("Ściana nie ma begCoordinate/endCoordinate")
+
+    bx, by = float(beg["x"]), float(beg["y"])
+    ex, ey = float(end["x"]), float(end["y"])
+    mx, my = (bx + ex) / 2.0, (by + ey) / 2.0
+
+    dx, dy = ex - bx, ey - by
+    length = math.hypot(dx, dy)
+    if length < 1e-6:
+        raise ValueError(f"Ściana ma zerową długość ({length:.4f}m)")
+
+    # Wektor prostopadły jednostkowy
+    nx, ny = -dy / length, dx / length
+
+    # 2. Spróbuj obu stron ściany, zbieraj kandydatów
+    candidates: list[tuple[float, Polygon, tuple[float, float], list[WallType], tuple[float, float]]] = []
+    errors: list[str] = []
+    for sign in (+1, -1):
+        px = mx + sign * offset_m * nx
+        py = my + sign * offset_m * ny
+        try:
+            polygon, entry_point, wall_types = read_boundary_from_point(px, py, tapir)
+            area = polygon.area
+            if area < min_area_m2 or area > max_area_m2:
+                errors.append(
+                    f"strona {sign:+d}: polygon {area:.1f}m² poza zakresem "
+                    f"[{min_area_m2}, {max_area_m2}]"
+                )
+                continue
+            candidates.append((area, polygon, entry_point, wall_types, (px, py)))
+        except Exception as e:
+            errors.append(f"strona {sign:+d}: {e}")
+
+    if not candidates:
+        raise ValueError(
+            "Nie udało się auto-wykryć obrysu po żadnej stronie ściany:\n  "
+            + "\n  ".join(errors)
+            + f"\n\nZaznaczona ściana: ({bx:.2f},{by:.2f}) → ({ex:.2f},{ey:.2f}), "
+            f"midpoint ({mx:.2f},{my:.2f})."
+        )
+
+    # 3. Wybierz polygon o najmniejszej powierzchni (mieszkanie a nie piętro)
+    candidates.sort(key=lambda c: c[0])
+    _area, polygon, entry_point, wall_types, _pt = candidates[0]
+    return polygon, entry_point, wall_types
+
+
 def read_boundary_from_archicad(
     tapir: Optional[TapirConnection] = None,
 ) -> tuple[Polygon, tuple[float, float], list[WallType]]:
@@ -34,12 +298,21 @@ def read_boundary_from_archicad(
     # 1. Pobierz zaznaczone elementy
     selected = tapir.get_selected_elements()
     if not selected:
+        # Diagnostic: dump the raw Tapir response so we can see what's happening.
+        try:
+            raw = tapir._execute_tapir("GetSelectedElements", {})
+        except Exception as e:
+            raw = {"error": str(e)}
         raise ValueError(
-            "Nie zaznaczono żadnych elementów w ArchiCAD.\n\n"
-            "Wybierz JEDEN z trybów:\n"
-            "  • Zone (auto-wykrywanie): Tools → Zone → metoda Inner Edge → "
-            "klik wewnątrz mieszkania → zaznacz Zone\n"
-            "  • Ręcznie: zaznacz ściany obrysu mieszkania"
+            "Tapir zwrócił PUSTĄ listę zaznaczeń.\n\n"
+            f"Raw response: {raw}\n\n"
+            "Jeśli W ArchiCAD ZAZNACZYŁEŚ elementy a Tapir zwraca empty:\n"
+            "  • Sprawdź czy Tapir Add-On jest aktywny (Options → Add-On Manager)\n"
+            "  • Sprawdź czy zaznaczone elementy są w aktualnej kondygnacji\n"
+            "  • Sprawdź typ zaznaczonych elementów — Tapir czyta Wall, Slab, Zone, Polyline\n"
+            "  • Próbuj: Tools → Arrow → kliknij polygon obrysu bezpośrednio\n\n"
+            "Możliwe że Tapir używa innego klucza w response niż 'elements'/'elementIds'. "
+            "Powyższy raw response pomoże zdiagnozować."
         )
 
     guids = []

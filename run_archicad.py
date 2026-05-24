@@ -77,8 +77,11 @@ def run_from_archicad(mtype: str):
     answer = input("\nWyeksportować strefy do ArchiCAD? (t/n): ").strip().lower()
     if answer == "t":
         print("Eksportuję strefy...")
-        guids = export_plan_to_archicad(best, tapir)
-        print(f"✓ Utworzono {len(guids)} stref w ArchiCAD")
+        result = export_plan_to_archicad(best, tapir)
+        print(f"✓ Utworzono {len(result['zones'])} stref + "
+              f"{len(result['walls'])} ścianek + "
+              f"{len(result['doors'])} drzwi + "
+              f"{len(result.get('labels', []))} etykiet w ArchiCAD")
     else:
         print("Pominięto eksport.")
 

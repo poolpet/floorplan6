@@ -251,6 +251,21 @@ class MainWindow(QMainWindow):
         self.import_btn.clicked.connect(self._import_from_archicad)
         step1_lay.addWidget(self.import_btn)
 
+        self.click_pick_btn = QPushButton(
+            "Auto-detect z Inner Edge w AC"
+        )
+        self.click_pick_btn.setMinimumHeight(32)
+        self.click_pick_btn.setToolTip(
+            "Native AC workflow:\n"
+            "1. Naciśnij ten przycisk.\n"
+            "2. W AC: skrót Z (Zone tool) → klik w pustym miejscu mieszkania.\n"
+            "3. Wróć tutaj i potwierdź OK.\n"
+            "Skrypt znajdzie tę nową Zone, zaimportuje polygon, "
+            "usunie temp Zone."
+        )
+        self.click_pick_btn.clicked.connect(self._import_from_inner_edge)
+        step1_lay.addWidget(self.click_pick_btn)
+
         sep = QLabel("— or enter manually —")
         sep.setAlignment(Qt.AlignCenter)
         sep.setStyleSheet("color: gray; font-size: 11px;")
@@ -858,13 +873,23 @@ class MainWindow(QMainWindow):
         plan = self.variants[self.current_idx]
         try:
             from bridge.plan_writer import export_plan_to_archicad
-            guids = export_plan_to_archicad(plan, offset=self._archicad_offset)
+            result = export_plan_to_archicad(plan, offset=self._archicad_offset)
+            n_zones = len(result["zones"])
+            n_walls = len(result["walls"])
+            n_doors = len(result["doors"])
+            n_labels = len(result.get("labels", []))
+            n_windows = len(result.get("windows", []))
+            apt_id = result.get("apartment_id", "?")
             self.statusBar().showMessage(
-                f"Eksportowano {len(guids)} stref do ArchiCAD"
+                f"[{apt_id}] {n_zones} stref + {n_walls} ścian + "
+                f"{n_doors} drzwi + {n_windows} okien + {n_labels} etykiet"
             )
             QMessageBox.information(
                 self, "ArchiCAD",
-                f"Utworzono {len(guids)} stref w ArchiCAD."
+                f"Mieszkanie {apt_id}:\n\n"
+                f"{n_zones} stref + {n_walls} ścianek + {n_doors} drzwi "
+                f"+ {n_windows} okien (WT 1/8) + {n_labels} etykiet.\n\n"
+                f"Numery stref: {apt_id}-001…{apt_id}-{n_zones:03d}"
             )
         except Exception as e:
             QMessageBox.warning(
@@ -872,6 +897,81 @@ class MainWindow(QMainWindow):
                 f"Cannot connect to ArchiCAD:\n{e}\n\n"
                 "Make sure ArchiCAD is running with Tapir Add-On."
             )
+
+    def _import_from_inner_edge(self):
+        """Auto-detect z natywnego Inner Edge w AC.
+
+        Workflow (2 akcje):
+            1. Snapshot bieżących Zone GUIDs w AC.
+            2. Dialog z instrukcją "W AC: Z + klik w mieszkaniu, potem OK".
+            3. Po OK: szukamy nowej Zone, czytamy polygon, USUWAMY Zone.
+        """
+        from bridge.tapir_connection import TapirConnection
+        from bridge.boundary_reader import read_boundary_from_new_zone
+
+        try:
+            tapir = TapirConnection()
+            tapir.connect()
+        except Exception as e:
+            QMessageBox.warning(
+                self, "ArchiCAD",
+                f"Cannot connect to ArchiCAD:\n{e}\n\n"
+                "Check that AC is running and Tapir Add-On is installed."
+            )
+            return
+
+        # 1. Snapshot - jakie Zone juz istnieja PRZED user actions
+        try:
+            pre_zones = tapir.get_elements_by_type("Zone") or []
+        except Exception as e:
+            QMessageBox.warning(self, "ArchiCAD",
+                                f"Nie udalo sie pobrac listy Zone:\n{e}")
+            return
+
+        pre_guids: set[str] = set()
+        for z in pre_zones:
+            if isinstance(z, dict):
+                eid = z.get("elementId", z)
+                guid = eid.get("guid") if isinstance(eid, dict) else str(eid)
+                if guid:
+                    pre_guids.add(guid)
+
+        # 2. Modal: user wykonuje akcje w AC i naciska OK
+        reply = QMessageBox.question(
+            self, "Auto-detect z Inner Edge",
+            f"<b>Wykonaj w ArchiCAD:</b><br><br>"
+            f"1. Naciśnij <b>Z</b> (Zone tool, lub Tools → Zone)<br>"
+            f"2. Klik w pustym miejscu wewnątrz mieszkania<br>"
+            f"&nbsp;&nbsp;&nbsp;(AC sam wykryje obrys — Inner Edge)<br>"
+            f"3. Wróć tutaj i kliknij <b>OK</b><br><br>"
+            f"<i>Aktualnie w projekcie: {len(pre_guids)} Zone.<br>"
+            f"Po imporcie nowa Zone zostanie usunięta z AC.</i>",
+            QMessageBox.Ok | QMessageBox.Cancel,
+            QMessageBox.Ok,
+        )
+        if reply != QMessageBox.Ok:
+            self.statusBar().showMessage("Auto-detect anulowany.")
+            return
+
+        # 3. Import: znajdź nową Zone, polygon, cleanup
+        self.statusBar().showMessage("Szukam nowej Zone w AC…")
+        try:
+            polygon, entry_point, wall_types = read_boundary_from_new_zone(
+                tapir, before_guids=pre_guids, cleanup=True,
+            )
+        except ValueError as e:
+            QMessageBox.warning(self, "Auto-detect", str(e))
+            self.statusBar().showMessage("Auto-detect failed.")
+            return
+        except Exception as e:
+            QMessageBox.critical(self, "Auto-detect",
+                                 f"Unexpected error:\n{type(e).__name__}: {e}")
+            return
+
+        self._apply_imported_boundary(polygon, entry_point, wall_types)
+        self.statusBar().showMessage(
+            f"Outline auto-detected ({len(list(polygon.exterior.coords)) - 1} vertices)."
+        )
 
     def _import_from_archicad(self):
         """Start polling for new Zone/Slab in AC (every 1s)."""
@@ -972,73 +1072,8 @@ class MainWindow(QMainWindow):
         """Faktyczne wczytanie obrysu z aktualnego zaznaczenia w AC."""
         try:
             from bridge.boundary_reader import read_boundary_from_archicad
-            from core.boundary_analyzer import is_rectangle
             polygon, entry_point, wall_types = read_boundary_from_archicad()
-
-            bx0, by0, bx1, by1 = polygon.bounds
-            w = bx1 - bx0
-            h = by1 - by0
-
-            # Przesuń polygon do (0,0) — zachowaj offset do eksportu
-            from shapely.affinity import translate
-            self._archicad_offset = (bx0, by0)
-            shifted = translate(polygon, -bx0, -by0)
-            entry_shifted = (entry_point[0] - bx0, entry_point[1] - by0)
-
-            # Zablokuj _clear_import podczas ustawiania spinboxów
-            self._importing = True
-
-            # Ustaw wymiary w GUI
-            self.width_spin.setValue(round(w, 1))
-            self.height_spin.setValue(round(h, 1))
-            self.entry_x_spin.setValue(round(entry_shifted[0], 1))
-            self.entry_y_spin.setValue(round(entry_shifted[1], 1))
-
-            # Zapisz polygon PO ustawieniu spinboxów
-            self._imported_polygon = shifted
-            self._imported_entry = entry_shifted
-            self._importing = False
-
-            # Wykryj kształt obrysu
-            from core.boundary_analyzer import _detect_notch
-            is_rect = is_rectangle(shifted)
-            n_vertices = len(list(shifted.exterior.coords)) - 1
-
-            has_notch = False
-            if not is_rect:
-                notch_info = _detect_notch(shifted)
-                if notch_info is not None:
-                    has_notch = True
-                # Trapez i inne 4-wierzchołkowe — obsługiwane przez clipping
-
-            self.notch_group.setChecked(has_notch)
-
-            # Automatyczny dobór typu mieszkania z powierzchni
-            area = shifted.area
-            if area < 45:
-                auto_type = "M1"
-            elif area < 65:
-                auto_type = "M2"
-            elif area < 85:
-                auto_type = "M3"
-            elif area < 110:
-                auto_type = "M4"
-            else:
-                auto_type = "M5"
-            self.type_combo.setCurrentText(auto_type)
-
-            # Auto-detect wall_types — przesuń też do shifted (lokalne współrzędne)
-            self._imported_wall_types = list(wall_types)
-            self.facades_btn.setEnabled(True)
-
-            # Pokaż interaktywny podgląd obrysu — Dawid kliknie na krawędzie żeby
-            # zaznaczyć fasady (klik = toggle, Shift+klik = przenieś wejście)
-            self._show_boundary_preview(shifted, entry_shifted)
-
-            shape = "L/U-shape" if has_notch else ("rectangle" if is_rect else "trapezoid/other")
-            self.statusBar().showMessage(
-                f"Loaded {shape} {w:.1f}x{h:.1f}m ({area:.0f}m²) → {auto_type}"
-            )
+            self._apply_imported_boundary(polygon, entry_point, wall_types)
 
         except Exception as e:
             QMessageBox.warning(
@@ -1046,6 +1081,65 @@ class MainWindow(QMainWindow):
                 f"Cannot load outline:\n{e}\n\n"
                 "Select outline walls in ArchiCAD and try again."
             )
+
+    def _apply_imported_boundary(self, polygon, entry_point, wall_types):
+        """Aplikuje wczytany boundary do GUI — wspólne dla wszystkich źródeł
+        (zaznaczenie w AC / click-to-pick auto-detect)."""
+        from shapely.affinity import translate
+        from core.boundary_analyzer import _detect_notch, is_rectangle
+
+        bx0, by0, bx1, by1 = polygon.bounds
+        w = bx1 - bx0
+        h = by1 - by0
+
+        # Przesuń do (0,0), zapamiętaj offset do późniejszego eksportu
+        self._archicad_offset = (bx0, by0)
+        shifted = translate(polygon, -bx0, -by0)
+        entry_shifted = (entry_point[0] - bx0, entry_point[1] - by0)
+
+        # Zablokuj _clear_import podczas ustawiania spinboxów
+        self._importing = True
+        self.width_spin.setValue(round(w, 1))
+        self.height_spin.setValue(round(h, 1))
+        self.entry_x_spin.setValue(round(entry_shifted[0], 1))
+        self.entry_y_spin.setValue(round(entry_shifted[1], 1))
+
+        self._imported_polygon = shifted
+        self._imported_entry = entry_shifted
+        self._importing = False
+
+        # Wykryj kształt
+        is_rect = is_rectangle(shifted)
+        has_notch = False
+        if not is_rect:
+            if _detect_notch(shifted) is not None:
+                has_notch = True
+        self.notch_group.setChecked(has_notch)
+
+        # Auto-typ z powierzchni
+        area = shifted.area
+        if area < 45:
+            auto_type = "M1"
+        elif area < 65:
+            auto_type = "M2"
+        elif area < 85:
+            auto_type = "M3"
+        elif area < 110:
+            auto_type = "M4"
+        else:
+            auto_type = "M5"
+        self.type_combo.setCurrentText(auto_type)
+
+        self._imported_wall_types = list(wall_types)
+        self.facades_btn.setEnabled(True)
+        self._show_boundary_preview(shifted, entry_shifted)
+
+        shape = "L/U-shape" if has_notch else (
+            "rectangle" if is_rect else "trapezoid/other"
+        )
+        self.statusBar().showMessage(
+            f"Loaded {shape} {w:.1f}x{h:.1f}m ({area:.0f}m²) → {auto_type}"
+        )
 
 
 def run_gui():

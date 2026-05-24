@@ -44,11 +44,14 @@ def main(mtype: str = "M3"):
         print(f"      {room.spec.nazwa:30s} {room.area:5.1f}m²")
     print()
 
-    print("[4/4] Eksport do AC (CreateZones, offset=0,0)...")
-    guids = export_plan_to_archicad(best, tapir=tapir, offset=(0.0, 0.0))
-    print(f"    ✓ Utworzono {len(guids)} stref w AC")
-    if guids:
-        print(f"    GUIDs: {guids[:3]}{'...' if len(guids) > 3 else ''}")
+    print("[4/4] Eksport do AC (Zones + Walls + Doors + Openings, offset=0,0)...")
+    result = export_plan_to_archicad(best, tapir=tapir, offset=(0.0, 0.0))
+    zone_guids = result["zones"]
+    wall_guids = result["walls"]
+    door_guids = result["doors"]
+    opening_guids = result.get("openings", [])
+    print(f"    ✓ Utworzono {len(zone_guids)} stref + {len(wall_guids)} ścianek + "
+          f"{len(door_guids)} drzwi + {len(opening_guids)} otworów w AC")
 
     print("\n=== KONIEC ===")
     print("Strefy widoczne w AC. Jeśli nie widzisz — sprawdź View → Layers → Zone visible.")
