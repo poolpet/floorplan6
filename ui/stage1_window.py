@@ -243,8 +243,10 @@ class Stage1Widget(QWidget):
         self.export_pdf_btn.clicked.connect(self._on_export_pdf)
         left.addWidget(self.export_pdf_btn)
 
-        # Cache wyników Mode A do generacji raportu (Phase 3)
-        self._mode_a_results = None  # tuple(plot, variants, indicators, verification)
+        # Cache wyników do generacji raportu (Phase 3)
+        # Mode A: tuple("A", plot, variants, indicators, verification)
+        # Mode B: tuple("B", plot, subdivision_result)
+        self._mode_a_results = None  # zachowana nazwa dla kompatybilnosci
 
         left.addStretch()
         left_widget = QWidget(); left_widget.setLayout(left)
@@ -539,8 +541,8 @@ class Stage1Widget(QWidget):
                                                   indicators=indicators)
             self._render_mode_a(plot, v)
             self._show_mode_a_info(v, indicators, verification)
-            # Cache dla Phase 3 PDF export
-            self._mode_a_results = (plot, variants, indicators, verification)
+            # Cache dla Phase 3 PDF export — Mode A
+            self._mode_a_results = ("A", plot, variants, indicators, verification)
             self.export_pdf_btn.setEnabled(True)
         except Exception as e:
             self._mode_a_results = None
@@ -650,7 +652,7 @@ class Stage1Widget(QWidget):
     # ------------------------------------------------------------------
 
     def _run_mode_b(self, plot):
-        # Invalidate Mode A cache — Mode B uses different pipeline
+        # Invalidate cache na czas wykonania (bo Mode B uzywa innego pipeline)
         self._mode_a_results = None
         self.export_pdf_btn.setEnabled(False)
         bt_text = self.bt_combo.currentText().split(" ")[0]
@@ -659,8 +661,14 @@ class Stage1Widget(QWidget):
             result = subdivide_with_orientation_search(
                 plot, building_type=building_type
             )
+            # Mode B: propose building footprints per sub-plot (per building_type)
+            from core.building_proposer import propose_buildings
+            propose_buildings(result, building_type)
             self._render_mode_b(plot, result)
             self._show_mode_b_info(result)
+            # Cache dla Phase 3 PDF export — Mode B
+            self._mode_a_results = ("B", plot, result)
+            self.export_pdf_btn.setEnabled(True)
         except Exception as e:
             QMessageBox.critical(self, "Mode B failed", f"{e}")
 
@@ -684,17 +692,25 @@ class Stage1Widget(QWidget):
         from PyQt5.QtCore import Qt
         from PyQt5.QtWidgets import QApplication, QDialog, QFileDialog
 
-        from core.report_builder import build_report_data
+        from core.report_builder import build_report_data, build_report_data_mode_b
         from core.report_pdf import generate_pdf
         from ui.report_metadata_dialog import ReportMetadataDialog
 
-        plot, variants, indicators, verification = self._mode_a_results
+        # Rozpoznaj tryb cache (Mode A vs Mode B)
+        mode = self._mode_a_results[0]
+        if mode == "A":
+            plot = self._mode_a_results[1]
+        elif mode == "B":
+            plot = self._mode_a_results[1]
+        else:
+            QMessageBox.warning(self, "Eksport PDF", f"Nieznany tryb cache: {mode}")
+            return
 
         # 1. Metadata dialog
         default_pid = f"Działka {date.today():%Y-%m-%d}"
         dlg = ReportMetadataDialog(self, default_plot_id=default_pid)
         if dlg.exec_() != QDialog.Accepted:
-            self.status.showMessage("Eksport PDF anulowany.", 3000)
+            self.statusBar().showMessage("Eksport PDF anulowany.", 3000)
             return
         meta = dlg.get_metadata()
 
@@ -704,20 +720,30 @@ class Stage1Widget(QWidget):
             self, "Zapisz raport jako…", suggested, "PDF (*.pdf)",
         )
         if not path:
-            self.status.showMessage("Eksport PDF anulowany.", 3000)
+            self.statusBar().showMessage("Eksport PDF anulowany.", 3000)
             return
 
         # 3. Build + render (synchronous z busy state)
         QApplication.setOverrideCursor(Qt.WaitCursor)
         try:
-            rd = build_report_data(
-                plot, variants, indicators, verification,
-                plot_id=meta["plot_id"],
-                plot_address=meta["plot_address"],
-                logo_path=meta["logo_path"],
-            )
+            if mode == "A":
+                _, _, variants, indicators, verification = self._mode_a_results
+                rd = build_report_data(
+                    plot, variants, indicators, verification,
+                    plot_id=meta["plot_id"],
+                    plot_address=meta["plot_address"],
+                    logo_path=meta["logo_path"],
+                )
+            else:  # mode == "B"
+                _, _, subdivision_result = self._mode_a_results
+                rd = build_report_data_mode_b(
+                    plot, subdivision_result,
+                    plot_id=meta["plot_id"],
+                    plot_address=meta["plot_address"],
+                    logo_path=meta["logo_path"],
+                )
             generate_pdf(rd, output_path=path)
-            self.status.showMessage(f"PDF zapisany: {path}", 5000)
+            self.statusBar().showMessage(f"PDF zapisany: {path}", 5000)
             QMessageBox.information(
                 self, "Eksport PDF",
                 f"Raport wygenerowany:\n{path}",
@@ -727,7 +753,7 @@ class Stage1Widget(QWidget):
                 self, "Eksport PDF — błąd",
                 f"{type(e).__name__}: {e}",
             )
-            self.status.showMessage("Eksport PDF nieudany.", 5000)
+            self.statusBar().showMessage("Eksport PDF nieudany.", 5000)
         finally:
             QApplication.restoreOverrideCursor()
 
@@ -748,6 +774,16 @@ class Stage1Widget(QWidget):
                     zx, zy = s.buildable_zone.exterior.xy
                     ax.fill(zx, zy, color="#27ae60", alpha=0.18,
                             edgecolor="#27ae60", linewidth=0.5, linestyle="--")
+                except Exception:
+                    pass
+
+            # Propozycja bryły budynku (Mode B per building_type)
+            pb = getattr(s, "proposed_building", None)
+            if pb is not None and not pb.is_empty:
+                try:
+                    bx, by = pb.exterior.xy
+                    ax.fill(bx, by, color="#3a4f6e", alpha=0.85,
+                            edgecolor="black", linewidth=1.0)
                 except Exception:
                     pass
 

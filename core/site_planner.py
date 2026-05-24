@@ -98,8 +98,14 @@ class SitePlanner:
         plot_area = plot.area
         max_footprint = plot_area * max_wz
 
+        # Max depth budynku per typ zabudowy (doswietlenie WT 1/8 + praktyka PL):
+        # WIELORODZINNA 2-trakt z korytarzem: max 16m (depth/2 = 8m pokoje)
+        # JEDNORODZINNA wolnostojaca: max 12m (depth = 1 pokoj)
+        max_depth = 16.0 if plot.housing_type == HousingType.WIELORODZINNA else 12.0
+
         candidates = self._generate_building_candidates(
-            zone, max_footprint, max_floors, max_wiz, plot_area, no_openings_direction
+            zone, max_footprint, max_floors, max_wiz, plot_area,
+            no_openings_direction, max_depth=max_depth,
         )
 
         active_types = self._gate_element_types(plot, requested_element_types)
@@ -140,37 +146,50 @@ class SitePlanner:
         max_wiz: float,
         plot_area: float,
         no_openings_direction: Optional[str],
+        max_depth: Optional[float] = None,
     ) -> List[Tuple[Polygon, int]]:
         """Generate a small set of (footprint_polygon, floor_count) variants."""
         out: List[Tuple[Polygon, int]] = []
 
-        poly_max = self._inscribe_max_rect(zone, max_footprint, scale=1.0)
+        poly_max = self._inscribe_max_rect(zone, max_footprint, scale=1.0,
+                                           max_depth=max_depth)
         if poly_max:
             out.append((poly_max, 1))
 
         if max_floors >= 2:
             cap_2 = min(max_footprint, max_wiz * plot_area / (2 * USABLE_AREA_FACTOR))
-            poly_2 = self._inscribe_max_rect(zone, cap_2, scale=0.75)
+            poly_2 = self._inscribe_max_rect(zone, cap_2, scale=0.75,
+                                              max_depth=max_depth)
             if poly_2:
                 out.append((poly_2, 2))
 
         if max_floors >= 3:
             cap_3 = min(max_footprint, max_wiz * plot_area / (3 * USABLE_AREA_FACTOR))
-            poly_3 = self._inscribe_max_rect(zone, cap_3, scale=0.55)
+            poly_3 = self._inscribe_max_rect(zone, cap_3, scale=0.55,
+                                              max_depth=max_depth)
             if poly_3:
                 out.append((poly_3, 3))
 
         return out
 
     def _inscribe_max_rect(
-        self, zone: Polygon, max_area: float, scale: float = 1.0
+        self,
+        zone: Polygon,
+        max_area: float,
+        scale: float = 1.0,
+        max_depth: Optional[float] = None,
     ) -> Optional[Polygon]:
         """Largest axis-aligned rectangle fitting inside the zone, ≤ max_area.
 
-        Searches a grid of (width, length) combinations centred on the zone
-        centroid. Fix from the source: iterate length descending so we keep
-        the LARGEST fitting rectangle for each width (the source broke on
-        the smallest).
+        Args:
+            zone: buildable zone polygon.
+            max_area: area cap from WZ × plot_area.
+            scale: shrink factor (0.55-1.0).
+            max_depth: max depth (shorter dim) of the building in metres.
+                For WIELORODZINNA: 16m (PL standard 2-trakt z korytarzem,
+                doswietlenie WT 1/8 OK do depth/2=8m).
+                For JEDNORODZINNA: 12m (wolnostojaca).
+                None = no constraint (legacy behaviour).
         """
         if zone.is_empty or zone.area < 1.0:
             return None
@@ -199,6 +218,10 @@ class SitePlanner:
         for w in widths:
             for l in reversed(lengths):
                 if w * l > max_area * 1.01:
+                    continue
+                # Depth constraint: shorter side <= max_depth
+                # (zapewnia doswietlenie WT 1/8 dla pomieszczen wewn.)
+                if max_depth is not None and min(w, l) > max_depth:
                     continue
                 rect = box(cx - w / 2, cy - l / 2, cx + w / 2, cy + l / 2)
                 if zone.contains(rect):

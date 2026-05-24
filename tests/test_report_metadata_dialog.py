@@ -85,8 +85,8 @@ def test_qsettings_persists_logo_across_instances(
     dlg1._logo_path = fake_logo
     dlg1._on_accept()  # zapisuje do QSettings
 
-    # 2. QSettings ma logo zapamiętane
-    s = QSettings(QSETTINGS_ORG, QSETTINGS_APP)
+    # 2. QSettings ma logo zapamiętane (jawnie IniFormat + UserScope jak w dialogu)
+    s = QSettings(QSettings.IniFormat, QSettings.UserScope, QSETTINGS_ORG, QSETTINGS_APP)
     saved = s.value(QSETTINGS_LAST_LOGO_KEY, "", type=str)
     assert saved == str(fake_logo)
 

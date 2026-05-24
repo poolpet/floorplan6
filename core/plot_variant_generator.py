@@ -47,6 +47,26 @@ def generate_subdivision_variants(
 
 def _road_tree_strategy_set(plot: Plot) -> list[RoadTreeSettings]:
     """Small deterministic search space; no random magic in MVP."""
+    # Optimal-ratio strategy (FP4 CPP port) — target_front = max(min_front,
+    # sqrt(area × 0.67)), nie wciska wąskich pasów. Pierwsza próbowana strategia.
+    optimal_ratio = RoadTreeSettings(
+        name="road_tree_optimal_ratio",
+        branch_row_group=2,
+        trunk_position=0.50,
+        edge_clearance_front_factor=0.50,
+        shallow_depth_factor=1.75,
+        use_optimal_ratio=True,
+        target_ratio=0.67,  # wolnostojący; szeregowe/bliżniacze przeliczyć osobno
+    )
+    # Minimal roads — trunk + rzadkie branche co 3 rzędy (wolnostojący Q3(c):
+    # 1 dostęp do drogi wystarczy). Mniej dróg = wyższy road_efficiency score.
+    single_trunk = RoadTreeSettings(
+        name="road_tree_minimal_roads",
+        branch_row_group=3,  # branche co 3 rzedy (zamiast co 1-2 jak tight_lots)
+        trunk_position=0.50,
+        edge_clearance_front_factor=0.30,
+        shallow_depth_factor=2.20,
+    )
     balanced = RoadTreeSettings(
         name="road_tree_balanced",
         branch_row_group=2,
@@ -102,6 +122,8 @@ def _road_tree_strategy_set(plot: Plot) -> list[RoadTreeSettings]:
         and plot.mpzp.max_sub_plot_area_m2 <= 900
     ):
         return [
+            single_trunk,     # NAJMNIEJ drog — pierwsza probowana
+            optimal_ratio,    # FP4 CPP port
             left_trunk,
             right_trunk,
             tight_alt,
@@ -112,6 +134,8 @@ def _road_tree_strategy_set(plot: Plot) -> list[RoadTreeSettings]:
         ]
 
     return [
+        single_trunk,     # NAJMNIEJ drog — pierwsza probowana
+        optimal_ratio,    # FP4 CPP port
         balanced,
         minimal,
         left_trunk,

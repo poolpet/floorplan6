@@ -27,6 +27,13 @@ class RoadTreeSettings:
     edge_clearance_front_factor: float = 0.5
     shallow_depth_factor: float = 1.75
 
+    # Optimal-ratio mode (port z FP4 CPP PlotSubdivider.cpp linia 192):
+    # target_front = max(min_front, sqrt(target_area × target_ratio))
+    # daje proporcje front/depth ≈ target_ratio dla optymalnego budynku.
+    # 0.67 dla wolnostojących, 0.5 dla szeregowych/bliźniaczych.
+    use_optimal_ratio: bool = False
+    target_ratio: float = 0.67  # front × depth ratio (wolnostojący default)
+
 
 def rotate_plot_to_droga_horizontal(
     plot: Plot,
@@ -117,6 +124,14 @@ def generate_road_tree_layout(
     max_area = plot.mpzp.max_sub_plot_area_m2
     target_front = plot.mpzp.min_front_m
     road_w = plot.mpzp.min_road_width_m
+
+    # Optimal-ratio mode (FP4 CPP PlotSubdivider.cpp:192):
+    # Zamiast wciskac min_front, uzyj target_front = max(min_front, sqrt(area × ratio))
+    # → daje optymalne proporcje budynku, eliminuje "wciskane" wąskie pasy.
+    if settings.use_optimal_ratio:
+        avg_area = (plot.mpzp.min_sub_plot_area_m2 + max_area) / 2.0
+        optimal_front = math.sqrt(avg_area * settings.target_ratio)
+        target_front = max(target_front, optimal_front)
 
     rotated_plot, angle_deg, pivot = rotate_plot_to_droga_horizontal(plot)
     geom = rotated_plot.geometry

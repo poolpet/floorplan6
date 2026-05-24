@@ -10,9 +10,9 @@ from core.plot_subdivision_validator import validate
 
 
 WEIGHTS = {
-    "buildable_area": 0.35,
-    "road_efficiency": 0.20,
-    "waste_control": 0.20,
+    "buildable_area": 0.30,
+    "road_efficiency": 0.30,  # podniesiono z 0.20 — user nie chce za duzo drog
+    "waste_control": 0.15,
     "road_access": 0.10,
     "area_fit": 0.10,
     "regularity": 0.05,
@@ -47,7 +47,9 @@ def _score_buildable_area(result: SubdivisionResult) -> float:
 
 
 def _score_road_efficiency(result: SubdivisionResult) -> float:
-    return max(0.0, 1.0 - min(result.road_area_percent / 12.0, 1.0))
+    # Mocniejsza penalizacja drog: 8% drog = score 0 (wczesniej bylo 12%).
+    # Cel: scorer preferuje strategie z mniejsza siecia drog.
+    return max(0.0, 1.0 - min(result.road_area_percent / 8.0, 1.0))
 
 
 def _score_waste_control(result: SubdivisionResult) -> float:

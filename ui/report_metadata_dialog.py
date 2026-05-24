@@ -53,7 +53,7 @@ class ReportMetadataDialog(QDialog):
         self.logo_btn.clicked.connect(self._on_pick_logo)
 
         # Restore last-used logo
-        s = QSettings(QSETTINGS_ORG, QSETTINGS_APP)
+        s = QSettings(QSettings.IniFormat, QSettings.UserScope, QSETTINGS_ORG, QSETTINGS_APP)
         last = s.value(QSETTINGS_LAST_LOGO_KEY, "", type=str)
         if last and Path(last).exists():
             self._logo_path = Path(last)
@@ -92,7 +92,7 @@ class ReportMetadataDialog(QDialog):
     def _on_accept(self):
         # Persist last-used logo so next run pre-fills it
         if self._logo_path is not None:
-            s = QSettings(QSETTINGS_ORG, QSETTINGS_APP)
+            s = QSettings(QSettings.IniFormat, QSettings.UserScope, QSETTINGS_ORG, QSETTINGS_APP)
             s.setValue(QSETTINGS_LAST_LOGO_KEY, str(self._logo_path))
         self.accept()
 

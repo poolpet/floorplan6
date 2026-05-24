@@ -154,13 +154,24 @@ def test_logo_path_none_by_default():
     assert rd.logo_path is None
 
 
-def test_logo_path_passed_through():
+def test_logo_path_passed_through(tmp_path):
     plot = make_minimal_plot()
     variants, indicators, verification = _run_mode_a(plot)
-    logo = Path("/tmp/logo.png")
+    logo = tmp_path / "logo.png"
+    logo.write_bytes(b"\x89PNG\r\n\x1a\n")  # minimal PNG sig
     rd = build_report_data(plot, variants, indicators, verification,
                            plot_id="X", plot_address="", logo_path=logo)
     assert rd.logo_path == logo
+
+
+def test_logo_path_missing_file_silently_dropped(tmp_path):
+    """Stary path z QSettings persistent state → ignore, nie wybuchaj."""
+    plot = make_minimal_plot()
+    variants, indicators, verification = _run_mode_a(plot)
+    ghost_logo = tmp_path / "does_not_exist.png"
+    rd = build_report_data(plot, variants, indicators, verification,
+                           plot_id="X", plot_address="", logo_path=ghost_logo)
+    assert rd.logo_path is None
 
 
 # ============================================================================

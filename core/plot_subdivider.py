@@ -68,6 +68,8 @@ class SubPlot:
     buildable_zone: Optional[Polygon] = None
     parent_droga_touch: float = 0.0    # length of edge on parent's DROGA
     internal_road_touch: float = 0.0   # length of edge on an internal road
+    # Mode B building proposal (z core/building_proposer.py)
+    proposed_building: Optional[Polygon] = None
 
     @property
     def area(self) -> float:
