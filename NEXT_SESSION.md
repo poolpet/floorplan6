@@ -1,123 +1,124 @@
-# Briefing — następna sesja FP6 (po 2026-05-22)
+# Briefing — następna sesja FP6 (po 2026-05-26)
 
-> **Jak zacząć jutro:** otwórz terminal, wpisz:
+> **Jak zacząć:**
 >
 > ```bash
 > cd "/Users/dawidcwiertniewicz/Desktop/claude code/FloorPlan6"
 > claude
 > ```
 >
-> Następnie pierwsza wiadomość: **"Czytaj NEXT_SESSION.md i kontynuujemy."**
+> Pierwsza wiadomość: **"Czytaj NEXT_SESSION.md i kontynuujemy."**
 
 ---
 
-## Co zrobione w sesji 2026-05-22 (push'owane na GitHub)
+## STAN: Q19 + Q20 + Q21 DONE — zacommitowane na `main` 2026-05-26
 
-1. **Faza 0** — commit/push 51 zaległych zmian: Stage 1 logic + Stage 4 V1-V4 + custom Tapir + docs (commity `678e561`, `39ba221`, `f21d5a1`)
-2. **Faza 4 — Stage 1 Phase 3** — Eksport raportu PDF Mode A + Mode B (commit `9017bae`)
-   - `core/report_builder.py`: `build_report_data()` + `build_report_data_mode_b()`
-   - `ui/report_metadata_dialog.py`: plot_id/address/logo z QSettings IniFormat
-   - `ui/stage1_window.py`: przycisk "Eksport raportu PDF" + cache `("A"/"B", ...)`
-3. **Opcja A — port CPP `optimal_ratio`** (commit `f7c923c`)
-   - `target_front = max(min_front, sqrt(area × 0.67))` z FP4_CPP
-4. **Zadanie 1 — Mode A depth-aware** (commit `f7c923c`)
-   - WIELORODZINNA: max_depth=16m (2-trakt z korytarzem, NIE kwadrat)
-   - JEDNORODZINNA: max_depth=12m
-5. **Zadanie 2 — Building proposals Mode B** (commit `f7c923c`)
-   - `core/building_proposer.py` (NOWY): per typ zabudowy
-   - **DETACHED**: prostokąt 9.5×11m w środku buildable_zone
-   - **SEMI (bliźniacza)**: pary sub-działek z budynkami stykającymi się 1 ścianą
-   - **TERRACED (szeregowa)**: łańcuchy z budynkami stykającymi się 2 ściany
-6. **Strategia subdivider `road_tree_minimal_roads`** — pierwsza próbowana, fewer branches
-7. **Scorer mocniejsza penalizacja dróg**: waga 0.30, 8% road = score 0
+Sześć commitów (clean split, każdy z jasną wiadomością):
 
-**Pytest:** 277 passed, 0 failed. 0 regresji.
+```
+913525d chore(requirements): add reportlab>=4.0 (Stage 1 Phase 2 dep)
+b69d762 fix(building_proposer): rename BuildingType.SEMI to TWIN + regression tests
+9db4684 feat(stage1): Q19 — TWIN/TERRACED accept any road access (Mode B)
+1801f58 feat(stage1): Q20 — auto-scale MPZP per BuildingType (segment-aware)
+d9d566d feat(stage1): Q21 — shared walls zero side setback for TWIN/TERRACED
+[ten] docs: NEXT_SESSION post-Q21 + STATE Session 10
+```
 
----
+Pytest (non-GUI suite, `pytest --ignore=notebooks --ignore=tests/test_gui.py`):
 
-## Stan końcowy GUI (po `python3 -m ui.main_window`)
+- **287 passed, 31 skipped, 1 xpassed, exit 0** (~10 min)
+- Pre-Q21 baseline (subset zmienionych obszarów): 39 pass + 1 fail (`test_propose_buildings_twin_runs_and_assigns`)
+- Post-Q21: ten test pass + 4 nowe `TestQ21SharedWalls` zielone
 
-| Tab | Co działa |
-|---|---|
-| **Stage 1 Plot Analyser** | Mode A (whole plot) z wielorodzinną prostokątną, Mode B (subdivision) z propozycjami budynków per typ, Eksport raportu PDF dla obu |
-| **Stage 2 Volume Generator** | Placeholder — NIE rozpoczęte |
-| **Stage 3 Floor Layout** | Działa (rectangular MVP) |
-| **Stage 4 Apartment Layout** | Pełny V1-V4 export (zones + walls + doors z biblioteki + windows WT 1/8 + labels) — wymaga custom Tapir AC29 build (`tapir-custom/`) |
+Dawid przeszedł na `main` bezpośrednio (bez feature/PR) zgodnie z decyzją sesji.
 
 ---
 
-## Co dalej — kolejność TODO
+## 🎯 PRIO 1 — manualna weryfikacja AC
 
-### 🥇 Priorytet 1 — Test wizualny zadań 1+2
-Przetestuj w GUI 4 scenariusze, daj feedback:
-1. **Mode A wielorodzinna** → prostokąt 14-16m depth × max width (NIE kwadrat)
-2. **Mode B → DETACHED** → budynki 9.5×11m w środku sub-działek
-3. **Mode B → BLIŻNIACZA** → pary budynków stykających się ścianą
-4. **Mode B → SZEREGOWA** → ciągi budynków stykających się 2 ścianami
+Q21 logika ma testy jednostkowe (5 GREEN), ale architektoniczna sanity check
+na realnej działce z AC jeszcze nie była robiona.
 
-### 🥈 Zadanie 3 — Drogi minimum (częściowo zrobione)
-- `road_tree_minimal_roads` strategy + scorer fix już są
-- Sprawdzić czy obecne wystarczy lub dopracować
+```bash
+source venv/bin/activate
+python3 -m ui.main_window
+```
 
-### 🥉 Zadanie 4 — Eksport Stage 1 do AC
-- Sub-plots jako Slabs (przez Tapir CreateSlabs)
-- Budynki jako Slabs
-- Drogi jako Polylines / Slabs
-- Plus przycisk "Wstaw do ArchiCAD" w Stage 1 widget
+Scenariusze do sprawdzenia:
 
-### 🏅 Faza 3 — Stage 2 minimalny (formularz)
-- Footprint ze Stage 1 → user wpisuje liczba pięter, wysokość kondygnacji, typ dachu
-- "Dalej" → przekazanie footprint piętra do Stage 3
+1. **265×202 m (Dawid's AC test plot, regression dla Q19):**
+   - DETACHED: powinno dać ~50 sub-działek równomiernie.
+   - TWIN: ~60-80 sub-działek, **pary** budynków stykające jedną ścianą po stronie partnera.
+   - TERRACED: ~120+ sub-działek, **ciągi** budynków stykające dwoma ścianami bocznymi (wewnątrz łańcucha).
 
-### Faza 2 — Wariant B Stage 3 ↔ Stage 4 split view
-- Klik mieszkania na piętrze → automatyczny rzut w Stage 4
-- Persystencja mapy `apartment_id → FloorPlan`
-- Batch export "wszystkie mieszkania na raz"
+2. **60×80 m (regression Q21):**
+   - TWIN: ≥ 1 budynek uplasowany (przed Q21: 0/7).
+   - TERRACED: nadal działa (przed Q21 też działał, ale Q21 nie psuje).
 
-### Faza 1 — Stage 4 dopinki
-- Drzwi wejściowe automatycznie (entry_point z auto-detect)
-- Wybór piętra przy eksporcie (floorIndex)
-- Kategorie zon w AC (Mieszkalne/Komunikacyjne/Sanitarne)
+3. **Mode A (sanity):** dowolna jednorodzinna działka — sprawdzić że
+   buildable_zone wygląda tak jak przed (`is_shared_wall=False` domyślnie,
+   Q21 flag nie wpływa).
+
+Jeśli któryś scenariusz daje wizualnie złe wyniki → diagnoza zanim
+implementujemy Q22 cokolwiek (B1: 2 fail = REWRITE).
+
+---
+
+## PRIO 2 — kolejne kandydaty (do decyzji Dawida)
+
+W kolejności potencjalnej wartości:
+
+1. **STATE.md Phase 3 sync** — sekcja "Stage 1 Phase 3 — PLAN READY, NOT IMPLEMENTED"
+   jest stale, bo Phase 3 (UI Eksport PDF) shipowała w commit `9017bae`.
+   Przeczytać Phase 3 PR/diff, zaktualizować STATE.md sekcję.
+2. **Q1.1(c) — push-neighbour mechanism** — deferred od Mode B port (Session 5,
+   2026-05-07). Obecnie Q1.1(d) drop-to-nieużytek fallback działa, ale push
+   pozwoliłby utrzymać więcej sub-działek na L-shape z notchami.
+3. **L-shape floors w Stage 3** — `floor_layout.py` zakłada prostokątne piętro;
+   real-life pierwszego rzędu są L/U-shape.
+4. **Walls + doors export do AC** — Stage 4 obecnie eksportuje tylko Zones.
+5. **Stage 1 → Stage 4 integration** — kliknięcie sub-działki w Stage 1 GUI →
+   otwórz jej obrys jako wejście do Stage 4.
+6. **Stage 2 — volumetric generator** — jeszcze niezaczęty.
+
+---
+
+## PRIO 3 — code health (po cichu)
+
+- `core/plot_subdivider.py` — legacy experimental algorithms (`_pattern_*`,
+  `_recursive_obb_split`, `_compute_road_tree`, `_generate_grid`, ...) są
+  martwy kod (active path = `_generate_obb_layout` + `generate_road_tree_layout`).
+  Przenieść do `notebooks/archive/`.
+- Shapely `oriented_envelope` warnings (~10k per pytest run) — nie blokują,
+  można zignorować w `pyproject.toml` filterwarnings.
 
 ---
 
 ## Reguły workflow do PAMIĘTANIA
 
-**Z `docs/FUNDAMENTAL_RULES.md` (NIENARUSZALNE):**
-- **F2**: łazienka ≤ 5m², WC ≤ 3m² ABSOLUTNIE
-- **B1**: 2 fail = REWRITE, NIE 3-cia próba
-- **B2**: Plan PRZED zmianą kodu, czekaj na OK
-- **B6**: słuchaj user'a dosłownie
-- **B7**: tłumacz architektonicznie nie programistycznie
-- **B10**: po polsku, kolega-do-kolegi
-
-**Z lekcji 2026-05-22:**
-- Pytania STRATEGICZNE pytaj zanim implementujesz (B5) — np. głębokości traktów per typ
-- QSettings TESTOWE potrafi wyciekać → `isolated_qsettings` fixture musi czyścić cache w setup/teardown
-- Tapir 1.4.0 limits: brak GetUserPoint (workaround = Inner Edge polling), CreateDoors bez oSide/reflected (custom build dorobiony w `tapir-custom/`)
+Jak w `docs/FUNDAMENTAL_RULES.md`:
+- **F2** łazienka ≤ 5 m² (twarda Stage 4)
+- **B1** 2 fail = REWRITE (nie 3-cia próba)
+- **B2** plan w prostym języku PRZED zmianą kodu, czekaj na OK
+- **B6** słuchaj dosłownie ("nie zmieniaj X" = nie zmieniaj X)
+- **B8** verify before "done" (pytest + ja widzę wynik)
+- **B10** kolega-do-kolegi, po polsku
 
 ---
 
 ## Środowisko / komendy
 
 ```bash
-# venv
 source venv/bin/activate
+python3 -m ui.main_window                                    # GUI
 
-# uruchom GUI
-python3 -m ui.main_window
+python3 -m pytest --ignore=notebooks --ignore=tests/test_gui.py -q   # pełny (~10 min)
 
-# uruchom pytest (pełny, ~3.5 min)
-python3 -m pytest --ignore=notebooks -q
+python3 -m pytest tests/test_plot_subdivider.py tests/test_building_proposer.py \
+                  tests/test_plot_variant_generator.py -v             # zmienione obszary (~7 min)
 
-# uruchom tylko subdivider
-python3 -m pytest tests/test_plot_subdivider.py tests/test_plot_variant_generator.py -q
-
-# uruchom Stage 1 testy
-python3 -m pytest tests/test_buildable_zone.py tests/test_plot_verifier.py tests/test_site_planner.py -q
+python3 -m pytest tests/test_plot_subdivider.py::TestQ21SharedWalls -v # Q21 alone (~1s)
 ```
 
-**Custom Tapir Add-On** (potrzebny tylko dla Stage 4 export):
-- Folder: `/Users/dawidcwiertniewicz/Desktop/claude code/tapir-custom/`
-- Bundle: `/Applications/Graphisoft/Archicad 29/Dodatki/TapirAddOn_AC29_Mac.bundle`
-- Backup oryginalnego: `.bundle.orig`
+**Custom Tapir Add-On** dla Stage 4 export — bez zmian, `tapir-custom/`
+w katalogu `claude code/`.

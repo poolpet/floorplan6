@@ -3,7 +3,7 @@
 > Updated after every working session. If it doesn't reflect reality —
 > Claude updates immediately.
 >
-> **Last update:** 2026-05-07 (Stage 1 Sessions 1–6 — Mode A + Mode B logic + UI tab in `ui/main_window.py`)
+> **Last update:** 2026-05-26 (Stage 1 Session 10 — Q19 road access, Q20 segment scaling, Q21 shared walls; 287 pass non-GUI)
 >
 > Earlier sessions documented in Polish are preserved at the bottom; from
 > 2026-05-05 onwards everything is in English so the project can be shared
@@ -337,6 +337,53 @@ rewrite). Old modules removed:
    - `tests/test_plot_subdivider.py` + `tests/test_plot_variant_generator.py`: ✅ 28 passed
    - Stage 1 subset (`plot_subdivider`, `plot_variant_generator`, `buildable_zone`, `plot_verifier`, `site_planner`): ✅ 72 passed
    - Reproduced tight top-road case: `road_tree_left_trunk`, 83 sub-plots, max parcel 797.1 m², min buildable zone 157.4 m², road 8.0%, waste 0.0%, validation errors 0.
+
+   **Stage 1 Session 10 components (2026-05-25 → 2026-05-26) — segment-aware sub-plots:**
+
+   Driven by Dawid's AC test on a 265×202 m plot where TWIN/TERRACED collapsed
+   to 4 monster sub-plots (Q19), and a follow-up 60×80 m case where TWIN sub-plots
+   were architecturally correct but produced 0 buildable footprints because the
+   default 3 m side setback ate the entire frontage (Q21). Three connected
+   owner decisions — Q19 (road access), Q20 (per-type MPZP scaling), Q21
+   (shared walls).
+
+   | Component | Status |
+   |---|---|
+   | `core/building_proposer.py` | ✅ `BuildingType.SEMI` → `BuildingType.TWIN` (the dict crashed at import — Mode B/TWIN+TERRACED GUI flow was unreachable); pair/chain detection refactored to call `core/subdivision_topology` so subdivider and proposer agree |
+   | `core/plot_subdivider.py` (Q19) | ✅ `_filter_for_building_type` and `_wrap_valid_subplot` accept parent DROGA OR internal road for ALL building types (Q3 only mandates orientation, not location) |
+   | `core/plot_subdivider.py` (Q20) | ✅ `_with_effective_mpzp` scales `min_front_m`/`min_sub_plot_area_m2`/`max_sub_plot_area_m2` per BuildingType so 1 sub-plot = 1 segment; `_min_short_dim(mpzp)` derives the `_is_buildable_shape` guard from `mpzp.min_front_m` (no longer hardcoded 12 m) |
+   | `core/plot_subdivider.py` (Q21) | ✅ `_mark_shared_walls(sub_plots, building_type, plot)` runs AFTER absorb/split, sets `PlotBoundary.is_shared_wall=True` on the shared edge of every pair (TWIN) or chain neighbour (TERRACED), and rebuilds the affected sub-plots' buildable zones |
+   | `core/plot_model.py` | ✅ `PlotBoundary.is_shared_wall: bool = False`; `min_setback` returns 0 when the flag is set |
+   | `core/buildable_zone.py` | ✅ `_setback_distance` short-circuits to 0 for `is_shared_wall=True` boundaries (Mode A unaffected — flag defaults False) |
+   | `core/subdivision_topology.py` | ✅ NEW shared helpers `find_adjacent_pairs`, `find_chains`, `longest_linestring`; one source of truth for both `building_proposer` and `plot_subdivider._mark_shared_walls` |
+   | `tests/test_building_proposer.py` | ✅ NEW (4 tests): SEMI→TWIN regression + DETACHED/TWIN/TERRACED end-to-end smoke (TWIN unblocked by Q21) |
+   | `tests/test_plot_subdivider.py` | ✅ `TestQ19RoadAccess` (5 tests) + `TestQ20SegmentScaling` (6 tests) + `TestQ21SharedWalls` (4 tests) |
+   | `docs/OPEN_QUESTIONS.md` | ✅ Q19, Q20, Q21 added as DECIDED with owner reasoning |
+   | `requirements.txt` | ✅ `reportlab>=4.0` added (Phase 2 dep that was missing) |
+
+   **Stage 1 verification after Session 10 (2026-05-26):**
+
+   - Full non-GUI suite (`pytest --ignore=notebooks --ignore=tests/test_gui.py`):
+     ✅ **287 passed, 31 skipped, 1 xpassed** (exit 0, ~10 min)
+   - Pre-Q21 baseline (modified-areas subset, briefing 2026-05-25):
+     39 passed + 1 failed (`test_propose_buildings_twin_runs_and_assigns`)
+   - Post-Q21 (same subset): all 5 GREEN (4 new `TestQ21SharedWalls` +
+     previously-red TWIN regression).
+   - Verified: TWIN on 60×80 m now places ≥1 building (was 0/7);
+     `TestQ19RoadAccess` confirms TWIN/TERRACED on 265×202 m no longer collapse
+     to monster sub-plots; Mode A unaffected (Q21 flag defaults False).
+
+   **Stage 1 outstanding (after Session 10):**
+
+   - Visual AC validation on Dawid's real selected plots (Q19/Q20/Q21
+     architectural sanity check beyond unit tests).
+   - STATE.md Phase 3 section still says "PLAN READY, NOT IMPLEMENTED" — UI
+     integration (Eksport PDF) shipped in commit `9017bae` 2026-05-?; sync needed.
+   - Q1.1(c) push-neighbour mechanism — still deferred (Q1.1(d) drop-to-nieużytek
+     fallback is in production).
+   - `core/plot_subdivider.py` legacy experimental algorithms — still in file,
+     should move to `notebooks/archive/`.
+
 5. **Stage 2 (volumetric generator)** — not started
 
 ---
