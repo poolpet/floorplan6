@@ -50,10 +50,17 @@ class PlotBoundary:
     boundary_type: BoundaryType = BoundaryType.NIEZNANA
     segment_index: int = 0
     no_openings: bool = False  # if True, 1.5m allowed on neighbour boundaries
+    is_shared_wall: bool = False
+    # Q21 (2026-05-26): TWIN/TERRACED sub-plots share a wall with the next
+    # segment in the pair/chain. The side setback on that boundary is 0
+    # (BuildableZoneBuilder._setback_distance honours the flag). Set by
+    # `plot_subdivider._mark_shared_walls` after subdivision.
 
     @property
     def min_setback(self) -> float:
         """Minimum required setback [m]."""
+        if self.is_shared_wall:
+            return 0.0
         with_openings, without_openings = BOUNDARY_SETBACK[self.boundary_type]
         return without_openings if self.no_openings else with_openings
 

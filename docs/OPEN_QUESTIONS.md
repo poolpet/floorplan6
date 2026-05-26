@@ -476,6 +476,44 @@ helper that derives the guard from `mpzp.min_front_m`
 `min(8, 0.45 × min_front_m)` for the loose split pass). Both call sites
 now use it.
 
+### Q21 — Shared walls for TWIN/TERRACED (Mode B)
+**Question:** TWIN/TERRACED sub-plots are by design glued to a pair/chain
+neighbour by a shared wall — the wall on that boundary has 0 setback. The
+existing `BuildableZoneBuilder` treats every SASIAD_* boundary the same and
+applies 3 m side setback. On a 60×80 plot the Q20-scaled TWIN sub-plot is
+8.6 m wide → after 3 m + 3 m side setbacks the buildable zone shrinks to
+2.6 m × 72 m, and `building_proposer._propose_detached` (fallback for
+un-paired sub-plots) needs ≥ 4 m → returns 0 buildings placed for the whole
+TWIN result. How should the side setback be relaxed on the shared side
+without breaking DETACHED or Mode A semantics?
+
+**Options:**
+- (a) **Per-sub-plot detection** — add `is_shared_wall: bool` flag to
+  `PlotBoundary`. Subdivider detects pair/chain adjacency post-absorption
+  and marks the matching boundary segment(s); `BuildableZoneBuilder.
+  _setback_distance` returns 0 when the flag is set. Internal TERRACED
+  sub-plots end up with 2 marks, edge sub-plots with 1, DETACHED with 0.
+- (b) **Hardcode TWIN/TERRACED override** — drop side setback to 0 on every
+  SASIAD_* boundary of TWIN/TERRACED sub-plots, regardless of adjacency.
+  Faster (~30 min) but edge sub-plots in a chain have a "wall to nowhere"
+  on the non-pair side (buildings overhang the parent).
+- (c) **No-op + accept narrow buildable zone** — TWIN sub-plots without a
+  pair stay unbuildable; algorithm caller must over-subdivide to ensure
+  enough pairs.
+
+**Status:** DECIDED 2026-05-26
+**Owner's decision:** option (a) — per-sub-plot detection. Topology
+(`find_adjacent_pairs`, `find_chains`) shared between
+`core/subdivision_topology.py` and `core/building_proposer.py` so both
+agree on the pair/chain set. `plot_subdivider._mark_shared_walls` runs
+AFTER `_absorb_leftover`/`_split_oversized_subplots` (those re-infer
+boundaries and would otherwise clear the flag) and rebuilds the affected
+sub-plots' buildable zones via `BuildableZoneBuilder.compute(...)`.
+TWIN keeps a single pair per sub-plot (only one shared wall); TERRACED
+marks every neighbour above the chain threshold (internal segments get
+2 marks). Thresholds mirror `building_proposer`: 6 m (TWIN) / 4 m
+(TERRACED). DETACHED is a no-op.
+
 ### Q18 — Stage 1 UI entry point
 **Question:** how does the user pick mode (A/B) and housing type?
 

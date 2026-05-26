@@ -2159,6 +2159,120 @@ def _validate_single_family(plot: Plot) -> None:
         )
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Q21 (2026-05-26) — shared walls for TWIN/TERRACED
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Minimum overlap (m) when matching a SubPlot boundary segment against the
+# shared-edge LineString returned by topology.find_adjacent_pairs.
+_SHARED_EDGE_MIN_OVERLAP = 0.5
+
+# Adjacency thresholds — mirror building_proposer's pair/chain detection so
+# building placement and setback overrides agree on what "paired" means.
+_TWIN_MIN_SHARED_EDGE = 6.0
+_TERRACED_MIN_SHARED_EDGE = 4.0
+
+
+def _segment_overlap_length(segment_geom, ribbon) -> float:
+    """Length of the geometry returned by `segment_geom.intersection(ribbon)`,
+    handling both LineString and (Multi)Geometry results."""
+    try:
+        overlap = segment_geom.intersection(ribbon)
+    except Exception:
+        return 0.0
+    if overlap.is_empty:
+        return 0.0
+    if hasattr(overlap, "length") and not hasattr(overlap, "geoms"):
+        return overlap.length
+    if hasattr(overlap, "geoms"):
+        return sum(getattr(g, "length", 0.0) for g in overlap.geoms)
+    return 0.0
+
+
+def _mark_segment_on_edge(sub: SubPlot, shared_edge: LineString) -> bool:
+    """Set `is_shared_wall=True` on whichever PlotBoundary segment of `sub`
+    overlaps `shared_edge` the most (must overlap at least the minimum).
+    Returns True if a segment was marked."""
+    ribbon = shared_edge.buffer(0.01, cap_style=2)
+    best_bnd: Optional[PlotBoundary] = None
+    best_overlap = _SHARED_EDGE_MIN_OVERLAP
+    for bnd in sub.boundaries:
+        length = _segment_overlap_length(bnd.geometry, ribbon)
+        if length > best_overlap:
+            best_overlap = length
+            best_bnd = bnd
+    if best_bnd is not None:
+        best_bnd.is_shared_wall = True
+        return True
+    return False
+
+
+def _mark_shared_walls(
+    sub_plots: List[SubPlot],
+    building_type: BuildingType,
+    plot: Plot,
+) -> None:
+    """Mark the boundary segment shared with a pair/chain neighbour and rebuild
+    each affected sub-plot's buildable_zone so the 0m side setback applies.
+
+    DETACHED → no-op.
+    TWIN → first-best pair per sub-plot (one shared wall per sub-plot).
+    TERRACED → every neighbour pair above the chain threshold (internal
+    sub-plots get 2 marks, edge sub-plots get 1).
+
+    Must run AFTER `_absorb_leftover` / `_split_oversized_subplots` since those
+    re-infer boundaries (they would overwrite the flag with a fresh
+    `is_shared_wall=False`)."""
+    if building_type == BuildingType.DETACHED:
+        return
+
+    from core.subdivision_topology import find_adjacent_pairs
+
+    affected: set = set()
+
+    if building_type == BuildingType.TWIN:
+        pairs = find_adjacent_pairs(sub_plots, min_shared_edge=_TWIN_MIN_SHARED_EDGE)
+        paired: set = set()
+        for a, b, shared_edge in pairs:
+            if id(a) in paired or id(b) in paired:
+                continue
+            if _mark_segment_on_edge(a, shared_edge):
+                affected.add(id(a))
+            if _mark_segment_on_edge(b, shared_edge):
+                affected.add(id(b))
+            paired.add(id(a))
+            paired.add(id(b))
+    else:  # TERRACED
+        pairs = find_adjacent_pairs(
+            sub_plots, min_shared_edge=_TERRACED_MIN_SHARED_EDGE
+        )
+        for a, b, shared_edge in pairs:
+            if _mark_segment_on_edge(a, shared_edge):
+                affected.add(id(a))
+            if _mark_segment_on_edge(b, shared_edge):
+                affected.add(id(b))
+
+    if not affected:
+        return
+
+    builder = BuildableZoneBuilder()
+    for sub in sub_plots:
+        if id(sub) not in affected:
+            continue
+        tmp = Plot(
+            number="q21_recompute",
+            geometry=sub.polygon,
+            boundaries=sub.boundaries,
+            mpzp=plot.mpzp,
+            housing_type=plot.housing_type,
+        )
+        try:
+            new_zone = builder.compute(tmp)
+        except BuildableZoneInfeasible:
+            continue
+        if new_zone is not None and not new_zone.is_empty:
+            sub.buildable_zone = new_zone
+
 
 def _is_buildable_shape(
     cell: Polygon,
@@ -2690,6 +2804,13 @@ def _subdivide_single(
         if abs(after_leftover - before_leftover) < 0.01:
             break
     kept = _split_oversized_subplots(plot, kept, roads, building_type)
+
+    # Q21 (2026-05-26): TWIN/TERRACED sub-plots share a wall with their
+    # pair/chain neighbour. Mark those boundary segments so the side setback
+    # drops to 0 there (otherwise a 9m TWIN front gets 6m of setback and the
+    # buildable zone shrinks to 3m — no building fits).
+    _mark_shared_walls(kept, building_type, plot)
+
     nieuzytek = _assemble_nieuzytek(plot, kept, roads)
 
     return SubdivisionResult(

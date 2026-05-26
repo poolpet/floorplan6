@@ -20,13 +20,12 @@ Output: SubPlot.proposed_building (Polygon) field set in-place.
 """
 from __future__ import annotations
 
-import math
-from typing import List, Optional, Tuple
+from typing import List, Optional
 
-from shapely.affinity import translate
-from shapely.geometry import LineString, Point, Polygon, box
+from shapely.geometry import LineString, Polygon, box
 
 from core.plot_subdivider import BuildingType, SubdivisionResult, SubPlot
+from core.subdivision_topology import find_adjacent_pairs, find_chains
 
 
 # Optymalne wymiary budynku per typ (depth × width), z PL praktyki + Neufert.
@@ -133,7 +132,7 @@ def _propose_semi_pairs(sub_plots: List[SubPlot], dims: dict) -> None:
     2. Dla każdej pary: budynek "przyklejony" do wspólnej krawędzi.
     3. Sub-plot bez pary → fallback do detached.
     """
-    pairs = _find_adjacent_pairs(sub_plots, min_shared_edge=6.0)
+    pairs = find_adjacent_pairs(sub_plots, min_shared_edge=6.0)
     paired_ids = set()
 
     for a, b, shared_edge in pairs:
@@ -158,7 +157,7 @@ def _propose_terraced_chain(sub_plots: List[SubPlot], dims: dict) -> None:
     2. W każdym łańcuchu: środkowe sub-plots mają budynki z 2 ścianami wspólnymi
        (boczne ściany 0m setback), skrajne 1 ścianą wspólną.
     """
-    chains = _find_terraced_chains(sub_plots, min_shared_edge=4.0)
+    chains = find_chains(sub_plots, min_shared_edge=4.0)
     chained_ids = set()
 
     for chain in chains:
@@ -173,85 +172,6 @@ def _propose_terraced_chain(sub_plots: List[SubPlot], dims: dict) -> None:
     for sub in sub_plots:
         if id(sub) not in chained_ids and not getattr(sub, "proposed_building", None):
             sub.proposed_building = _propose_detached(sub, detached_dims)
-
-
-def _find_adjacent_pairs(
-    sub_plots: List[SubPlot],
-    min_shared_edge: float,
-) -> List[Tuple[SubPlot, SubPlot, LineString]]:
-    """Znajdź pary sąsiednich sub-działek dzielących krawędź ≥ min_shared_edge."""
-    pairs = []
-    for i, a in enumerate(sub_plots):
-        for b in sub_plots[i + 1:]:
-            shared = a.polygon.boundary.intersection(b.polygon.boundary)
-            if shared.is_empty:
-                continue
-            shared_line = _longest_linestring(shared)
-            if shared_line is None or shared_line.length < min_shared_edge:
-                continue
-            pairs.append((a, b, shared_line))
-    # Sortuj po długości wspólnej krawędzi malejąco
-    pairs.sort(key=lambda p: -p[2].length)
-    return pairs
-
-
-def _find_terraced_chains(
-    sub_plots: List[SubPlot],
-    min_shared_edge: float,
-) -> List[List[SubPlot]]:
-    """Znajdź łańcuchy sąsiadujących sub-działek (szeregowa: 3+ w ciągu).
-
-    Buduje graf sąsiedztwa per wspólna krawędź, traktuje łańcuch jako
-    spójną komponentę grafu (sąsiedzi po lewej-prawej).
-    """
-    # adjacency map: id(sub) -> List[sub]
-    adj = {id(s): [] for s in sub_plots}
-    for i, a in enumerate(sub_plots):
-        for b in sub_plots[i + 1:]:
-            shared = a.polygon.boundary.intersection(b.polygon.boundary)
-            if shared.is_empty:
-                continue
-            shared_line = _longest_linestring(shared)
-            if shared_line is None or shared_line.length < min_shared_edge:
-                continue
-            adj[id(a)].append(b)
-            adj[id(b)].append(a)
-
-    # BFS spójnych komponentów
-    visited = set()
-    chains = []
-    by_id = {id(s): s for s in sub_plots}
-    for sub in sub_plots:
-        if id(sub) in visited:
-            continue
-        # BFS
-        chain = []
-        stack = [sub]
-        while stack:
-            cur = stack.pop()
-            if id(cur) in visited:
-                continue
-            visited.add(id(cur))
-            chain.append(cur)
-            for nb in adj[id(cur)]:
-                if id(nb) not in visited:
-                    stack.append(nb)
-        chains.append(chain)
-    return chains
-
-
-def _longest_linestring(geom) -> Optional[LineString]:
-    """Wyciągnij najdłuższy LineString z (Multi)LineString/Collection."""
-    if geom.is_empty:
-        return None
-    if isinstance(geom, LineString):
-        return geom
-    if hasattr(geom, "geoms"):
-        lines = [g for g in geom.geoms if isinstance(g, LineString)]
-        if not lines:
-            return None
-        return max(lines, key=lambda g: g.length)
-    return None
 
 
 def _place_semi_pair(

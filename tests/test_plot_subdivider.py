@@ -475,6 +475,86 @@ class TestQ20SegmentScaling:
         )
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Q21 (2026-05-26) — shared walls for TWIN/TERRACED: side setback = 0 on the
+# boundary that touches another segment in the pair (TWIN) or chain (TERRACED).
+# Without this, default 3m side setback shrinks an 8.6m-wide TWIN sub-plot's
+# buildable zone to 2.6m × ~72m — no building fits. See OPEN_QUESTIONS.md
+# Q21 + plot_subdivider._mark_shared_walls.
+# ─────────────────────────────────────────────────────────────────────────────
+
+class TestQ21SharedWalls:
+
+    def test_detached_has_no_shared_walls(self):
+        """DETACHED: no boundary should ever be marked is_shared_wall."""
+        plot = _rectangular(60, 80)
+        r = subdivide(plot, building_type=BuildingType.DETACHED)
+        for s in r.sub_plots:
+            assert not any(b.is_shared_wall for b in s.boundaries), (
+                "DETACHED: free-standing — no shared walls expected"
+            )
+
+    def test_twin_paired_subplots_have_shared_wall_marked(self):
+        """TWIN: paired sub-plots (longest shared edge ≥ 6m) have exactly one
+        boundary marked is_shared_wall on each side of the pair."""
+        plot = _rectangular(60, 80)
+        r = subdivide(plot, building_type=BuildingType.TWIN)
+        marked_subs = [
+            s for s in r.sub_plots
+            if any(b.is_shared_wall for b in s.boundaries)
+        ]
+        # At least 1 pair → 2 sub-plots marked (one per side).
+        assert len(marked_subs) >= 2, (
+            f"TWIN: expected ≥2 sub-plots with shared wall (≥1 pair), "
+            f"got {len(marked_subs)}"
+        )
+        # Each marked sub-plot should have exactly 1 shared wall (TWIN = 1 pair).
+        for s in marked_subs:
+            shared_count = sum(1 for b in s.boundaries if b.is_shared_wall)
+            assert shared_count == 1, (
+                f"TWIN paired sub-plot has {shared_count} shared walls "
+                "(expected exactly 1)"
+            )
+
+    def test_terraced_internal_subplots_have_two_shared_walls(self):
+        """TERRACED chain: internal segments have 2 shared walls (both sides),
+        edge segments have 1 shared wall. At least one internal segment must
+        exist on a 60×80 plot."""
+        plot = _rectangular(60, 80)
+        r = subdivide(plot, building_type=BuildingType.TERRACED)
+        shared_counts = [
+            sum(1 for b in s.boundaries if b.is_shared_wall)
+            for s in r.sub_plots
+        ]
+        # At least one sub-plot has 2 shared walls (internal in chain).
+        assert max(shared_counts) >= 2, (
+            f"TERRACED: expected ≥1 internal sub-plot with 2 shared walls, "
+            f"max found = {max(shared_counts)}; counts={sorted(shared_counts)}"
+        )
+        # At least one sub-plot has exactly 1 shared wall (chain edge).
+        assert 1 in shared_counts, (
+            f"TERRACED: expected ≥1 edge sub-plot with 1 shared wall, "
+            f"counts={sorted(shared_counts)}"
+        )
+
+    def test_twin_buildable_zone_widens_after_shared_wall(self):
+        """TWIN: shared-wall sub-plot's buildable zone is wide enough for a
+        building. Before Q21: ~2.6m. After Q21: ≥ ~5m (3m setback dropped on
+        the shared side)."""
+        plot = _rectangular(60, 80)
+        r = subdivide(plot, building_type=BuildingType.TWIN)
+        widths = []
+        for s in r.sub_plots:
+            if (any(b.is_shared_wall for b in s.boundaries)
+                    and s.has_buildable_zone):
+                minx, _, maxx, _ = s.buildable_zone.bounds
+                widths.append(maxx - minx)
+        assert widths, "Expected at least one TWIN sub-plot with shared wall"
+        assert min(widths) >= 4.0, (
+            f"Shared-wall TWIN sub-plot has buildable zone width "
+            f"{min(widths):.2f}m < 4m — Q21 setback override not applied"
+        )
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Road tree invariants — owner feedback 2026-05-10

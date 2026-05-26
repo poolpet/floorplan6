@@ -116,6 +116,11 @@ class BuildableZoneBuilder:
         no_openings_direction: Optional[str],
     ) -> float:
         """Required setback distance for a single boundary [m]."""
+        if boundary.is_shared_wall:
+            # Q21 (2026-05-26): TWIN/TERRACED share a wall along this segment;
+            # the side setback is 0 by construction. See plot_model.PlotBoundary
+            # and plot_subdivider._mark_shared_walls.
+            return 0.0
         if boundary.boundary_type == BoundaryType.DROGA:
             return max(setback_from_road, 3.0)
 
