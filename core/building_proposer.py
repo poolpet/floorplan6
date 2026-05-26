@@ -8,7 +8,7 @@ BuildingType (per Polish architectural practice + Neufert):
         depth ~9-10m, width ~10-12m
         Free-standing, building centered in buildable_zone with 4-side setbacks.
 
-    SEMI (bliżniacza):
+    TWIN (bliżniacza):
         depth ~8-9m, width ~10-14m (2 segments share 1 wall)
         Each pair of adjacent sub-plots: buildings stick to their shared edge.
 
@@ -38,7 +38,7 @@ BUILDING_DIMENSIONS = {
         "depth_max": 12.0,
         "width_max": 14.0,
     },
-    BuildingType.SEMI: {
+    BuildingType.TWIN: {
         "depth_opt": 8.5,    # 8-9m
         "width_opt": 9.0,    # per segment (1 z pary)
         "depth_max": 11.0,
@@ -63,7 +63,7 @@ def propose_buildings(
 
     Args:
         result: SubdivisionResult z plot_subdivider.subdivide().
-        building_type: DETACHED / SEMI / TERRACED — wpływa na geometrię.
+        building_type: DETACHED / TWIN / TERRACED — wpływa na geometrię.
 
     Returns: same result with proposed_building set per sub-plot.
     """
@@ -75,7 +75,7 @@ def propose_buildings(
     if building_type == BuildingType.DETACHED:
         for sub in result.sub_plots:
             sub.proposed_building = _propose_detached(sub, dims)
-    elif building_type == BuildingType.SEMI:
+    elif building_type == BuildingType.TWIN:
         _propose_semi_pairs(result.sub_plots, dims)
     elif building_type == BuildingType.TERRACED:
         _propose_terraced_chain(result.sub_plots, dims)
