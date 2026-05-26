@@ -26,6 +26,10 @@ Decisions implemented:
           DROGA OR internal road). Earlier strict "TWIN/TERRACED requires
           parent DROGA" collapsed multi-row developments to ≤4 monster
           sub-plots; reverted per owner.
+  Q20 (2026-05-25) — auto-scale MPZP front/area per BuildingType so that
+          1 sub-plot = 1 segment (PL practice). TWIN front=min(user, 9 m),
+          area×0.5. TERRACED front=min(user, 6 m), area×1/3. DETACHED
+          keeps user values.
 
 Anti-bug regressions vs C++ Plot Subdivider session 2026-04-29:
   #1 sub-plots overflow parent boundary — fixed by Shapely intersection.
@@ -38,7 +42,7 @@ Anti-bug regressions vs C++ Plot Subdivider session 2026-04-29:
 from __future__ import annotations
 
 import math
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from enum import Enum
 from typing import List, Optional, Tuple
 
@@ -57,10 +61,54 @@ from core.subdivision_roads import RoadTreeSettings, generate_road_tree_layout
 
 
 class BuildingType(str, Enum):
-    """Sub-plot building type — drives per-sub-plot orientation / front rules."""
+    """Sub-plot building type — drives Q20 per-type MPZP scaling."""
     DETACHED = "DETACHED"
     TWIN = "TWIN"
     TERRACED = "TERRACED"
+
+
+# Q20 (2026-05-25): per-type defaults for "1 sub-plot = 1 segment".
+# TWIN segment ≈ half a twin pair; TERRACED segment ≈ one unit of a chain.
+# User's MPZP min_front_m acts as an upper bound — we never enlarge above
+# what the user set, only shrink to the type-appropriate default.
+_BUILDING_TYPE_SEGMENT_DEFAULTS = {
+    BuildingType.TWIN: {
+        "front_m": 9.0,            # ½ of standard 18 m detached front
+        "area_scale": 0.5,         # ½ of user min/max area
+    },
+    BuildingType.TERRACED: {
+        "front_m": 6.0,            # ⅓ of standard 18 m
+        "area_scale": 1.0 / 3.0,   # ⅓ of user min/max area
+    },
+}
+
+
+def _with_effective_mpzp(plot: Plot, building_type: "BuildingType") -> Plot:
+    """Q20 (2026-05-25): return a Plot whose MPZP front/area are scaled to
+    1 sub-plot = 1 segment for TWIN/TERRACED.
+
+    DETACHED: returns the input plot unchanged.
+    TWIN/TERRACED: returns a new Plot with `mpzp.min_front_m`,
+    `mpzp.min_sub_plot_area_m2`, `mpzp.max_sub_plot_area_m2` scaled per
+    `_BUILDING_TYPE_SEGMENT_DEFAULTS`. User's `min_front_m` is taken as
+    upper bound (we never widen the front beyond what they configured).
+
+    Why not just shrink in inner functions? Plot.mpzp is read by many
+    subdivider helpers (`_subdivide_single`, road generation, buildable
+    zone per cell). Replacing at the public entry point means every
+    downstream read picks up the scaled value automatically.
+    """
+    defaults = _BUILDING_TYPE_SEGMENT_DEFAULTS.get(building_type)
+    if defaults is None:
+        return plot
+    mpzp = plot.mpzp
+    new_mpzp = replace(
+        mpzp,
+        min_front_m=min(mpzp.min_front_m, defaults["front_m"]),
+        min_sub_plot_area_m2=mpzp.min_sub_plot_area_m2 * defaults["area_scale"],
+        max_sub_plot_area_m2=mpzp.max_sub_plot_area_m2 * defaults["area_scale"],
+    )
+    return replace(plot, mpzp=new_mpzp)
 
 
 @dataclass
@@ -2111,6 +2159,7 @@ def _validate_single_family(plot: Plot) -> None:
         )
 
 
+
 def _is_buildable_shape(
     cell: Polygon,
     min_area: float,
@@ -2194,6 +2243,24 @@ def _min_buildable_zone_area(plot: Plot) -> float:
     enough to reject pathological edge plots without forcing a building size.
     """
     return max(60.0, plot.mpzp.min_sub_plot_area_m2 * 0.20)
+
+
+def _min_short_dim(mpzp, *, cap: float = 12.0, ratio: float = 0.67) -> float:
+    """Q20 (2026-05-25): scale `_is_buildable_shape` short-dim guard with
+    `mpzp.min_front_m` (which is already type-aware after
+    `_with_effective_mpzp` at the public entry).
+
+    DETACHED (front 18 m): `min(12, 18×0.67=12.06) = 12 m`.
+    TWIN (front 9 m after Q20): `min(12, 9×0.67=6.03) = 6 m`.
+    TERRACED (front 6 m after Q20): `min(12, 6×0.67=4.02) = 4 m`.
+
+    Without this scaling, the hardcoded 12 m guard rejected every
+    TERRACED segment (6 m wide) and most TWIN segments (9 m wide), so
+    TERRACED returned 0 sub-plots and TWIN had a leftover-absorption
+    explosion. `_split_oversized_subplots` uses a looser variant
+    (`cap=8.0, ratio=0.45`) as a last-ditch attempt.
+    """
+    return min(cap, mpzp.min_front_m * ratio)
 
 
 def _wrap_valid_subplot(
@@ -2323,7 +2390,7 @@ def _split_polygon_to_valid_subplots(
                     group,
                     min_area * 0.50,
                     min_rectangularity=0.45,
-                    min_short_dim=8.0,
+                    min_short_dim=_min_short_dim(plot.mpzp, cap=8.0, ratio=0.45),
                 ):
                     valid = False
                     break
@@ -2603,7 +2670,11 @@ def _subdivide_single(
     # quality. Owner: "powydzielal dzialki za male ponizej minimum, no rany
     # boskie", "w takim ksztalcie ze sie tam nic nie da wybudowac".
     min_area = plot.mpzp.min_sub_plot_area_m2
-    viable_cells = [c for c in clipped_cells if _is_buildable_shape(c, min_area)]
+    short_dim = _min_short_dim(plot.mpzp)
+    viable_cells = [
+        c for c in clipped_cells
+        if _is_buildable_shape(c, min_area, min_short_dim=short_dim)
+    ]
 
     subs = _build_subplots_from_cells(plot, viable_cells, roads)
     # Drop cells where buildable zone is infeasible (setbacks leave nothing).
@@ -2619,7 +2690,6 @@ def _subdivide_single(
         if abs(after_leftover - before_leftover) < 0.01:
             break
     kept = _split_oversized_subplots(plot, kept, roads, building_type)
-
     nieuzytek = _assemble_nieuzytek(plot, kept, roads)
 
     return SubdivisionResult(
@@ -2641,6 +2711,8 @@ def subdivide(
 ) -> SubdivisionResult:
     """Return the best scored subdivision variant for the existing API."""
     _validate_single_family(plot)
+    # Q20: scale MPZP front/area for TWIN/TERRACED so 1 sub-plot = 1 segment.
+    plot = _with_effective_mpzp(plot, building_type)
     from core.plot_variant_generator import generate_subdivision_variants
 
     variants = generate_subdivision_variants(

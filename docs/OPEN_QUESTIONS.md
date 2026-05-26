@@ -427,6 +427,55 @@ now treat all building types identically — any road access (parent DROGA
 OR internal road) is kept, only true no-access sub-plots are demoted to
 nieużytek.
 
+### Q20 — Sub-plot size scaling per BuildingType (Mode B)
+**Question:** in real PL practice, a twin-house sub-plot is ½ of a typical
+detached sub-plot (segment = one unit), and a terraced sub-plot is ⅓.
+Current subdivider uses the same MPZP `min_front_m` / `min_sub_plot_area_m2`
+for all building types, so TWIN/TERRACED produce DETACHED-sized sub-plots
+(~600-1000 m²) instead of segment-sized (~150-450 m²). How to fix?
+
+**Context:** Dawid 2026-05-25 screenshot after Q19 fix showed 43 sub-plots
+of ~600-800 m² for both TWIN and TERRACED — algorithmically correct (no
+collapse) but architecturally wrong (each segment should have its own
+small plot, not share a 600 m² plot with nothing).
+
+PL standards (per Neufert + lokalne MPZP):
+| Type      | Front segment | Area segment   |
+|-----------|---------------|----------------|
+| DETACHED  | 18 m          | 600-1000 m²    |
+| TWIN      | 7-10 m        | 250-450 m²     |
+| TERRACED  | 5-7 m         | 120-250 m²     |
+
+**Options:**
+- (a) **Auto-scale in algorithm** — `subdivide()` replaces `plot.mpzp`
+  with effective values per BuildingType (TWIN: front=min(user, 9 m),
+  area×0.5; TERRACED: front=min(user, 6 m), area×⅓). User's MPZP acts
+  as upper bound. Single entry point change.
+- (b) **Per-type fields in MPZP** — `min_front_twin_m`, `min_front_terraced_m`,
+  `min_area_twin_m2`, etc. Explicit, requires MPZP + UI + tests changes.
+- (c) **UI auto-defaults** — when user picks TWIN combo, UI sets fields to
+  TWIN defaults; user can still override. Transparent.
+
+**Status:** DECIDED 2026-05-25
+**Owner's decision:** option (a) — auto-scale in the algorithm at the
+`subdivide()` entry point. Defaults: TWIN front 9 m and area ×0.5;
+TERRACED front 6 m and area ×⅓. User's MPZP `min_front_m` is treated as
+an upper bound (we never enlarge above what they configured). MPZP fields
+remain single-typed; the type-aware scaling is an internal transform.
+Implemented in `plot_subdivider._with_effective_mpzp` +
+`_BUILDING_TYPE_SEGMENT_DEFAULTS`.
+
+**Follow-up fix (same day):** the `_is_buildable_shape` guard previously
+had a hardcoded `min_short_dim = 12.0 m` (and 8.0 m for the looser
+splitting variant), tuned for DETACHED segments. After Q20 scaling,
+TERRACED segments (6 m wide) and most TWIN segments (9 m) were rejected
+by that guard, producing 0 sub-plots for TERRACED and oversized
+leftover-absorption for TWIN. Added `plot_subdivider._min_short_dim(mpzp)`
+helper that derives the guard from `mpzp.min_front_m`
+(`min(12, 0.67 × min_front_m)` for the strict pass,
+`min(8, 0.45 × min_front_m)` for the loose split pass). Both call sites
+now use it.
+
 ### Q18 — Stage 1 UI entry point
 **Question:** how does the user pick mode (A/B) and housing type?
 

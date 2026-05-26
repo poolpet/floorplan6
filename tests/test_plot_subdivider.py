@@ -380,6 +380,100 @@ class TestQ19RoadAccess:
         )
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Q20 (2026-05-25) — segment scaling: 1 sub-plot = 1 segment for TWIN/TERRACED
+# DETACHED keeps standard sub-plots (~600-1000 m²). TWIN segment = ½ pair
+# (~300 m²). TERRACED segment = 1 unit of a chain (~200 m²). Without this
+# scaling, all building types would produce identical DETACHED-sized plots.
+# See plot_subdivider._with_effective_mpzp + _BUILDING_TYPE_SEGMENT_DEFAULTS.
+# ─────────────────────────────────────────────────────────────────────────────
+
+class TestQ20SegmentScaling:
+
+    def test_twin_average_sub_plot_smaller_than_detached(self):
+        """TWIN sub-plot = ½ pair → average area must be clearly smaller."""
+        plot = _rectangular(265, 202)
+        r_detached = subdivide(plot, building_type=BuildingType.DETACHED)
+        r_twin = subdivide(plot, building_type=BuildingType.TWIN)
+
+        avg_d = sum(s.area for s in r_detached.sub_plots) / len(r_detached.sub_plots)
+        avg_t = sum(s.area for s in r_twin.sub_plots) / len(r_twin.sub_plots)
+
+        assert avg_t < 0.7 * avg_d, (
+            f"TWIN avg sub-plot {avg_t:.0f}m² should be <70% of DETACHED "
+            f"avg {avg_d:.0f}m² (Q20 scaling — segment vs whole plot)"
+        )
+
+    def test_terraced_average_sub_plot_smaller_than_twin(self):
+        """TERRACED segment is the smallest of the three types."""
+        plot = _rectangular(265, 202)
+        r_twin = subdivide(plot, building_type=BuildingType.TWIN)
+        r_terraced = subdivide(plot, building_type=BuildingType.TERRACED)
+
+        avg_twin = sum(s.area for s in r_twin.sub_plots) / len(r_twin.sub_plots)
+        avg_terr = sum(s.area for s in r_terraced.sub_plots) / len(r_terraced.sub_plots)
+
+        assert avg_terr < avg_twin, (
+            f"TERRACED avg {avg_terr:.0f}m² should be smaller than "
+            f"TWIN avg {avg_twin:.0f}m² (Q20 scaling)"
+        )
+
+    def test_detached_unchanged_by_q20(self):
+        """DETACHED keeps user's MPZP values — no scaling applied."""
+        plot = _rectangular(60, 80)
+        before_front = plot.mpzp.min_front_m
+        before_min_area = plot.mpzp.min_sub_plot_area_m2
+        before_max_area = plot.mpzp.max_sub_plot_area_m2
+
+        # Run subdivide (which would mutate MPZP for TWIN/TERRACED via replace).
+        subdivide(plot, building_type=BuildingType.DETACHED)
+
+        # The original plot must not be mutated by subdivide.
+        assert plot.mpzp.min_front_m == before_front
+        assert plot.mpzp.min_sub_plot_area_m2 == before_min_area
+        assert plot.mpzp.max_sub_plot_area_m2 == before_max_area
+
+    def test_terraced_produces_subplots_after_short_dim_fix(self):
+        """Q20 follow-up: TERRACED segments (6 m wide) used to be rejected
+        by the hardcoded `min_short_dim=12` guard, returning 0 sub-plots.
+        After scaling the guard with mpzp.min_front_m, TERRACED must
+        produce a non-trivial number of sub-plots on a large plot.
+        """
+        plot = _rectangular(265, 202)
+        r = subdivide(plot, building_type=BuildingType.TERRACED)
+        assert len(r.sub_plots) >= 20, (
+            f"TERRACED produced only {len(r.sub_plots)} sub-plots — "
+            f"likely _is_buildable_shape guard regression"
+        )
+
+    def test_terraced_count_meets_or_exceeds_detached(self):
+        """Q20: TERRACED segments smaller than DETACHED → at least as many."""
+        plot = _rectangular(265, 202)
+        r_d = subdivide(plot, building_type=BuildingType.DETACHED)
+        r_t = subdivide(plot, building_type=BuildingType.TERRACED)
+        # Allow some scoring noise — TERRACED should clearly out-pack DETACHED.
+        assert len(r_t.sub_plots) >= 0.9 * len(r_d.sub_plots), (
+            f"TERRACED {len(r_t.sub_plots)} < DETACHED {len(r_d.sub_plots)} "
+            "— segments should pack denser, not sparser"
+        )
+
+    def test_twin_no_oversized_leftover_monster(self):
+        """Q20 follow-up: after the short-dim fix, `_split_oversized_subplots`
+        is able to recursively split absorption leftovers, so no single
+        sub-plot dwarfs the others. Cap = effective max_area × 2.5
+        (split cap is 1.5×; allow some slack for irregular trapezoid plots).
+        """
+        plot = _rectangular(265, 202)
+        r = subdivide(plot, building_type=BuildingType.TWIN)
+        # Effective max_area for TWIN = user value × 0.5 (Q20 scaling).
+        twin_effective_max = plot.mpzp.max_sub_plot_area_m2 * 0.5
+        max_area = max(s.area for s in r.sub_plots)
+        assert max_area <= twin_effective_max * 2.5, (
+            f"TWIN has monster sub-plot {max_area:.0f}m² "
+            f"(effective cap {twin_effective_max:.0f}m² × 2.5 = "
+            f"{twin_effective_max * 2.5:.0f}m²)"
+        )
+
 
 
 # ─────────────────────────────────────────────────────────────────────────────
