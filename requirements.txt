@@ -18,6 +18,9 @@ archicad>=29.3000  # Graphisoft official Python API
 # Pathfinding (floor layout walking distance via Dijkstra)
 networkx>=3.0
 
+# PDF report generation (Stage 1 Phase 2 — core/report_pdf.py)
+reportlab>=4.0
+
 # Tests
 pytest>=7.0
 pytest-cov>=4.0
