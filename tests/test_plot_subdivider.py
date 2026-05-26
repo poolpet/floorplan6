@@ -9,7 +9,9 @@ Anti-bug regressions vs C++ Plot Subdivider session 2026-04-29:
 
 Plus tests for:
   Q12 — Mode B single-family only
-  Q3(c) — TERRACED/TWIN requires direct parent's-DROGA touch
+  Q19 (2026-05-25) — TERRACED/TWIN accept any road access (parent DROGA
+       OR internal road); previously gated to parent DROGA only, which
+       collapsed multi-row developments to ≤4 monster sub-plots.
   Q15  — min_front threshold
   Q16(a) — strict coverage equality
 """
@@ -287,39 +289,97 @@ class TestMinFront:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Q3(c) — TERRACED/TWIN front-to-parent's-DROGA
+# Q19 (2026-05-25) — TWIN/TERRACED accept any road access
+# Previously: only parent's DROGA touch counted, which collapsed multi-row
+# developments to ≤4 monster sub-plots. Re-decision: all building types
+# accept parent DROGA OR internal road (Q3 only mandates orientation, not
+# location). See plot_subdivider._filter_for_building_type docstring.
 # ─────────────────────────────────────────────────────────────────────────────
 
-class TestQ3FrontToRoad:
-
-    def test_terraced_drops_internal_road_only_sub_plots(self):
-        """For TERRACED, sub-plots fronting internal road only are demoted."""
-        plot = _rectangular(60, 80)
-        r_detached = subdivide(plot, building_type=BuildingType.DETACHED)
-        r_terraced = subdivide(plot, building_type=BuildingType.TERRACED)
-        # Detached keeps both rows; terraced keeps only row touching parent's DROGA
-        assert len(r_terraced.sub_plots) <= len(r_detached.sub_plots)
-        for s in r_terraced.sub_plots:
-            assert s.parent_droga_touch > 0, \
-                "TERRACED sub-plot must touch parent's DROGA directly"
-
-    def test_twin_same_constraint_as_terraced(self):
-        plot = _rectangular(60, 80)
-        r_twin = subdivide(plot, building_type=BuildingType.TWIN)
-        for s in r_twin.sub_plots:
-            assert s.parent_droga_touch > 0
+class TestQ19RoadAccess:
 
     def test_detached_accepts_internal_road_sub_plots(self):
-        """For DETACHED, sub-plots fronting internal road only are still OK."""
+        """DETACHED: sub-plots fronting internal road only are kept."""
         plot = _rectangular(60, 260)
         r = subdivide(plot, building_type=BuildingType.DETACHED)
-        # Should have sub-plots in both rows
         any_internal_only = any(
             s.parent_droga_touch == 0 and s.internal_road_touch > 0
             for s in r.sub_plots
         )
         assert any_internal_only, \
             "Expected at least one DETACHED sub-plot fronting only internal road"
+
+    def test_terraced_accepts_internal_road_sub_plots(self):
+        """Q19: TERRACED no longer requires parent DROGA — internal road OK."""
+        plot = _rectangular(60, 260)
+        r = subdivide(plot, building_type=BuildingType.TERRACED)
+        any_internal_only = any(
+            s.parent_droga_touch == 0 and s.internal_road_touch > 0
+            for s in r.sub_plots
+        )
+        assert any_internal_only, (
+            "Expected at least one TERRACED sub-plot fronting only internal "
+            "road (Q19 2026-05-25 — szeregowce w drugim rzędzie are valid)"
+        )
+
+    def test_twin_accepts_internal_road_sub_plots(self):
+        """Q19: TWIN no longer requires parent DROGA — internal road OK."""
+        plot = _rectangular(60, 260)
+        r = subdivide(plot, building_type=BuildingType.TWIN)
+        any_internal_only = any(
+            s.parent_droga_touch == 0 and s.internal_road_touch > 0
+            for s in r.sub_plots
+        )
+        assert any_internal_only, (
+            "Expected at least one TWIN sub-plot fronting only internal road "
+            "(Q19 2026-05-25 — bliźniaki w drugim rzędzie are valid)"
+        )
+
+    def test_twin_does_not_collapse_to_monster_subplot_on_large_plot(self):
+        """Regression for Dawid's 2026-05-25 screenshot bug.
+
+        Before Q19: TWIN on 265×202m plot returned 4 sub-plots with one
+        monster S1=31708m² (almost the whole plot), instead of normal
+        grid subdivision. Cause: strict parent-DROGA filter rejected most
+        candidates, forcing _absorb_leftover_capped to merge them.
+        """
+        plot = _rectangular(265, 202)
+        r_detached = subdivide(plot, building_type=BuildingType.DETACHED)
+        r_twin = subdivide(plot, building_type=BuildingType.TWIN)
+
+        # TWIN should produce a similar count to DETACHED (within 50% lower
+        # bound — different scorers may pick different strategies, but TWIN
+        # must not collapse).
+        assert len(r_twin.sub_plots) >= 0.5 * len(r_detached.sub_plots), (
+            f"TWIN collapsed to {len(r_twin.sub_plots)} sub-plots vs "
+            f"{len(r_detached.sub_plots)} for DETACHED"
+        )
+        # No single sub-plot may swallow most of the plot.
+        max_area = max(s.area for s in r_twin.sub_plots)
+        plot_area = plot.geometry.area
+        assert max_area < 0.25 * plot_area, (
+            f"Monster sub-plot {max_area:.0f}m² covers "
+            f"{max_area / plot_area:.1%} of plot — likely Q19 regression"
+        )
+
+    def test_terraced_does_not_collapse_to_monster_subplot_on_large_plot(self):
+        """Mirror of test_twin_does_not_collapse — TERRACED scenario."""
+        plot = _rectangular(265, 202)
+        r_detached = subdivide(plot, building_type=BuildingType.DETACHED)
+        r_terraced = subdivide(plot, building_type=BuildingType.TERRACED)
+
+        assert len(r_terraced.sub_plots) >= 0.5 * len(r_detached.sub_plots), (
+            f"TERRACED collapsed to {len(r_terraced.sub_plots)} sub-plots vs "
+            f"{len(r_detached.sub_plots)} for DETACHED"
+        )
+        max_area = max(s.area for s in r_terraced.sub_plots)
+        plot_area = plot.geometry.area
+        assert max_area < 0.25 * plot_area, (
+            f"Monster sub-plot {max_area:.0f}m² covers "
+            f"{max_area / plot_area:.1%} of plot — likely Q19 regression"
+        )
+
+
 
 
 # ─────────────────────────────────────────────────────────────────────────────

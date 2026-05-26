@@ -396,6 +396,37 @@ placement and the verifier skips wt_004–008. Parking placement remains
 active and is the dominant constraint for multi-family. Effectively a
 hybrid of (a) and (b) — single flag drives the skip.
 
+### Q19 — Q3(c) gating: TWIN/TERRACED parent's DROGA touch only?
+**Question:** is the strict parent-DROGA filter (added 2026-05-08 in
+`plot_subdivider._filter_for_building_type` for TWIN/TERRACED, while DETACHED
+keeps the lenient parent-OR-internal filter) consistent with the architectural
+intent of Q3?
+
+**Context:** Q3 owner's decision mandates only **orientation** (shorter
+side = front) for TWIN/TERRACED, not **location**. The strict filter
+collapsed multi-row developments to ≤4 monster sub-plots on large plots
+(Dawid's 2026-05-25 screenshot: 265×202 m plot → TWIN returned 4 sub-plots
+with one S1=31708 m² monster), making szeregowce/bliźniaki in the second
+row impossible to design.
+
+**Options:**
+- (a) **Loosen** — TWIN/TERRACED accept any road access (parent DROGA OR
+  internal road), same as DETACHED. Front orientation remains the
+  constraint per Q3.
+- (b) **Hybrid** — TWIN/TERRACED accept internal road *iff* that internal
+  road connects to a parent's DROGA (transitive driveway continuity).
+- (c) **Keep strict** — preserve 2026-05-08 behavior; fix
+  `building_proposer` to handle ≤4 sub-plot scenarios gracefully.
+
+**Status:** DECIDED 2026-05-25
+**Owner's decision:** option (a) — loosen. Standard PL deweloperka
+practice puts szeregowce/bliźniaki in multiple rows with internal road
+access; the strict gate broke this. Q3 stays as-is (orientation only).
+Implementation: `_filter_for_building_type` and `_wrap_valid_subplot`
+now treat all building types identically — any road access (parent DROGA
+OR internal road) is kept, only true no-access sub-plots are demoted to
+nieużytek.
+
 ### Q18 — Stage 1 UI entry point
 **Question:** how does the user pick mode (A/B) and housing type?
 

@@ -13,9 +13,8 @@ Decisions implemented:
           trapezoid via Shapely intersection.
   Q1.1(d) — too-small clipped sub-plots are demoted to explicit nieużytek
           (Q1.1(c) push-neighbour deferred to a future iteration).
-  Q3(c) — for BuildingType.TERRACED and TWIN, every sub-plot must touch
-          parent's DROGA edge directly (not only the internal road).
-          For DETACHED, any road access (parent or internal) is enough.
+  Q3 (orientation) — for TERRACED and TWIN the shorter sub-plot side is
+          the front (towards the road); free orientation for DETACHED.
   Q4(a) — twin-house: 1 sub-plot = 1 segment. Pairing into twin houses
           is a Stage 2/Stage 4 concern, not a subdivision concern.
   Q5(c) — orientation search picks the layout with the most sub-plots
@@ -23,6 +22,10 @@ Decisions implemented:
   Q15   — `MPZPParameters.min_front_m` default 18 m, MPZP override.
   Q16(a) — strict coverage `Σ sub + roads + nieużytek == parent` with
           0.5 m² floating-point tolerance.
+  Q19 (2026-05-25) — ALL building types accept any road access (parent
+          DROGA OR internal road). Earlier strict "TWIN/TERRACED requires
+          parent DROGA" collapsed multi-row developments to ≤4 monster
+          sub-plots; reverted per owner.
 
 Anti-bug regressions vs C++ Plot Subdivider session 2026-04-29:
   #1 sub-plots overflow parent boundary — fixed by Shapely intersection.
@@ -54,7 +57,7 @@ from core.subdivision_roads import RoadTreeSettings, generate_road_tree_layout
 
 
 class BuildingType(str, Enum):
-    """Sub-plot building type — drives Q3(c) front-to-road requirement."""
+    """Sub-plot building type — drives per-sub-plot orientation / front rules."""
     DETACHED = "DETACHED"
     TWIN = "TWIN"
     TERRACED = "TERRACED"
@@ -1723,27 +1726,20 @@ def _filter_for_building_type(
     sub_plots: List[SubPlot],
     building_type: BuildingType,
 ) -> Tuple[List[SubPlot], List[SubPlot]]:
-    """Q3(c): TERRACED/TWIN require parent's DROGA touch (not only internal
-    road). DETACHED requires *any* road access — cells without any road
-    edge are demoted (you can't legally have a house without driveway,
-    AC test feedback 2026-05-08).
+    """Q19 (2026-05-25): ALL building types accept any road access (parent
+    DROGA OR internal road). Previous strict "TWIN/TERRACED requires parent
+    DROGA only" was over-interpretation of Q3 — Q3 mandates only ORIENTATION
+    (shorter side = front), not LOCATION. Multi-row developments with
+    internal roads are standard PL deweloperka practice; the strict gate
+    collapsed large plots to ≤4 monster sub-plots and made szeregowce in
+    the second row impossible to design.
 
-    Returns (kept, demoted) — demoted go to nieużytek.
+    Returns (kept, demoted) — demoted (no road access at all) go to nieużytek.
     """
-    if building_type == BuildingType.DETACHED:
-        kept: List[SubPlot] = []
-        demoted: List[SubPlot] = []
-        for s in sub_plots:
-            if s.parent_droga_touch > 0 or s.internal_road_touch > 0:
-                kept.append(s)
-            else:
-                demoted.append(s)
-        return kept, demoted
-
     kept: List[SubPlot] = []
     demoted: List[SubPlot] = []
     for s in sub_plots:
-        if s.parent_droga_touch > 0:
+        if s.parent_droga_touch > 0 or s.internal_road_touch > 0:
             kept.append(s)
         else:
             demoted.append(s)
@@ -2210,10 +2206,9 @@ def _wrap_valid_subplot(
     boundaries, droga_touch, internal_touch = _infer_boundaries(
         polygon, plot, roads
     )
-    if building_type == BuildingType.DETACHED:
-        if droga_touch + internal_touch <= 0.5:
-            return None
-    elif droga_touch <= 0.5:
+    # Q19 (2026-05-25): all building types accept any road access (see
+    # _filter_for_building_type docstring for rationale).
+    if droga_touch + internal_touch <= 0.5:
         return None
 
     tmp = Plot(
@@ -2574,7 +2569,7 @@ def _subdivide_single(
          shared-edge neighbour. Coverage stays 100% — no leftover.
       3. _build_subplots_from_cells wraps cells into SubPlots with boundary
          classification (DROGA / SASIAD_*) and per-cell buildable zone.
-      4. Q3 filter (TERRACED/TWIN need parent DROGA touch).
+      4. Q19 filter — any road access (parent DROGA OR internal) kept.
 
     No `_absorb_leftover` step — katana cells already tile the parent.
     The earlier rejection-+-absorption pipeline blew up one sub-plot to
