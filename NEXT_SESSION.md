@@ -1,4 +1,4 @@
-# Briefing — następna sesja FP6 (po 2026-05-27)
+# Briefing — następna sesja FP6 (po 2026-05-27, sesja 11)
 
 > **Jak zacząć:**
 >
@@ -11,61 +11,53 @@
 
 ---
 
-## STAN: Q19 + Q20 + Q21 DONE + visual sanity check PASS — wszystko na `main`
+## STAN: Sesja 11 (2026-05-27) — 3 PRIO zamknięte + spec/plan Stage 1→4 gotowy
 
-Q19/Q20/Q21 commits (2026-05-26):
+Wszystko zacommitowane na `main`. Commits sesji 11:
 
 ```
-913525d chore(requirements): add reportlab>=4.0 (Stage 1 Phase 2 dep)
-b69d762 fix(building_proposer): rename BuildingType.SEMI to TWIN + regression tests
-9db4684 feat(stage1): Q19 — TWIN/TERRACED accept any road access (Mode B)
-1801f58 feat(stage1): Q20 — auto-scale MPZP per BuildingType (segment-aware)
-d9d566d feat(stage1): Q21 — shared walls zero side setback for TWIN/TERRACED
+4256997 docs(plan): Stage 1 → Stage 4 integration implementation plan
+6a46498 docs(spec): fix wall_types contract — WallType enum, not list[str]
+cfdf314 docs(spec): Stage 1 → Stage 4 integration design
+483d71f chore(plot_subdivider): remove 21 dead functions (−39% file size)
+12e6906 docs(state): sync Stage 1 Phase 3 — COMPLETED 2026-05-24 (commit 9017bae)
+254c9f6 chore(stage1): Q21 visual sanity check + STATE/NEXT_SESSION sync
 ```
 
-Visual sanity check Q21 (2026-05-27):
+Co zrobione w sesji 11:
+- Q21 visual sanity check PASS — 5 scenariuszy renderowanych przez prod `subdivide()` + `propose_buildings()`. Regresja 60×80 TWIN: 5/5 buildings (przed Q21: 0/7).
+- Phase 3 STATE.md sync — sekcja "PLAN READY, NOT IMPLEMENTED" zaktualizowana do "COMPLETED 2026-05-24".
+- Code health — 21 dead functions z `plot_subdivider.py` wyciętych (2860 → 1731 linii, −39%).
+- Stage 1 → Stage 4 integration **spec + plan** gotowe (9 TDD tasków), **implementacja NIE rozpoczęta**.
 
-- `notebooks/stage1_q21_sanity.py` — 5 scenariuszy renderowanych przez
-  produkcyjne `subdivide()` + `propose_buildings()` (PNG w `notebooks/output/`).
-- Regresja 60×80 TWIN: **5/5 buildings** (przed Q21 było 0/7) ✅
-- 265×202 TWIN: 70 sub, 35 par TWIN, Q21 shared walls poprawne ✅
-- 265×202 TERRACED: 81 sub w 6 ciągach, każda z budynkiem ✅
-- Architectural review owner: PASS — Q21 zamknięte.
-
-Pytest (non-GUI suite, `pytest --ignore=notebooks --ignore=tests/test_gui.py`):
-
-- **287 passed, 31 skipped, 1 xpassed, exit 0** (~10 min, baseline z sesji 10)
-
-Outstanding niepokoje (NIE bugi, raczej kalibracja na przyszłość):
-- DETACHED 30 sub na 265×202 (avg 1729 m²) — `max_sub_plot_area_m2=2000` default może być za duży.
-- TERRACED 81 sub zamiast oczekiwanych 120+ — `_is_buildable_shape` z `min_short_dim` może ucinać wąskie segmenty.
-- Pionowa droga w środku 265×202 — algorytm dzieli na 4 kwadranty, alternatywą byłaby 1 droga wzdłuż dłuższej osi.
+Pytest (non-GUI suite): **287 passed, 31 skipped, 1 xpassed** (identyczne jak baseline sesji 10, zero regresji).
 
 ---
 
-## 🎯 PRIO 1 — STATE.md Phase 3 sync (quick win)
+## 🎯 PRIO 1 — Wykonaj plan Stage 1 → Stage 4 integration
 
-Sekcja "Stage 1 Phase 3 — PLAN READY, NOT IMPLEMENTED" w `docs/STATE.md`
-jest stale — Phase 3 (UI Eksport PDF) shipowała w commit `9017bae`.
-Przeczytać Phase 3 PR/diff, zaktualizować sekcję. Bez kodu, bez testów.
+**Plan:** `docs/superpowers/plans/2026-05-27-stage1-stage4-integration.md` (9 tasków TDD, ~1.5h)
+**Spec:** `docs/superpowers/specs/2026-05-27-stage1-stage4-integration-design.md`
+
+Co implementujemy: klik sub-działki w Stage 1 Mode B (SF: DETACHED/TWIN/TERRACED) → highlight → przycisk "Otwórz w Stage 4" → prefilled Stage 4 z auto-detekcją entry/walls → auto-switch tab → user klika Generate.
+
+Pierwsza wiadomość: **"Czytaj NEXT_SESSION.md i wykonujemy plan stage1-stage4."**
+Albo: **"Subagent-driven execution: superpowers:subagent-driven-development na plan stage1-stage4."**
+
+Spodziewany wynik po wykonaniu: 295 passed (287 + 6 helper + 2 integration), end-to-end smoke na 60×80 TWIN pass.
 
 ---
 
-## PRIO 2 — kolejne kandydaty (do decyzji Dawida)
+## PRIO 2 — kolejne kandydaty (po Stage 1→4 integration)
 
 W kolejności potencjalnej wartości:
 
-1. **Q1.1(c) — push-neighbour mechanism** — deferred od Mode B port (Session 5,
-   2026-05-07). Obecnie Q1.1(d) drop-to-nieużytek fallback działa, ale push
-   pozwoliłby utrzymać więcej sub-działek na L-shape z notchami.
-2. **L-shape floors w Stage 3** — `floor_layout.py` zakłada prostokątne piętro;
-   real-life pierwszego rzędu są L/U-shape.
+1. **Q1.1(c) — push-neighbour mechanism** — deferred od Mode B port (Session 5, 2026-05-07). Obecnie Q1.1(d) drop-to-nieużytek fallback działa, ale push pozwoliłby utrzymać więcej sub-działek na L-shape z notchami.
+2. **L-shape floors w Stage 3** — `floor_layout.py` zakłada prostokątne piętro; real-life pierwszego rzędu są L/U-shape.
 3. **Walls + doors export do AC** — Stage 4 obecnie eksportuje tylko Zones.
-4. **Stage 1 → Stage 4 integration** — kliknięcie sub-działki w Stage 1 GUI →
-   otwórz jej obrys jako wejście do Stage 4.
-5. **Stage 2 — volumetric generator** — jeszcze niezaczęty.
-6. **DETACHED `max_sub_plot_area_m2` recalibration** — opcjonalna zmiana
-   defaultu z 2000 → 1500 (lub 1200) m² po dyskusji architektonicznej.
+4. **Stage 2 — volumetric generator** — jeszcze niezaczęty.
+5. **DETACHED `max_sub_plot_area_m2` recalibration** — opcjonalna zmiana defaultu z 2000 → 1500 (lub 1200) m² po dyskusji architektonicznej.
+6. **TERRACED 81 zamiast 120+ na 265×202** — diagnostyka `_is_buildable_shape` z `min_short_dim` — może ucina wąskie segmenty.
 
 ---
 
