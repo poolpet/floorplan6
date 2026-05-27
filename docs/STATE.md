@@ -389,8 +389,9 @@ flow, richer VariantInfo metrics.
      integration (Eksport PDF) shipped in commit `9017bae` 2026-05-?; sync needed.
    - Q1.1(c) push-neighbour mechanism — still deferred (Q1.1(d) drop-to-nieużytek
      fallback is in production).
-   - `core/plot_subdivider.py` legacy experimental algorithms — still in file,
-     should move to `notebooks/archive/`.
+   - ~~`core/plot_subdivider.py` legacy experimental algorithms~~ — DONE 2026-05-27:
+     21 dead functions removed (file 2860 → 1731 lines, −39%); 287 non-GUI tests
+     still pass, no regressions.
 
 5. **Stage 2 (volumetric generator)** — not started
 

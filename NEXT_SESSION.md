@@ -71,10 +71,8 @@ W kolejności potencjalnej wartości:
 
 ## PRIO 3 — code health (po cichu)
 
-- `core/plot_subdivider.py` — legacy experimental algorithms (`_pattern_*`,
-  `_recursive_obb_split`, `_compute_road_tree`, `_generate_grid`, ...) są
-  martwy kod (active path = `_generate_obb_layout` + `generate_road_tree_layout`).
-  Przenieść do `notebooks/archive/`.
+- ~~`core/plot_subdivider.py` legacy~~ — DONE 2026-05-27 (commit po PRIO 2):
+  21 dead functions removed (2860 → 1731 linii, −39%).
 - Shapely `oriented_envelope` warnings (~10k per pytest run) — nie blokują,
   można zignorować w `pyproject.toml` filterwarnings.
 
