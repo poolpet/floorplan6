@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import sys
 
-from PyQt5.QtCore import Qt, QTimer
+from PyQt5.QtCore import Qt, QTimer, pyqtSignal
 from PyQt5.QtWidgets import (
     QApplication, QButtonGroup, QCheckBox, QComboBox, QDoubleSpinBox,
     QGridLayout, QGroupBox, QHBoxLayout, QLabel, QMainWindow, QMessageBox,
@@ -59,6 +59,10 @@ ELEMENT_COLOR = {
 
 class Stage1Widget(QWidget):
     """Stage 1 panel — embeddable in QTabWidget."""
+
+    # Stage 1 -> Stage 4 integration (Mode B SF only)
+    apartment_layout_requested = pyqtSignal(object, object, object)
+    # args: (polygon: shapely.Polygon, entry: (x, y), wall_types: list[WallType])
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -211,6 +215,14 @@ class Stage1Widget(QWidget):
             "(parent's DROGA), DETACHED akceptuje tylko dostęp do drogi wewnętrznej"
         )
         bl.addWidget(self.bt_combo, 0, 1)
+        self.open_in_stage4_btn = QPushButton("Otwórz wybraną sub-działkę w Stage 4")
+        self.open_in_stage4_btn.setEnabled(False)
+        self.open_in_stage4_btn.setToolTip(
+            "Wybierz sub-działkę z proposed_building klikając ją na canvasie, "
+            "potem otwórz jej obrys jako wejście do Stage 4."
+        )
+        self.open_in_stage4_btn.clicked.connect(self._on_open_in_stage4)
+        bl.addWidget(self.open_in_stage4_btn, 1, 0, 1, 2)
         left.addWidget(modeb_box)
 
         # 5. Generate
@@ -781,8 +793,41 @@ class Stage1Widget(QWidget):
         self._update_open_in_stage4_btn()
 
     def _update_open_in_stage4_btn(self):
-        """Placeholder - implemented in Task 5."""
-        pass
+        """Enable iff a sub-plot with proposed_building is currently selected."""
+        if (self._mode_b_result is None
+                or self._selected_sub_idx is None
+                or self._selected_sub_idx >= len(self._mode_b_result.sub_plots)):
+            self.open_in_stage4_btn.setEnabled(False)
+            self.open_in_stage4_btn.setToolTip(
+                "Kliknij sub-działkę na canvasie aby ją wybrać."
+            )
+            return
+        sub = self._mode_b_result.sub_plots[self._selected_sub_idx]
+        pb = getattr(sub, "proposed_building", None)
+        if pb is None or pb.is_empty:
+            self.open_in_stage4_btn.setEnabled(False)
+            self.open_in_stage4_btn.setToolTip(
+                "Brak proposed building — sprawdź strefę zabudowy tej sub-działki."
+            )
+            return
+        self.open_in_stage4_btn.setEnabled(True)
+        self.open_in_stage4_btn.setToolTip(
+            f"Otwórz sub-działkę #{self._selected_sub_idx + 1} jako rzut w Stage 4."
+        )
+
+    def _on_open_in_stage4(self):
+        """Emit apartment_layout_requested with derived (polygon, entry, walls)."""
+        if self._mode_b_result is None or self._selected_sub_idx is None:
+            return
+        sub = self._mode_b_result.sub_plots[self._selected_sub_idx]
+        pb = getattr(sub, "proposed_building", None)
+        if pb is None or pb.is_empty:
+            return
+        from core.building_to_apartment_input import building_to_apartment_input
+        polygon, entry, walls = building_to_apartment_input(
+            sub, roads=self._mode_b_result.roads
+        )
+        self.apartment_layout_requested.emit(polygon, entry, walls)
 
     def _render_mode_b(self, plot, result):
         self.fig.clear()
