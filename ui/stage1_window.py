@@ -70,6 +70,9 @@ class Stage1Widget(QWidget):
         self._poll_attempts = 0
         self._poll_max_attempts = 60   # 60 × 1 s = 60 s
         self._poll_initial_guids: set = set()
+        # Stage 1 -> Stage 4 (Mode B only) selection state
+        self._mode_b_result = None         # last SubdivisionResult, for click hit-test
+        self._selected_sub_idx = None      # index into result.sub_plots
         self._build_ui()
         self._refresh_outline_preview()
 
@@ -255,6 +258,7 @@ class Stage1Widget(QWidget):
         # Right: matplotlib canvas
         self.fig = Figure(figsize=(10, 8))
         self.canvas = FigureCanvasQTAgg(self.fig)
+        self.canvas.mpl_connect("button_press_event", self._on_canvas_click)
 
         main_layout.addWidget(left_widget)
         main_layout.addWidget(self.canvas, stretch=1)
@@ -664,6 +668,8 @@ class Stage1Widget(QWidget):
             # Mode B: propose building footprints per sub-plot (per building_type)
             from core.building_proposer import propose_buildings
             propose_buildings(result, building_type)
+            self._mode_b_result = result
+            self._selected_sub_idx = None
             self._render_mode_b(plot, result)
             self._show_mode_b_info(result)
             # Cache dla Phase 3 PDF export — Mode B
@@ -757,6 +763,27 @@ class Stage1Widget(QWidget):
         finally:
             QApplication.restoreOverrideCursor()
 
+    def _on_canvas_click(self, event):
+        """Mode B only: hit-test against sub_plots, set _selected_sub_idx."""
+        if self._mode_b_result is None or event.xdata is None or event.ydata is None:
+            return
+        from shapely.geometry import Point
+        pt = Point(event.xdata, event.ydata)
+        for i, s in enumerate(self._mode_b_result.sub_plots):
+            if s.polygon.contains(pt):
+                self._selected_sub_idx = i
+                self._render_mode_b(self._mode_b_result.parent, self._mode_b_result)
+                self._update_open_in_stage4_btn()
+                return
+        # Click in empty space - clear selection.
+        self._selected_sub_idx = None
+        self._render_mode_b(self._mode_b_result.parent, self._mode_b_result)
+        self._update_open_in_stage4_btn()
+
+    def _update_open_in_stage4_btn(self):
+        """Placeholder - implemented in Task 5."""
+        pass
+
     def _render_mode_b(self, plot, result):
         self.fig.clear()
         ax = self.fig.add_subplot(111)
@@ -767,7 +794,11 @@ class Stage1Widget(QWidget):
         for i, s in enumerate(result.sub_plots):
             sx, sy = s.polygon.exterior.xy
             c = SUBPLOT_COLORS[i % len(SUBPLOT_COLORS)]
-            ax.fill(sx, sy, color=c, alpha=0.7, edgecolor="black", linewidth=0.8)
+            if i == self._selected_sub_idx:
+                edge_color, edge_w = "#f1c40f", 3.0     # yellow highlight
+            else:
+                edge_color, edge_w = "black", 0.8
+            ax.fill(sx, sy, color=c, alpha=0.7, edgecolor=edge_color, linewidth=edge_w)
 
             if s.has_buildable_zone:
                 try:
