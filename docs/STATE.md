@@ -3,7 +3,7 @@
 > Updated after every working session. If it doesn't reflect reality —
 > Claude updates immediately.
 >
-> **Last update:** 2026-05-27 (Q21 visual sanity check on 265×202 + 60×80 — PASS; notebooks/stage1_q21_sanity.py added)
+> **Last update:** 2026-05-27 (Stage 1 → Stage 4 integration shipped — Mode B SF sub-plot opens directly in Stage 4 with auto-detected entry/walls)
 >
 > Earlier sessions documented in Polish are preserved at the bottom; from
 > 2026-05-05 onwards everything is in English so the project can be shared
@@ -392,6 +392,31 @@ flow, richer VariantInfo metrics.
    - ~~`core/plot_subdivider.py` legacy experimental algorithms~~ — DONE 2026-05-27:
      21 dead functions removed (file 2860 → 1731 lines, −39%); 287 non-GUI tests
      still pass, no regressions.
+
+   **Stage 1 → Stage 4 integration (Session 11, 2026-05-27):**
+
+   | Component | Status |
+   |---|---|
+   | `core/building_to_apartment_input.py` | ✅ NEW — pure-Python adapter SubPlot → (polygon, entry, list[WallType]); midpoint-based shared-wall classification (deviation from spec to prevent false-positive INTERNAL on edges that merely touch at endpoints). 6 unit tests pass. |
+   | `ui/stage1_window.py` Stage1Widget | ✅ + `apartment_layout_requested` signal; canvas `button_press_event` hit-test → `_selected_sub_idx`; yellow 3pt highlight on selected sub-plot in `_render_mode_b`; "Otwórz wybraną sub-działkę w Stage 4" button (disabled until selection with `proposed_building`). |
+   | `ui/main_window.py` MainWindow | ✅ + `self.stage1_widget` / `self.apt_tab` exposed as members; signal wired in `_build_ui`; `_populate_stage4_from_stage1` slot fills `_imported_polygon/_imported_entry/_imported_wall_types` and switches active tab; `_confirm_stage4_overwrite` QMessageBox.question with Cancel default. |
+   | `tests/test_stage1_stage4_integration.py` | ✅ NEW — 2 Qt smoke tests via `qapp` fixture (slot fills fields + tab switch; no emit without proposed_building). |
+   | `docs/superpowers/specs/2026-05-27-stage1-stage4-integration-design.md` | ✅ design spec |
+   | `docs/superpowers/plans/2026-05-27-stage1-stage4-integration.md` | ✅ implementation plan (9 TDD tasks) |
+
+   **End-to-end smoke (programmatic, 2026-05-27):** 60×80 TWIN → 5 sub-plots, 5/5 with proposed_building; clicking #1 → button enables → emit → `_imported_polygon` (76.5 m²), `_imported_entry` (7.75, 35.5), wall_types [INTERNAL, FACADE, FACADE, FACADE] — exactly TWIN expectation (1 INTERNAL + 3 FACADE) — active tab switched to Stage 4. PASS.
+
+   **Suite after Session 11 (2026-05-27):** 296 passed, 29 skipped, 1 xpassed in the full non-GUI suite (target was 295: 287 baseline + 6 helper + 2 integration; 1 extra likely due to a previously-skipped test becoming runnable). One known-flake (`test_cpsat_solver::test_hub_adjacency_m2`) fails intermittently — sibling `test_hub_adjacency_m3` is already xfail-marked with the same root cause (CP-SAT non-determinism + Shapely clipping); passes in isolation; unrelated to this session.
+
+   **Scope (decided in brainstorm 2026-05-27):**
+   - Mode B single-family only (DETACHED/TWIN/TERRACED).
+   - Auto-detect: entry = midpoint of building edge whose midpoint is nearest a road geometry; walls INTERNAL where midpoint lies within 0.5 m of a Q21 `is_shared_wall=True` boundary, FACADE otherwise.
+   - User explicitly clicks Generate in Stage 4 (no auto-solver).
+   - Confirm dialog when Stage 4 already holds variants.
+
+   **Out of scope (still on backlog):**
+   - Mode A → Stage 4 (different UX — choose variant first).
+   - Wielorodzinna → multi-apartment in one building (needs Stage 3 floor layout first).
 
 5. **Stage 2 (volumetric generator)** — not started
 
