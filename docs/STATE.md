@@ -3,7 +3,7 @@
 > Updated after every working session. If it doesn't reflect reality —
 > Claude updates immediately.
 >
-> **Last update:** 2026-05-26 (Stage 1 Session 10 — Q19 road access, Q20 segment scaling, Q21 shared walls; 287 pass non-GUI)
+> **Last update:** 2026-05-27 (Q21 visual sanity check on 265×202 + 60×80 — PASS; notebooks/stage1_q21_sanity.py added)
 >
 > Earlier sessions documented in Polish are preserved at the bottom; from
 > 2026-05-05 onwards everything is in English so the project can be shared
@@ -373,10 +373,22 @@ rewrite). Old modules removed:
      `TestQ19RoadAccess` confirms TWIN/TERRACED on 265×202 m no longer collapse
      to monster sub-plots; Mode A unaffected (Q21 flag defaults False).
 
-   **Stage 1 outstanding (after Session 10):**
+   **Stage 1 Session 10 visual sanity check (2026-05-27) — PASS:**
 
-   - Visual AC validation on Dawid's real selected plots (Q19/Q20/Q21
-     architectural sanity check beyond unit tests).
+   | Component | Status |
+   |---|---|
+   | `notebooks/stage1_q21_sanity.py` | ✅ NEW: 5 scenarios (265×202 DETACHED/TWIN/TERRACED + 60×80 TWIN/TERRACED) rendered via production `subdivide()` + `propose_buildings()` |
+   | `notebooks/output/q21_sanity_*.png` | ✅ 5 detail + 1 overview PNG |
+
+   - 60×80 TWIN: **5/5 buildings** (regression vs pre-Q21 0/7) ✅
+   - 265×202 TWIN: 70 sub-plots, 35 TWIN pairs, 100% coverage, Q21 shared walls visible between paired neighbours ✅
+   - 265×202 TERRACED: 81 sub-plots in 6 chains, 100% coverage, every sub-plot has a building, shared walls along chain ✅
+   - Q16 coverage: diff=0.00 m² in all 5 scenarios; nieużytek=0%
+   - Architectural review (owner): pass — close Q21 visual validation, no further fixes required this session.
+   - Outstanding open questions noted but not blocking: DETACHED `max_sub_plot_area_m2=2000` may be too generous (avg 1729 m² per sub-plot); TERRACED produces 81 not 120+ on 265×202; vertical road appears mid-plot in 265×202 layouts. None marked as bugs.
+
+   **Stage 1 outstanding (after Session 10 + sanity check 2026-05-27):**
+
    - STATE.md Phase 3 section still says "PLAN READY, NOT IMPLEMENTED" — UI
      integration (Eksport PDF) shipped in commit `9017bae` 2026-05-?; sync needed.
    - Q1.1(c) push-neighbour mechanism — still deferred (Q1.1(d) drop-to-nieużytek

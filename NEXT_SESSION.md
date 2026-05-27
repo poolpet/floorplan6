@@ -1,4 +1,4 @@
-# Briefing — następna sesja FP6 (po 2026-05-26)
+# Briefing — następna sesja FP6 (po 2026-05-27)
 
 > **Jak zacząć:**
 >
@@ -11,9 +11,9 @@
 
 ---
 
-## STAN: Q19 + Q20 + Q21 DONE — zacommitowane na `main` 2026-05-26
+## STAN: Q19 + Q20 + Q21 DONE + visual sanity check PASS — wszystko na `main`
 
-Sześć commitów (clean split, każdy z jasną wiadomością):
+Q19/Q20/Q21 commits (2026-05-26):
 
 ```
 913525d chore(requirements): add reportlab>=4.0 (Stage 1 Phase 2 dep)
@@ -21,46 +21,33 @@ b69d762 fix(building_proposer): rename BuildingType.SEMI to TWIN + regression te
 9db4684 feat(stage1): Q19 — TWIN/TERRACED accept any road access (Mode B)
 1801f58 feat(stage1): Q20 — auto-scale MPZP per BuildingType (segment-aware)
 d9d566d feat(stage1): Q21 — shared walls zero side setback for TWIN/TERRACED
-[ten] docs: NEXT_SESSION post-Q21 + STATE Session 10
 ```
+
+Visual sanity check Q21 (2026-05-27):
+
+- `notebooks/stage1_q21_sanity.py` — 5 scenariuszy renderowanych przez
+  produkcyjne `subdivide()` + `propose_buildings()` (PNG w `notebooks/output/`).
+- Regresja 60×80 TWIN: **5/5 buildings** (przed Q21 było 0/7) ✅
+- 265×202 TWIN: 70 sub, 35 par TWIN, Q21 shared walls poprawne ✅
+- 265×202 TERRACED: 81 sub w 6 ciągach, każda z budynkiem ✅
+- Architectural review owner: PASS — Q21 zamknięte.
 
 Pytest (non-GUI suite, `pytest --ignore=notebooks --ignore=tests/test_gui.py`):
 
-- **287 passed, 31 skipped, 1 xpassed, exit 0** (~10 min)
-- Pre-Q21 baseline (subset zmienionych obszarów): 39 pass + 1 fail (`test_propose_buildings_twin_runs_and_assigns`)
-- Post-Q21: ten test pass + 4 nowe `TestQ21SharedWalls` zielone
+- **287 passed, 31 skipped, 1 xpassed, exit 0** (~10 min, baseline z sesji 10)
 
-Dawid przeszedł na `main` bezpośrednio (bez feature/PR) zgodnie z decyzją sesji.
+Outstanding niepokoje (NIE bugi, raczej kalibracja na przyszłość):
+- DETACHED 30 sub na 265×202 (avg 1729 m²) — `max_sub_plot_area_m2=2000` default może być za duży.
+- TERRACED 81 sub zamiast oczekiwanych 120+ — `_is_buildable_shape` z `min_short_dim` może ucinać wąskie segmenty.
+- Pionowa droga w środku 265×202 — algorytm dzieli na 4 kwadranty, alternatywą byłaby 1 droga wzdłuż dłuższej osi.
 
 ---
 
-## 🎯 PRIO 1 — manualna weryfikacja AC
+## 🎯 PRIO 1 — STATE.md Phase 3 sync (quick win)
 
-Q21 logika ma testy jednostkowe (5 GREEN), ale architektoniczna sanity check
-na realnej działce z AC jeszcze nie była robiona.
-
-```bash
-source venv/bin/activate
-python3 -m ui.main_window
-```
-
-Scenariusze do sprawdzenia:
-
-1. **265×202 m (Dawid's AC test plot, regression dla Q19):**
-   - DETACHED: powinno dać ~50 sub-działek równomiernie.
-   - TWIN: ~60-80 sub-działek, **pary** budynków stykające jedną ścianą po stronie partnera.
-   - TERRACED: ~120+ sub-działek, **ciągi** budynków stykające dwoma ścianami bocznymi (wewnątrz łańcucha).
-
-2. **60×80 m (regression Q21):**
-   - TWIN: ≥ 1 budynek uplasowany (przed Q21: 0/7).
-   - TERRACED: nadal działa (przed Q21 też działał, ale Q21 nie psuje).
-
-3. **Mode A (sanity):** dowolna jednorodzinna działka — sprawdzić że
-   buildable_zone wygląda tak jak przed (`is_shared_wall=False` domyślnie,
-   Q21 flag nie wpływa).
-
-Jeśli któryś scenariusz daje wizualnie złe wyniki → diagnoza zanim
-implementujemy Q22 cokolwiek (B1: 2 fail = REWRITE).
+Sekcja "Stage 1 Phase 3 — PLAN READY, NOT IMPLEMENTED" w `docs/STATE.md`
+jest stale — Phase 3 (UI Eksport PDF) shipowała w commit `9017bae`.
+Przeczytać Phase 3 PR/diff, zaktualizować sekcję. Bez kodu, bez testów.
 
 ---
 
@@ -68,18 +55,17 @@ implementujemy Q22 cokolwiek (B1: 2 fail = REWRITE).
 
 W kolejności potencjalnej wartości:
 
-1. **STATE.md Phase 3 sync** — sekcja "Stage 1 Phase 3 — PLAN READY, NOT IMPLEMENTED"
-   jest stale, bo Phase 3 (UI Eksport PDF) shipowała w commit `9017bae`.
-   Przeczytać Phase 3 PR/diff, zaktualizować STATE.md sekcję.
-2. **Q1.1(c) — push-neighbour mechanism** — deferred od Mode B port (Session 5,
+1. **Q1.1(c) — push-neighbour mechanism** — deferred od Mode B port (Session 5,
    2026-05-07). Obecnie Q1.1(d) drop-to-nieużytek fallback działa, ale push
    pozwoliłby utrzymać więcej sub-działek na L-shape z notchami.
-3. **L-shape floors w Stage 3** — `floor_layout.py` zakłada prostokątne piętro;
+2. **L-shape floors w Stage 3** — `floor_layout.py` zakłada prostokątne piętro;
    real-life pierwszego rzędu są L/U-shape.
-4. **Walls + doors export do AC** — Stage 4 obecnie eksportuje tylko Zones.
-5. **Stage 1 → Stage 4 integration** — kliknięcie sub-działki w Stage 1 GUI →
+3. **Walls + doors export do AC** — Stage 4 obecnie eksportuje tylko Zones.
+4. **Stage 1 → Stage 4 integration** — kliknięcie sub-działki w Stage 1 GUI →
    otwórz jej obrys jako wejście do Stage 4.
-6. **Stage 2 — volumetric generator** — jeszcze niezaczęty.
+5. **Stage 2 — volumetric generator** — jeszcze niezaczęty.
+6. **DETACHED `max_sub_plot_area_m2` recalibration** — opcjonalna zmiana
+   defaultu z 2000 → 1500 (lub 1200) m² po dyskusji architektonicznej.
 
 ---
 
