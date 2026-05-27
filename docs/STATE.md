@@ -142,39 +142,35 @@ rewrite). Old modules removed:
 
 ---
 
-### Stage 1 — Phase 3 (UI Integration) — PLAN READY 2026-05-14, NOT IMPLEMENTED
+### Stage 1 — Phase 3 (UI Integration) — COMPLETED 2026-05-24 (commit 9017bae)
 
-**Scope decisions (z brainstormingu):**
-- Phase 3 zwężone do samego Stage1ReportDialog. Multi-persona views → Phase 3.1. macOS CI → Phase 3.2.
-- Tylko Mode A (Mode B report — Phase 4).
-- Trigger: osobny przycisk "Eksport PDF" pod Generate (disabled aż Mode A zwróci wynik).
-- Sync generation z busy state (Qt.WaitCursor + processEvents).
-- `QFileDialog` z prefilled filename `Raport_<plot_id>_<YYYY-MM-DD>.pdf`.
-- Pre-save mały dialog "Dane raportu" zbierający `plot_id` / `plot_address` / optional `logo_path` (QSettings persistence).
+UI wire-up Phase 2 PDF backend → Stage 1 Mode A pipeline. Shipped end-to-end:
+"Mode A → Generate → Eksport PDF → 9-page report".
 
-**Doprecyzowania z sesji 2026-05-14:**
-- `variants=[]` → `ValueError` (szybki fail, nie graceful).
-- QApplication test fixture: ręczny session-scoped w `tests/conftest.py` (bez `pytest-qt`).
-- QSettings test isolation: `IniFormat` + `setPath` na `tmp_path` (`isolated_qsettings` fixture).
-- Filename sanitization: jednolinijka regex inline, manual smoke wystarczy.
-- `VariantInfo.long_description` = reuse `BuildupVariant.description` (krótkie opisy do Phase 4).
-- `SetbackInfo`: front=`mpzp.setback_from_road`, side/rear=`BOUNDARY_SETBACK[SASIAD_NIEZABUDOWANY][0]`.
+| Component | Status |
+|---|---|
+| `core/report_builder.py` | ✅ `build_report_data(plot, variants, indicators, verification, *, plot_id, plot_address, logo_path=None) → ReportData`. Q14 5% warning band (MAX-constrained WZ/WIZ, MIN-constrained PBC). VariantInfo detailed metrics (PUM, headroom, parking, height). Polish chars preserved. `data_hash` stable across runs, sensitive to plot_id changes. Empty variants → `ValueError`. |
+| `ui/report_metadata_dialog.py` | ✅ `ReportMetadataDialog(QDialog)` collects `plot_id` / `plot_address` / `logo_path`. `QSettings("FloorPlan6", "Stage1Report")` persists last-used logo across sessions. |
+| `ui/stage1_window.py` (Stage1Widget) | ✅ `export_pdf_btn` (disabled by default, enabled after Mode A success). `_mode_a_results` cache: `(plot, variants, indicators, verification)`. `_on_export_pdf` handler: metadata dialog → `build_report_data` → `QFileDialog` (prefilled `Raport_<plot_id>_<YYYY-MM-DD>.pdf`) → `generate_pdf`, sync with `Qt.WaitCursor` + `processEvents`. Cache invalidation in `_run_mode_b` (Mode B uses different pipeline). |
+| `tests/conftest.py` | ✅ session-scoped `qapp` (manual, no `pytest-qt`); `isolated_qsettings` (IniFormat + `setPath` on `tmp_path` + clear/sync between tests); `make_minimal_plot` (40×30 m rectangle with buildable zone). |
+| `tests/test_report_builder.py` | ✅ 14 tests pass (covers status mapping, Q14 band, hash stability, empty-variants ValueError) |
+| `tests/test_report_metadata_dialog.py` | ✅ 5 tests pass (cancel returns None on Rejected, QSettings round-trip, Polish chars) |
 
-**Spec self-review 2026-05-14 — 8 niespójności naprawionych:**
-- `MPZPSummary` field names: `max_wz/max_wiz/min_pbc_percent` → `wz_max/wiz_max/pbc_min_percent`
-- `PlotIndicators` fields: `.wz/.wiz/.pbc_percent` → `.wz_designed/.wiz_designed/.pbc_percent`
-- `ReportData.cover.logo_path` → `.logo_path` (top-level)
-- `datetime.now()` vs `date.today()` → ujednolicone
-- "Cancel returns None" wording → `dlg.exec_() == Rejected`, no `get_metadata()` call
-- `pbc_headroom_percent` musi być policzony przez adapter (brak w `BuildupVariant`)
-- PUM source: `main_building.footprint_area × .floors × USABLE_AREA_FACTOR`
-- `VerificationResult.name` → `ComplianceRow.rule_name` (field rename)
+**Subsequent enhancement (2026-05-?, commit `f7c923c`):**
+report_builder + stage1_window extended for depth-aware building dimensions
+and Mode B building proposals; not a regression of Phase 3 — same Eksport PDF
+flow, richer VariantInfo metrics.
 
-**Spec:** `docs/superpowers/specs/2026-05-13-stage1-phase3-ui-integration-design.md` (READY — sekcje 1-5 zatwierdzone, self-review pass zamknięty).
-**Plan:** `docs/superpowers/plans/2026-05-14-stage1-phase3-ui-integration.md` (19 tasków TDD: 1 conftest + 8 builder + 5 dialog + 4 window + 1 manual smoke).
-**Status implementacji:** ⏸️ NIE rozpoczęta. Plan napisany, ale execution nie odpalony.
-**Pytest baseline (2026-05-14):** 198 passed, 29 skipped, 1 xpassed (Session 9 + Phase 2 wszystko green — gotowe do commit'u jako baseline w następnej sesji).
-**Next:** ustalić branch strategy → commit Session 9 modules + Phase 3 docs jako baseline na main → `git checkout -b feature/stage1-phase3-ui-integration` → odpalić `superpowers:subagent-driven-development` na plan.
+**Spec / plan (kept for history):**
+- `docs/superpowers/specs/2026-05-13-stage1-phase3-ui-integration-design.md`
+- `docs/superpowers/plans/2026-05-14-stage1-phase3-ui-integration.md` (19 tasks executed)
+
+**Pytest (2026-05-27):** 19 Phase 3 tests pass; full non-GUI suite 287 pass / 31 skip / 1 xpass (Session 10 baseline).
+
+**Outstanding from original spec (deferred phases):**
+- Phase 3.1 — multi-persona views (architect / inwestor / klient końcowy).
+- Phase 3.2 — macOS-only Polish font (Arial Unicode) → cross-platform handling.
+- Phase 4 — Mode B report (currently `export_pdf_btn` is Mode A only; cache is invalidated on Mode B run).
 
 ---
 
