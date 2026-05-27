@@ -209,6 +209,9 @@ class MainWindow(QMainWindow):
             from ui.stage1_window import Stage1Widget
             self.stage1_widget = Stage1Widget(self)
             self.tabs.addTab(self.stage1_widget, "Stage 1: Plot Analyser")
+            self.stage1_widget.apartment_layout_requested.connect(
+                self._populate_stage4_from_stage1
+            )
         except Exception as e:
             print(f"[WARN] Stage 1 tab unavailable: {e}")
             self.stage1_widget = None
@@ -1018,6 +1021,30 @@ class MainWindow(QMainWindow):
         self._poll_timer = QTimer(self)
         self._poll_timer.timeout.connect(self._poll_archicad_selection)
         self._poll_timer.start(1000)
+
+    def _populate_stage4_from_stage1(self, polygon, entry, wall_types):
+        """Slot for Stage1Widget.apartment_layout_requested.
+
+        Fills Stage 4 input fields, renders the boundary preview, and switches
+        the active tab to Stage 4. If Stage 4 already has generated variants,
+        asks for confirmation before overwriting.
+        """
+        if self.variants:
+            if not self._confirm_stage4_overwrite():
+                return
+        self._imported_polygon = polygon
+        self._imported_entry = entry
+        self._imported_wall_types = list(wall_types)
+        self._show_boundary_preview(polygon, entry)
+        self.tabs.setCurrentWidget(self.apt_tab)
+        self._real_status_bar.showMessage(
+            f"Załadowano sub-działkę ze Stage 1 ({polygon.area:.1f} m²). "
+            f"Kliknij Generate aby wygenerować rzut.", 6000
+        )
+
+    def _confirm_stage4_overwrite(self) -> bool:
+        """Placeholder — Task 7 replaces this with a QMessageBox confirm."""
+        return True
 
     @staticmethod
     def _extract_guid(elem):
