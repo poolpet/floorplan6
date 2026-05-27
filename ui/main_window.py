@@ -1043,8 +1043,16 @@ class MainWindow(QMainWindow):
         )
 
     def _confirm_stage4_overwrite(self) -> bool:
-        """Placeholder — Task 7 replaces this with a QMessageBox confirm."""
-        return True
+        """Ask before overwriting an existing Stage 4 result with new data."""
+        reply = QMessageBox.question(
+            self,
+            "Nadpisać obecny rzut?",
+            "Stage 4 zawiera już wygenerowany rzut. Czy chcesz go zastąpić "
+            "obrysem wybranej sub-działki?",
+            QMessageBox.Yes | QMessageBox.Cancel,
+            QMessageBox.Cancel,
+        )
+        return reply == QMessageBox.Yes
 
     @staticmethod
     def _extract_guid(elem):
