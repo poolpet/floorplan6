@@ -48,7 +48,7 @@ class Stage1Widget(QWidget):
     apartment_layout_requested = pyqtSignal(object, object, object)
     # args: (polygon: shapely.Polygon,
     #        entry: tuple[float, float],
-    #        wall_types: list[str])
+    #        wall_types: list[WallType])   # core.models.WallType enum
 
     def _on_open_in_stage4(self) -> None:
         if self._selected_sub_idx is None:
@@ -88,19 +88,21 @@ fully unit-testable):
 ```python
 def building_to_apartment_input(
     sub: SubPlot,
-) -> tuple[Polygon, tuple[float, float], list[str]]:
+    roads: list[Polygon] | None = None,   # result.roads, optional for fallback
+) -> tuple[Polygon, tuple[float, float], list[WallType]]:
     """Derive Stage 4 input (polygon, entry, wall_types) from a Mode B sub-plot.
 
     Returns:
         polygon: sub.proposed_building (or its largest part if MultiPolygon).
         entry: midpoint of the building edge closest to a road edge
-               (parent DROGA or internal road).
+               (sub-plot's parent DROGA boundary or any internal road).
                Fallback: midpoint of the longest building edge.
-        wall_types: per-edge classification ["facade" | "inner"], in the
-                    same order as the polygon's exterior edges.
-                    An edge is "inner" if it lies on a shared wall of the
-                    sub-plot (Q21 is_shared_wall=True boundary).
-                    Otherwise "facade".
+        wall_types: per-edge classification, in the same order as the
+                    polygon's exterior edges (one entry per edge, excluding
+                    the closing duplicate vertex). Values from core.models.WallType:
+                      WallType.INTERNAL if the building edge lies on a shared
+                                        wall of the sub-plot (Q21 is_shared_wall=True),
+                      WallType.FACADE   otherwise.
     """
 ```
 
@@ -118,13 +120,13 @@ def building_to_apartment_input(
 ### 4.2 Walls classification
 For each building edge, in polygon exterior order:
 - If the building edge lies within tolerance (≤ 0.5 m) of any sub-plot
-  boundary with `is_shared_wall=True` → `"inner"`
-- Else → `"facade"`
+  boundary with `is_shared_wall=True` → `WallType.INTERNAL`
+- Else → `WallType.FACADE`
 
-DETACHED → all 4 edges `"facade"`.
-TWIN → 1 edge `"inner"` (paired neighbour), 3 edges `"facade"`.
-TERRACED (middle of chain) → 2 edges `"inner"`, 2 edges `"facade"`.
-TERRACED (end of chain) → 1 edge `"inner"`, 3 edges `"facade"`.
+DETACHED → all 4 edges `WallType.FACADE`.
+TWIN → 1 edge `INTERNAL` (paired neighbour), 3 edges `FACADE`.
+TERRACED (middle of chain) → 2 edges `INTERNAL`, 2 edges `FACADE`.
+TERRACED (end of chain) → 1 edge `INTERNAL`, 3 edges `FACADE`.
 
 ## 5. Components
 
@@ -145,7 +147,7 @@ The signal is emitted with three positional arguments
 |---|---|---|
 | `polygon` | `shapely.geometry.Polygon` | Building footprint, single Polygon. If proposed_building is MultiPolygon, the largest part is used. |
 | `entry` | `tuple[float, float]` | `(x, y)` of entry point on or just inside the polygon. |
-| `wall_types` | `list[str]` | One entry per polygon exterior edge, in coord order. Values: `"facade"` or `"inner"`. |
+| `wall_types` | `list[WallType]` | One entry per polygon exterior edge, in coord order. Values from `core.models.WallType`: `WallType.FACADE` or `WallType.INTERNAL`. Matches `MainWindow._imported_wall_types` format. |
 
 This matches Stage 4's existing input contract (see `MainWindow._imported_polygon` / `_imported_entry` / `_imported_wall_types`).
 
