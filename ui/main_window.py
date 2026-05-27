@@ -207,9 +207,11 @@ class MainWindow(QMainWindow):
         # Stage 1 — plot analyser (Mode A whole-plot + Mode B subdivision)
         try:
             from ui.stage1_window import Stage1Widget
-            self.tabs.addTab(Stage1Widget(self), "Stage 1: Plot Analyser")
+            self.stage1_widget = Stage1Widget(self)
+            self.tabs.addTab(self.stage1_widget, "Stage 1: Plot Analyser")
         except Exception as e:
             print(f"[WARN] Stage 1 tab unavailable: {e}")
+            self.stage1_widget = None
             try:
                 from ui.stage_placeholder import Stage1PlotPlaceholder
                 self.tabs.addTab(Stage1PlotPlaceholder(self), "Stage 1: Plot Subdivision")
@@ -231,12 +233,12 @@ class MainWindow(QMainWindow):
             print(f"[WARN] Stage 3 tab unavailable: {e}")
 
         # Stage 4 — apartment layout (this is the existing implementation)
-        apt_tab = QWidget()
-        self.tabs.addTab(apt_tab, "Stage 4: Apartment Layout")
+        self.apt_tab = QWidget()
+        self.tabs.addTab(self.apt_tab, "Stage 4: Apartment Layout")
         # Default to Stage 4 (the working part) so users see results immediately
-        self.tabs.setCurrentWidget(apt_tab)
+        self.tabs.setCurrentWidget(self.apt_tab)
 
-        main_layout = QHBoxLayout(apt_tab)
+        main_layout = QHBoxLayout(self.apt_tab)
 
         # --- Lewy panel ---
         left = QVBoxLayout()
