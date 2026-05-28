@@ -514,6 +514,52 @@ marks every neighbour above the chain threshold (internal segments get
 2 marks). Thresholds mirror `building_proposer`: 6 m (TWIN) / 4 m
 (TERRACED). DETACHED is a no-op.
 
+### Q22 — Templates dla domów jednorodzinnych (szeregowiec / bliźniak / wolnostojący)
+**Pytanie:** obecne `templates/M1_standard.json`-`M5_standard.json` są zaprojektowane dla mieszkań w bloku wielorodzinnym (jedna kondygnacja, mały salon, brak kotłowni, brak garażu, brak schodów wewnętrznych, brak tarasu). Integracja Stage 1 Mode B → Stage 4 (sesja 11) wrzuca obrysy DOMÓW jednorodzinnych (TWIN, TERRACED, DETACHED) do Stage 4, gdzie aktualny CP-SAT solver i constraint templates nie pasują architektonicznie.
+
+**Co musi się znaleźć w domu jednorodzinnym (nieobecne w blokowych M1-M5):**
+- Parter + piętro (~2 kondygnacje, schody wewnętrzne)
+- Kotłownia / pomieszczenie techniczne
+- Garaż (wbudowany) lub miejsce na garaż wolnostojący (poza obrysem)
+- Pralnia / spiżarnia (oddzielne pomieszczenia, nie tylko aneks)
+- Większy salon (typowo 25-40 m², nie 18-25 m² jak w bloku)
+- Taras / wyjście do ogrodu (na elewacji)
+- Często osobny WC na parterze + łazienki na piętrze
+
+**Opcje:**
+- (a) **Nowy zestaw templates `house_TWIN.json` / `house_TERRACED.json` / `house_DETACHED.json` z dodatkowymi pomieszczeniami i parametrami `kondygnacja`** + rozszerzenie solvera o wymiar kondygnacji
+- (b) **Osobny solver dla domów** (`core/house_solver.py`) — Stage 4 dostaje router: jeśli source = Stage 1 Mode B → houseSolver, jeśli Stage 3 (mieszkanie) → cpsat_solver istniejący
+- (c) **Hybryda** — wspólny solver z nowymi templates ale dodatkową warstwą kondygnacji; templates jednorodzinne reużywają większości field z M1-M5
+
+**Recommendation:** brainstorming + spec PRZED implementacją. Skala podobna do oryginalnego Stage 4 (osobna sesja designu + 2-3 sesje implementacji).
+
+**Status:** OPEN — dodane 2026-05-28 (sesja 12) po obserwacji że Stage 1 Mode B → Stage 4 wrzuca obrysy domów ale solver nie ma jak ich zapełnić sensownie.
+
+---
+
+### Q23 — Full pipeline Mode A wielorodzinna → Stage 3 → Stage 4
+**Pytanie:** dziś integracja jest tylko Stage 1 Mode B SF → Stage 4 (jedna sub-działka = jedno mieszkanie). Dla **wielorodzinnej** (Mode A) workflow powinien być:
+
+1. Stage 1 Mode A → user wybiera wariant budynku wielorodzinnego (z 3 propozycji)
+2. Obrys piętra przekazany do **Stage 3** (Floor Layout) — podział na mieszkania M1-M5 + klatka + korytarz
+3. Klik w mieszkanie w Stage 3 → **Stage 4** (per-apartment room layout)
+
+Aktualnie:
+- Stage 1 → Stage 3: **NIE ZROBIONE** (brak sygnału, brak UX wyboru wariantu)
+- Stage 3 → Stage 4: **NIE ZROBIONE** (Stage 3 generuje apartamenty ale nie da się ich kliknąć i przejść)
+- Stage 1 → Stage 4: zrobione tylko dla Mode B SF (jedna sub-działka)
+
+**Opcje:**
+- (a) **Dwa nowe sygnały** — `Stage1Widget.building_for_floor_layout_requested` + `FloorLayoutWidget.apartment_for_layout_requested`, oba zaimplementowane analogicznie do `apartment_layout_requested` z sesji 11
+- (b) **Większy refaktor** — jeden wspólny mechanizm "Open in next stage" z routerem (Stage 1 → 3 vs 1 → 4 vs 3 → 4) zależnie od source/target
+- (c) **Inkrementalnie** — najpierw Stage 3 → Stage 4 (mniejsze, mieszkanie ma już obrys jako Polygon), potem Stage 1 → Stage 3 (większe, wymaga wyboru wariantu)
+
+**Recommendation:** (c) inkrementalnie — Stage 3 → Stage 4 to mniejsze pole zmian, a stworzy wzór dla Stage 1 → Stage 3. Brainstorming PRZED implementacją.
+
+**Status:** OPEN — dodane 2026-05-28 (sesja 12). Powiązane z `STATE.md` "Out of scope still on backlog: Mode A → Stage 4 (different UX — choose variant first); Wielorodzinna → multi-apartment in one building (needs Stage 3 floor layout first)."
+
+---
+
 ### Q18 — Stage 1 UI entry point
 **Question:** how does the user pick mode (A/B) and housing type?
 

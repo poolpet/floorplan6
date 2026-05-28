@@ -1,4 +1,4 @@
-# Briefing — następna sesja FP6 (po 2026-05-27, sesja 12)
+# Briefing — następna sesja FP6 (po 2026-05-28, sesja 13)
 
 > **Jak zacząć:**
 >
@@ -11,82 +11,78 @@
 
 ---
 
-## STAN: Sesja 12 wchodzi z zamkniętą integracją Stage 1 → Stage 4
+## STAN po sesji 12 (2026-05-28, krótka — manual GUI smoke + identyfikacja gapów)
 
-Sesja 11 (2026-05-27, druga część) zamknęła **PRIO 1 = Stage 1 → Stage 4 integration**.
-Wszystko zacommitowane na `main`. Commity sesji 11 (cały zestaw):
+Sesja 12 była **manualnym smoke testem integracji Stage 1 → Stage 4** (PRIO 1 z poprzedniej sesji) + identyfikacją nowych priorytetów. **Zero zmian kodu.** Pytest baseline confirmed: **296 passed / 30 skipped / 1 xpassed** w 10:08 — zgodne z baseline po sesji 11.
 
-```
-7d72143 test(stage1): Qt smoke for signal->slot wiring
-8d0beff feat(main_window): confirm dialog when overwriting Stage 4 variants
-fc9547e feat(main_window): _populate_stage4_from_stage1 slot + signal wire-up
-cfb5ac7 feat(stage1): 'Otwórz w Stage 4' button + apartment_layout_requested signal
-61d8eae feat(stage1): canvas click selects sub-plot (yellow highlight)
-fff45d2 refactor(main_window): expose self.stage1_widget and self.apt_tab
-eedc4d4 feat(core): building_to_apartment_input helper for Stage 1->4
-bbf56b8 test(stage1): RED tests for building_to_apartment_input helper
-4eddd29 docs(next): session 11 close + PRIO 1 = execute stage1→4 plan
-4256997 docs(plan): Stage 1 → Stage 4 integration implementation plan
-6a46498 docs(spec): fix wall_types contract — WallType enum, not list[str]
-cfdf314 docs(spec): Stage 1 → Stage 4 integration design
-483d71f chore(plot_subdivider): remove 21 dead functions (−39% file size)
-12e6906 docs(state): sync Stage 1 Phase 3 — COMPLETED 2026-05-24
-254c9f6 chore(stage1): Q21 visual sanity check + STATE/NEXT_SESSION sync
-```
+### Co zweryfikowane manualnie (Dawid w GUI)
 
-Co dowiezione w sesji 11 (część integracyjna):
+- **Stage 1 Mode B + prostokąt 284×109 m: PASS.** DETACHED 41 sub-działek, TWIN 72, TERRACED 110. Pokrycie 100%, sensowne wielkości, drogi OK, nieużytek=0%.
+- **Klik canvas → Stage 4 działa.** Wstępnie Dawid myślał że nie działa, ale to było przeoczenie — nie wiedział że trzeba kliknąć sub-działkę żeby przycisk "Otwórz wybraną sub-działkę w Stage 4" się włączył.
 
-- Nowy pure-Python helper `core/building_to_apartment_input.py` — SubPlot → (polygon, entry, wall_types) z auto-detekcją entry (krawędź z midpointem najbliżej drogi) i wall_types (INTERNAL gdy midpoint krawędzi ≤ 0.5 m od Q21 `is_shared_wall=True`).
-- **Deviation od spec/planu (świadoma):** plan zakładał `edge.distance(shared_wall)` jako kryterium — empirycznie powodowało false-positive INTERNAL na rogach budynku stykających się ze shared wall. Fix: midpoint krawędzi. Plan był RED dla TWIN test, midpoint daje GREEN.
-- Stage1Widget: nowy sygnał `apartment_layout_requested(polygon, entry, walls)`, canvas click hit-test, żółty highlight, przycisk "Otwórz wybraną sub-działkę w Stage 4" włączający się tylko gdy zaznaczona sub-działka ma `proposed_building`.
-- MainWindow: `self.stage1_widget` + `self.apt_tab` jako member, slot `_populate_stage4_from_stage1` (uzupełnia `_imported_*` + przełącza tab), confirm dialog z Cancel jako default.
-- 6 unit testów helpera + 2 Qt smoke testy integracji.
-- End-to-end smoke (programatic) na 60×80 TWIN: 5/5 sub-działek z budynkiem, klik #1 → polygon 76.5 m², entry (7.75, 35.5), walls [INTERNAL, FACADE, FACADE, FACADE] — dokładnie 1 INTERNAL + 3 FACADE jak oczekiwano dla TWIN.
+### Co zidentyfikowane jako problemy
 
-Pytest non-GUI suite: **296 passed**, 29 skipped, 1 xpassed (target był 295: 287 baseline + 6 + 2). Jeden flake (`test_hub_adjacency_m2`) — siostra `test_hub_adjacency_m3` jest już xfail-marked z tego samego powodu (CP-SAT non-determinism + Shapely clipping); przechodzi w izolacji; niezwiązany z tą sesją.
+1. 🐛 **BUG: monster sub-działka na nieregularnym kształcie** (regresja zakresu Q19)
+   - DETACHED na 284×166 nieregularny: **S7 = 19 664 m²** (zone 17 692 m²). `max_sub_plot_area_m2=1000` → 19× ponad limit.
+   - TWIN na 284×166 nieregularny: **S11 = 16 769 m²** (zone 15 315 m²).
+   - Pattern: lewa część plotu bez dostępu do drogi (droga tylko po prawej w pionie) → algorytm nie wyciąga drogi w lewo i nie demuje do nieużytku, tylko zostawia monstera.
+   - Q19 z sesji 10 naprawiał TWIN/TERRACED monstery na prostokącie (collapse do 4 sub-plots) — ale nie obejmuje nieregularnych kształtów i DETACHED.
+   - Łamie spec Q16 (strict coverage z legalnymi sub-działkami) i Q1.1(d) (za małe → nieużytek, nie monster).
+
+2. 🎨 **UX: brak wskazówki kliknięcia sub-działki**
+   - Przycisk "Otwórz wybraną sub-działkę w Stage 4" jest disabled domyślnie, włącza się dopiero po kliknięciu canvas. Brak tooltipu / status-bar hint.
+   - Mała sprawa, ale zablokowała Dawida przy pierwszym smoke.
+
+3. 📦 **GAP: brak eksportu Stage 1 → ArchiCAD**
+   - Stage 4 ma `bridge/plan_writer.py` (apartamenty jako Zones), Stage 1 nigdy nie miał. Sub-działki/drogi/nieużytek po wygenerowaniu w UI nie da się wstawić do AC.
+   - Nowa funkcja, nie regresja.
+
+### Co dorzucone do `docs/OPEN_QUESTIONS.md` jako nowe pytania architektoniczne
+
+- **Q22 — Templates dla domów jednorodzinnych** (szeregowiec / bliźniak / wolnostojący). Obecne `templates/M1_standard.json`-`M5_standard.json` są dla mieszkań w bloku wielorodzinnym (mały salon, brak kotłowni/garażu/tarasu, brak piętra). Dom jednorodzinny ma 2 kondygnacje + kotłownia + garaż + schody + taras. Stage 4 dla domów po Stage 1 Mode B SF generuje obrysy domów ale nie ma czym ich zapełnić sensownie. **Duże, na osobną sesję.**
+- **Q23 — Full pipeline Mode A wielorodzinna → Stage 3 → Stage 4.** Dziś integracja jest tylko Mode B SF → Stage 4 (single apartment). Dla wielorodzinnej trzeba: (a) wybór wariantu budynku w Mode A, (b) przekazanie obrysu piętra do Stage 3, (c) podział piętra na mieszkania w Stage 3, (d) klik w mieszkanie → Stage 4 z jego obrysem. **Dwa nowe sygnały + UX, duże, na osobną sesję.**
 
 ---
 
-## 🔥 PRIO 1 dla sesji 12 — manualny GUI smoke + ewentualne fixy UX
+## 🔥 PRIO 1 dla sesji 13 — monster sub-działka na nieregularnym kształcie
 
-Implementacja przeszła test programatyczny, ale **żywy klik w GUI jeszcze nie zweryfikowany przez Dawida**. Sekwencja do sprawdzenia:
+**Decyzja workflow z sesji 12:** plan A diagnostyki (button "Eksportuj geometrię działki JSON" w Stage 1) zaproponowany, nie potwierdzony przez Dawida przed zamknięciem sesji. Sesja 13 zaczyna od potwierdzenia planu A vs B vs C.
 
-1. `source venv/bin/activate && python3 -m ui.main_window`
-2. Stage 1 tab → Housing: Jednorodzinna, Mode: B → Building type: TWIN → W=60, D=80 (lub większy plot z AC)
-3. Click **Generate** → 5+ sub-działek widocznych z propozycjami budynków
-4. Click na dowolną sub-działkę na canvasie → **żółty highlight obwódki** + przycisk "Otwórz wybraną sub-działkę w Stage 4" enables
-5. Click przycisk → tab przełącza się na Stage 4, preview obrysu budynku z entry pointem
-6. Stage 4 → Click **Generate** → CP-SAT solver buduje rzut pokoi (~10 s)
-7. (Edge case) Wygeneruj coś w Stage 4 ZANIM zrobisz krok 5 → przycisk "Otwórz" wywoła **confirm dialog "Nadpisać obecny rzut?"** z Cancel jako default
+**Plan A (rekomendowany):**
+1. Dodać tymczasowy button "Eksportuj geometrię działki (JSON)" w `ui/stage1_window.py` — zapisuje `~/Desktop/fp6_plot_debug.json` z `polygon` (WKT), `boundaries` (lista z typami DROGA/SASIAD_*), `MPZP params`. Nie zmienia logiki algorytmu, ~30 linii.
+2. Dawid: Load from ArchiCAD ten sam nieregularny plot → Generate → Eksportuj. Przesyła JSON.
+3. Claude: buduje test repro w `tests/test_plot_subdivider.py` (RED test który replikuje monstera), diagnozuje root cause w `_absorb_leftover` / `subdivision_roads` / `_split_oversized_subplots`.
+4. Plain-language plan fixu → OK od Dawida → implementacja → GREEN.
+5. Po fix: usunąć tymczasowy button.
 
-Co może wyjść nie tak (na co warto patrzeć):
-- Highlight czy faktycznie żółty + widoczny — kolory matplotlib bywają jaśniejsze niż się wydaje
-- Czy "Otwórz" jest enabled tylko gdy klik trafia w sub-działkę z `proposed_building` (TWIN sometimes prudko = 0 buildings na małych plotach)
-- Czy status bar pokazuje "Załadowano sub-działkę…" z prawidłowym m²
-- Czy entry point na preview wygląda sensownie (powinien być na krawędzi budynku najbliższej drodze)
-- Czy walls są pokolorowane poprawnie w Stage 4 (INTERNAL vs FACADE)
+**Plan B (lżejszy):** wstawić `print(plot.polygon.wkt + boundaries)` w `_run_mode_b`, Dawid kopiuje z terminala. 3 linie, brzydsze.
+
+**Plan C (bez Dawida):** syntetyczny nieregularny plot (np. trójkąt + prostokąt z drogą po jednej stronie) który da monster — buduje go Claude. Plus: niezależne od AC. Minus: może nie replikować dokładnie problemu.
 
 ---
 
-## PRIO 2 — kolejne kandydaty (po manualnej weryfikacji PRIO 1)
+## PRIO 2 dla sesji 13 — UX fix: hint "kliknij sub-działkę"
+
+Drobnostka po monster bug fix.
+- Status bar w Stage 1 po Generate: "Kliknij sub-działkę aby zaznaczyć…"
+- Tooltip na disabled "Otwórz wybraną sub-działkę w Stage 4": "Najpierw kliknij sub-działkę na podglądzie"
+
+Może być dorzucone w tym samym commicie co fix monstera albo osobno.
+
+---
+
+## PRIO 3 — wybór z większego backlogu (po PRIO 1+2)
 
 W kolejności potencjalnej wartości:
 
-1. **Q1.1(c) — push-neighbour mechanism** — deferred od Mode B port (Session 5, 2026-05-07). Obecnie Q1.1(d) drop-to-nieużytek fallback działa, ale push pozwoliłby utrzymać więcej sub-działek na L-shape z notchami.
-2. **L-shape floors w Stage 3** — `floor_layout.py` zakłada prostokątne piętro; real-life pierwszego rzędu są L/U-shape.
-3. **Walls + doors export do AC** — Stage 4 obecnie eksportuje tylko Zones.
-4. **Stage 2 — volumetric generator** — jeszcze niezaczęty.
-5. **Mode A → Stage 4 integration** — analogicznie do Mode B, ale UX inny (wybór wariantu propozycji budynku zamiast jednej sub-działki).
-6. **DETACHED `max_sub_plot_area_m2` recalibration** — opcjonalna zmiana defaultu z 2000 → 1500 (lub 1200) m² po dyskusji architektonicznej.
-7. **TERRACED 81 zamiast 120+ na 265×202** — diagnostyka `_is_buildable_shape` z `min_short_dim`.
-8. **`test_hub_adjacency_m2` xfail-mark** — albo napraw root cause (Shapely clipping after MIN_SHARED_EDGE_CM constraint), albo oznacz xfail jak `m3`.
-
----
-
-## PRIO 3 — code health (po cichu)
-
-- Shapely `oriented_envelope` warnings (~11k per pytest run) — nie blokują, można zignorować w `pyproject.toml` filterwarnings.
-- `_imported_wall_types` mainwindow code path — pozostaje wąskie miejsce typingu (np. `Optional[list[WallType]]` byłby cleaner niż `None | list[WallType]`).
+1. **Q22 — templates dla domów jednorodzinnych** (szeregowiec/bliźniak/wolnostojący). Pierwsza krok: brainstorm + spec design. Skala: nowy zestaw 3-6 templates + ewentualnie 2-kondygnacyjny solver wariant.
+2. **Eksport Stage 1 → ArchiCAD** — sub-działki + drogi + nieużytek jako Zones. Analogicznie do `bridge/plan_writer.py` dla Stage 4.
+3. **Q23 — Mode A wielorodzinna → Stage 3 → Stage 4 full pipeline.** Wymaga: (a) UX wyboru wariantu w Mode A, (b) signal Stage 1 → Stage 3, (c) signal Stage 3 → Stage 4. Patrz STATE.md "Out of scope still on backlog".
+4. **Q1.1(c) — push-neighbour mechanism** — deferred od Session 5 (2026-05-07).
+5. **L-shape floors w Stage 3** — `floor_layout.py` zakłada prostokątne piętro.
+6. **Walls + doors export do AC** — Stage 4 obecnie eksportuje tylko Zones.
+7. **Stage 2 — volumetric generator** — jeszcze niezaczęty.
+8. **`test_hub_adjacency_m2` xfail-mark** — albo napraw root cause, albo xfail jak `m3`.
 
 ---
 
@@ -110,12 +106,22 @@ python3 -m ui.main_window                                    # GUI
 
 python3 -m pytest --ignore=notebooks --ignore=tests/test_gui.py -q   # pełny (~10 min)
 
-python3 -m pytest tests/test_building_to_apartment_input.py \
-                  tests/test_stage1_stage4_integration.py -v        # nowy obszar (~1s)
+python3 -m pytest tests/test_plot_subdivider.py tests/test_plot_variant_generator.py \
+                  tests/test_building_proposer.py -v                  # obszar monster bug
 
-python3 -m pytest tests/test_plot_subdivider.py tests/test_building_proposer.py \
-                  tests/test_plot_variant_generator.py -v             # zmienione obszary z poprzednich sesji
+python3 -m pytest tests/test_building_to_apartment_input.py \
+                  tests/test_stage1_stage4_integration.py -v          # Session 11 integration (~1s)
 ```
 
 **Custom Tapir Add-On** dla Stage 4 export — bez zmian, `tapir-custom/`
 w katalogu `claude code/`.
+
+---
+
+## Pytest baseline po sesji 12 (2026-05-28)
+
+```
+296 passed, 30 skipped, 1 xpassed, 11636 warnings in 608.83s (0:10:08)
+```
+
+Identyczne z baseline po sesji 11 (296 passed, 29 skip, 1 xpass) modulo 1 skip — żadnej regresji. Sesja 12 nie ruszała kodu.
