@@ -172,6 +172,33 @@ def _wide_parallel_top_road_plot():
     return plot
 
 
+def _notch_road_right_plot():
+    """Irregular plot, road only on the RIGHT vertical edge, with a notch on
+    the lower-left. The notch blocks the internal road tree from reaching the
+    bottom-left band, so those cells have no road access. Replicates Dawid's
+    2026-05-28 monster bug (S7=19664 m² on a 284×166 irregular plot): the
+    road-less band is glued into one giant sub-plot by `_absorb_leftover`
+    instead of being demoted to nieużytek / split into legal sub-plots.
+    """
+    plot = _make_plot(
+        [(0, 0), (284, 0), (284, 166), (0, 166),
+         (0, 100), (60, 100), (60, 60), (0, 60)],
+        [
+            BoundaryType.SASIAD_NIEZABUDOWANY,  # bottom
+            BoundaryType.DROGA,                 # right (only road)
+            BoundaryType.SASIAD_NIEZABUDOWANY,  # top
+            BoundaryType.WLASNA,                # left upper
+            BoundaryType.SASIAD_NIEZABUDOWANY,  # notch
+            BoundaryType.WLASNA,                # notch
+            BoundaryType.SASIAD_NIEZABUDOWANY,  # notch
+            BoundaryType.WLASNA,                # left lower
+        ],
+    )
+    plot.mpzp.min_sub_plot_area_m2 = 400.0
+    plot.mpzp.max_sub_plot_area_m2 = 1000.0
+    return plot
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Q12 — Mode B single-family only
 # ─────────────────────────────────────────────────────────────────────────────
@@ -750,6 +777,86 @@ class TestResultMetadata:
         # sub-plot count (cols) and "1" (rows) when at least one sub-plot exists.
         assert r.rows >= 1
         assert r.cols >= 1
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Monster sub-plot on irregular shape with single-side road (2026-05-28)
+# Regression for Dawid's bug: a notch blocks the road tree from reaching part
+# of the plot; `_absorb_leftover` then glues that road-less band into one giant
+# sub-plot. Final sub-plots must all have road access and respect the area cap;
+# genuinely unreachable land becomes nieużytek (Q1.1(d) / Q16), not a monster.
+# ─────────────────────────────────────────────────────────────────────────────
+
+class TestMonsterOnIrregularSingleSideRoad:
+
+    @pytest.mark.parametrize(
+        "building_type",
+        [BuildingType.DETACHED, BuildingType.TWIN],
+    )
+    def test_no_roadless_monster_subplot(self, building_type):
+        plot = _notch_road_right_plot()
+        r = subdivide(plot, building_type=building_type)
+        assert r.sub_plots, "expected at least one sub-plot"
+
+        # Every retained sub-plot must touch a road (parent DROGA or internal).
+        # The monster bug keeps a road-less band as a sub-plot — that is the
+        # exact invariant it violates.
+        roadless = [
+            s for s in r.sub_plots
+            if (s.parent_droga_touch + s.internal_road_touch) <= 0.5
+        ]
+        assert not roadless, (
+            f"{len(roadless)} road-less sub-plot(s) kept "
+            f"(areas {[round(s.area) for s in roadless]}) — monster bug"
+        )
+
+        # No sub-plot may exceed the MPZP cap by more than the split tolerance.
+        max_area = max(s.area for s in r.sub_plots)
+        cap = plot.mpzp.max_sub_plot_area_m2 * 1.05
+        assert max_area <= cap, (
+            f"monster sub-plot {max_area:.0f}m² > cap {cap:.0f}m² "
+            f"(building_type={building_type.name})"
+        )
+
+    def test_coverage_holds_with_nieuzytek(self):
+        """Strict coverage (Q16): sub-plots + roads + nieużytek == parent."""
+        plot = _notch_road_right_plot()
+        r = subdivide(plot, building_type=BuildingType.DETACHED)
+        accounted = (
+            r.total_sub_area + r.total_road_area + r.nieuzytek_area
+        )
+        assert abs(accounted - plot.geometry.area) < 1.0, (
+            f"coverage gap: accounted {accounted:.1f} vs "
+            f"parent {plot.geometry.area:.1f}"
+        )
+
+    @pytest.mark.parametrize(
+        "building_type",
+        [BuildingType.DETACHED, BuildingType.TWIN],
+    )
+    def test_rescue_spur_does_not_dead_end_on_non_road_boundary(self, building_type):
+        """Invariant 6 guard for the oversized-parcel rescue path (owner rule
+        2026-05-10). When _resolve_oversized_parcels carves an access spur to
+        reach the road-less band, that spur (and every other internal road)
+        must NOT terminate on a non-DROGA plot boundary beyond min_road_width*0.5.
+        Otherwise the rescue would trade a monster for a dead-end road.
+        """
+        plot = _notch_road_right_plot()
+        result = subdivide(plot, building_type=building_type)
+        if not result.roads:
+            return  # no internal roads → nothing to dead-end
+
+        road_union = unary_union(result.roads)
+        non_road_touch = sum(
+            road_union.boundary.intersection(boundary.geometry.buffer(0.05)).length
+            for boundary in plot.boundaries
+            if boundary.boundary_type != BoundaryType.DROGA
+        )
+        assert non_road_touch < plot.mpzp.min_road_width_m * 0.5, (
+            "Rescue spur / internal roads must not dead-end on a non-DROGA "
+            f"boundary; touch length={non_road_touch:.2f}m "
+            f"(building_type={building_type.name})"
+        )
 
 
 if __name__ == "__main__":

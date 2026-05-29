@@ -924,6 +924,36 @@ def _absorb_leftover(
         if try_add_leftover_as_subplots(piece):
             continue
 
+        # Session 14 (2026-05-29): a road-less band ≥ min_area must NOT be
+        # glued into a road-accessible neighbour — that is exactly how the
+        # notch monster formed (the band inherits the neighbour's road touch
+        # and becomes one giant road-accessible parcel that nothing can later
+        # undo). Keep it as a standalone road-less sub-plot so the terminal
+        # post-pass (_resolve_oversized_parcels) can rescue it with a legal
+        # access spur or demote it to nieużytek (Q16(a)/Q1.1(d)). Tiny road-less
+        # slivers (< min_area) still fall through to the merge below.
+        band_bnd, band_dt, band_rt = _infer_boundaries(piece, plot, roads)
+        if band_dt + band_rt <= 0.5 and piece.area >= min_area:
+            try:
+                tmp_band = Plot(
+                    number="roadless_band",
+                    geometry=piece,
+                    boundaries=band_bnd,
+                    mpzp=plot.mpzp,
+                    housing_type=plot.housing_type,
+                )
+                band_zone = builder.compute(tmp_band)
+            except BuildableZoneInfeasible:
+                band_zone = None
+            out.append(SubPlot(
+                polygon=piece,
+                boundaries=band_bnd,
+                buildable_zone=band_zone,
+                parent_droga_touch=band_dt,
+                internal_road_touch=band_rt,
+            ))
+            continue
+
         shared_candidates = []
         for i, s in enumerate(out):
             try:
@@ -1611,6 +1641,268 @@ def _split_polygon_into_area_groups(
     return groups
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Oversized / road-less parcel resolution (focused rewrite, Session 14
+# 2026-05-29). Replaces the brittle in-loop "_service_oversized..." escape for
+# the FINAL pass. Runs ONCE after the absorb/split loop has converged, so it
+# cannot oscillate with _absorb_leftover.
+#
+# The monster bug: when a notch cuts a band off from the road tree, those cells
+# are dropped by the road-access filter, become leftover, and _absorb_leftover's
+# unconditional scored-merge glues the whole road-less band into one giant
+# sub-plot. This pass fixes that: road-less / oversized sub-plots are split with
+# an access spur where a *legal* one exists (owner rescue decision 2026-05-29),
+# and the genuinely boxed-in remainder is demoted to nieużytek (Q16(a)/Q1.1(d)).
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _spur_is_legal_access(
+    spur: Polygon,
+    access_geom,
+    plot: Plot,
+    *,
+    tol: float,
+) -> bool:
+    """A rescue spur is legal iff it (a) connects to the existing road network
+    or parent DROGA and (b) does NOT dead-end on a non-DROGA parent boundary
+    beyond `tol` (owner urban rule 2026-05-10, tol = min_road_width*0.5).
+    """
+    if access_geom is None or spur.is_empty:
+        return False
+    if spur.distance(access_geom) > 0.1:
+        return False
+    non_droga_touch = sum(
+        _line_overlap(spur.boundary, b.geometry)
+        for b in plot.boundaries
+        if b.boundary_type != BoundaryType.DROGA
+    )
+    return non_droga_touch <= tol
+
+
+def _rescue_or_demote(
+    plot: Plot,
+    polygon: Polygon,
+    roads: List[Polygon],
+    building_type: BuildingType,
+    builder: BuildableZoneBuilder,
+    *,
+    min_area: float,
+    cap_area: float,
+) -> Tuple[List[SubPlot], Optional[Polygon]]:
+    """Carve a legal access spur into a road-less/oversized band and split it
+    into road-accessible children (partial-accept: keep the legal children,
+    let the boxed-in remainder fall through to nieużytek).
+
+    Returns (children, spur). children == [] and spur is None means nothing
+    could be rescued → the caller demotes the whole band to nieużytek.
+    """
+    road_w = plot.mpzp.min_road_width_m
+    tol = road_w * 0.5
+    minx, miny, maxx, maxy = polygon.bounds
+    width = maxx - minx
+    height = maxy - miny
+    if width <= road_w or height <= road_w:
+        return [], None
+
+    access_parts = list(roads)
+    rb = plot.road_boundary()
+    if rb is not None:
+        access_parts.append(rb.geometry.buffer(0.05, cap_style=2))
+    access_geom = unary_union(access_parts) if access_parts else None
+    if access_geom is None:
+        return [], None
+
+    margin = tol + 0.5  # keep spur ends this far short of a non-road boundary
+
+    # Which end of each axis is nearest the road network — trim the FAR end so
+    # the spur cannot dead-end on the opposite (non-road) boundary.
+    left_d = LineString([(minx, miny), (minx, maxy)]).distance(access_geom)
+    right_d = LineString([(maxx, miny), (maxx, maxy)]).distance(access_geom)
+    bottom_d = LineString([(minx, miny), (maxx, miny)]).distance(access_geom)
+    top_d = LineString([(minx, maxy), (maxx, maxy)]).distance(access_geom)
+
+    ratios = [0.5, 0.4, 0.6, 0.33, 0.67, 0.25, 0.75]
+    candidate_boxes: List[Polygon] = []
+    for r in ratios:                                    # horizontal spurs
+        y = miny + height * r
+        if left_d <= right_d:
+            candidate_boxes.append(box(minx, y - road_w / 2, maxx - margin, y + road_w / 2))
+        else:
+            candidate_boxes.append(box(minx + margin, y - road_w / 2, maxx, y + road_w / 2))
+    for r in ratios:                                    # vertical spurs
+        x = minx + width * r
+        if bottom_d <= top_d:
+            candidate_boxes.append(box(x - road_w / 2, miny, x + road_w / 2, maxy - margin))
+        else:
+            candidate_boxes.append(box(x - road_w / 2, miny + margin, x + road_w / 2, maxy))
+
+    # Phase 1 — CHEAP selection: score each legal spur by the road-accessible
+    # land area it exposes (pieces ≥ min_area that touch the spur), WITHOUT
+    # running the expensive sub-plot splitter. Splitting all 14 candidates was
+    # ~thousands of buildable-zone computes per band and hung the suite.
+    scored: List[Tuple[float, Polygon, List[Polygon]]] = []
+    for cbox in candidate_boxes:
+        spur = cbox.intersection(polygon)
+        if spur.is_empty or spur.area < road_w * road_w:
+            continue
+        if not isinstance(spur, Polygon):
+            spur = max(
+                (g for g in spur.geoms if isinstance(g, Polygon)),
+                key=lambda g: g.area, default=None,
+            )
+            if spur is None:
+                continue
+        if not _spur_is_legal_access(spur, access_geom, plot, tol=tol):
+            continue
+
+        land = polygon.difference(spur)
+        pieces = [land] if isinstance(land, Polygon) else [
+            g for g in getattr(land, "geoms", [])
+            if isinstance(g, Polygon) and g.area > 1.0
+        ]
+        reachable = sum(
+            p.area for p in pieces
+            if p.area >= min_area and p.distance(spur) < 0.1
+        )
+        if reachable <= 0.0:
+            continue
+        scored.append((reachable, spur, pieces))
+
+    scored.sort(key=lambda t: -t[0])
+
+    # Phase 2 — EXPENSIVE split, but only on the few most promising spurs.
+    # Accept the first spur that yields at least one valid road-accessible
+    # child (partial-accept: un-splittable pieces fall through to nieużytek).
+    for _reach, spur, pieces in scored[:3]:
+        trial_roads = roads + [spur]
+        children: List[SubPlot] = []
+        for piece in pieces:
+            if piece.area < min_area:
+                continue
+            if piece.area <= cap_area:
+                sub = _wrap_valid_subplot(
+                    plot, piece, trial_roads, building_type, builder
+                )
+                if sub is not None:
+                    children.append(sub)
+            else:
+                children.extend(_split_polygon_to_valid_subplots(
+                    plot, piece, trial_roads, building_type, builder,
+                    min_area=min_area, cap_area=cap_area,
+                ))
+        if children:
+            return children, spur
+
+    return [], None
+
+
+def _resolve_oversized_parcels(
+    plot: Plot,
+    sub_plots: List[SubPlot],
+    roads: List[Polygon],
+    building_type: BuildingType,
+) -> List[SubPlot]:
+    """Single terminal post-pass (after the absorb/split loop has converged).
+
+    For each sub-plot that is road-less OR oversized: try a road-accessible
+    split, else a legal rescue spur (partial-accept), else demote to nieużytek
+    (road-less) or keep as last resort (road-accessible un-splittable). Mutates
+    `roads` in place when a rescue spur is accepted. Sub-plots that are both
+    road-accessible AND within cap are passed through untouched — this is what
+    keeps the zero-nieużytek absorption cases (600-800 etc.) unaffected.
+    """
+    cap_area = plot.mpzp.max_sub_plot_area_m2 * 1.05
+    min_area = plot.mpzp.min_sub_plot_area_m2
+    builder = BuildableZoneBuilder()
+    out: List[SubPlot] = []
+
+    for sub in sub_plots:
+        roadless = (sub.parent_droga_touch + sub.internal_road_touch) <= 0.5
+        oversized = sub.area > cap_area
+        if not roadless and not oversized:
+            out.append(sub)
+            continue
+
+        # 1. road-accessible oversized → plain local split (no new road needed).
+        if not roadless:
+            split = _split_polygon_to_valid_subplots(
+                plot, sub.polygon, roads, building_type, builder,
+                min_area=min_area, cap_area=cap_area,
+            )
+            if split:
+                out.extend(split)
+                continue
+
+        # 2. split failed (awkward road-accessible shape) OR road-less band →
+        #    rescue with a legal access spur (partial-accept keeps the legal
+        #    children). On dense regular plots this rescue rarely fires (step 1
+        #    already succeeds), so it adds negligible cost there.
+        children, spur = _rescue_or_demote(
+            plot, sub.polygon, roads, building_type, builder,
+            min_area=min_area, cap_area=cap_area,
+        )
+        if children:
+            if spur is not None:
+                roads.append(spur)
+            out.extend(children)
+            continue
+
+        # 3. nothing rescuable → demote to nieużytek (never keep a monster).
+        #    The honest answer for un-subdividable land is waste (Q1.1(d)/
+        #    Q16(a)); dropping the sub lets it fall into nieużytek via
+        #    _assemble_nieuzytek (coverage stays exact).
+        continue
+
+    return out
+
+
+def _trim_dead_end_roads(
+    plot: Plot,
+    roads: List[Polygon],
+) -> List[Polygon]:
+    """Trim road end-caps that dead-end on a non-DROGA boundary beyond
+    min_road_width*0.5 (owner urban rule 2026-05-10; scope decision 2026-05-29).
+
+    On an irregular plot the road-tree generator can run a branch right up to a
+    concave (notch) boundary, leaving a stub that wastes land. This pulls every
+    *violating* road back `tol` from the non-DROGA boundaries. Roads that do NOT
+    breach the tolerance are returned untouched, so well-formed zero-nieużytek
+    layouts are unaffected. Trimmed slivers fall into nieużytek (parent − subs −
+    roads) — coverage stays exact.
+    """
+    if not roads:
+        return roads
+    tol = plot.mpzp.min_road_width_m * 0.5
+    non_droga = [
+        b.geometry for b in plot.boundaries
+        if b.boundary_type != BoundaryType.DROGA
+    ]
+    if not non_droga:
+        return roads
+    non_droga_u = unary_union(non_droga)
+    probe = non_droga_u.buffer(0.05, cap_style=2)
+    pullback = non_droga_u.buffer(tol, cap_style=2)
+
+    out: List[Polygon] = []
+    for road in roads:
+        try:
+            touch = road.boundary.intersection(probe).length
+        except Exception:
+            touch = 0.0
+        if touch <= tol:
+            out.append(road)
+            continue
+        trimmed = road.difference(pullback)
+        if isinstance(trimmed, Polygon):
+            pieces = [] if trimmed.is_empty else [trimmed]
+        else:
+            pieces = [
+                g for g in getattr(trimmed, "geoms", [])
+                if isinstance(g, Polygon)
+            ]
+        out.extend(p for p in pieces if p.area > 1.0)
+    return out
+
+
 def _subdivide_single(
     plot: Plot,
     *,
@@ -1680,7 +1972,21 @@ def _subdivide_single(
         after_leftover = _assemble_nieuzytek(plot, kept, roads).area
         if abs(after_leftover - before_leftover) < 0.01:
             break
-    kept = _split_oversized_subplots(plot, kept, roads, building_type)
+    # Terminal post-pass (Session 14): resolve road-less / oversized parcels
+    # once, after the loop has converged. Kills the notch monster (rescue spur
+    # or demote-to-nieużytek) without the absorb↔split oscillation that doomed
+    # the in-loop attempts.
+    kept = _resolve_oversized_parcels(plot, kept, roads, building_type)
+
+    # Trim roads that dead-end on a non-DROGA boundary (owner scope decision
+    # 2026-05-29) — but ONLY on layouts that already carry genuine waste
+    # (irregular plots, e.g. the notch). On a clean zero-nieużytek layout the
+    # road tree is correct and a road grazing a sloped boundary legitimately
+    # tiles the diagonal edge; trimming there would invent waste and break the
+    # zero-nieużytek invariant. Gating on existing waste keeps those layouts
+    # untouched while still cleaning the irregular cases the rule targets.
+    if _assemble_nieuzytek(plot, kept, roads).area > 1.0:
+        roads = _trim_dead_end_roads(plot, roads)
 
     # Q21 (2026-05-26): TWIN/TERRACED sub-plots share a wall with their
     # pair/chain neighbour. Mark those boundary segments so the side setback
