@@ -233,6 +233,7 @@ def solve_cpsat(
     time_limit_s: float = 30.0,
     forced_facade: Optional[dict[str, str]] = None,
     blocked_arrangements: Optional[list[RoomArrangement]] = None,
+    reserved_core: Optional[tuple[float, float, float, float]] = None,
 ) -> CpsatResult:
     """Solver CP-SAT — umieszcza pokoje szablonu w obrysie.
 
@@ -244,6 +245,9 @@ def solve_cpsat(
             Klucz = room_id, wartość = "south"/"north"/"east"/"west".
         blocked_arrangements: Lista wcześniejszych rozwiązań do zablokowania.
             Solver wygeneruje topologicznie inny układ.
+        reserved_core: (x, y, w, h) in metres, bbox-relative, that the hub must
+            fully contain (e.g. shared staircase rectangle in a 2-storey house).
+            None = off — zero behaviour change for existing apartment flows M1–M5.
 
     Returns:
         CpsatResult z pokojami (Room z polygon w metrach).
@@ -440,6 +444,18 @@ def solve_cpsat(
                 model.add(x[hub_idx] == 0)
             elif entry_side == "east":
                 model.add(x_ends[hub_idx] == BW)
+
+        # Reserved core (e.g. shared staircase): hub must fully contain it.
+        if reserved_core is not None:
+            cx, cy, cw, ch = reserved_core
+            csx = round(cx * SCALE)
+            csy = round(cy * SCALE)
+            cex = round((cx + cw) * SCALE)
+            cey = round((cy + ch) * SCALE)
+            model.add(x[hub_idx] <= csx)
+            model.add(x_ends[hub_idx] >= cex)
+            model.add(y[hub_idx] <= csy)
+            model.add(y_ends[hub_idx] >= cey)
 
     # ====================================================================
     # Stage C: Facade constraints — pokoje z oknami na fasadzie
