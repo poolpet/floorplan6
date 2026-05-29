@@ -11,7 +11,38 @@
 
 ---
 
-## ✅ STAN po sesji 14 (2026-05-29 — MONSTER BUG NAPRAWIONY)
+## ✅ STAN po sesji 14 cz.2 (2026-05-29 — PIVOT MVP + Plan 1 domu zrobiony)
+
+**Pivot MVP:** ze „raport PDF" na **pipeline domu jednorodzinnego (2 kondygnacje) + meble**
+(decyzje właściciela 2026-05-29: 2 kondygnacje, pełne Stage 2/3, meble auto-kanoniczne).
+Zapisane w pamięci projektu. Stary raport PDF odłożony.
+
+**Faza 1 zaprojektowana + Plan 1 ZAIMPLEMENTOWANY** (gałąź `feat/sfh-2storey-mvp`):
+- Spec: `docs/superpowers/specs/2026-05-29-sfh-2storey-stage4-furniture-design.md`
+- Plan 1: `docs/superpowers/plans/2026-05-29-sfh-2storey-core-generation.md` — **ZROBIONY**:
+  `solve_cpsat(reserved_core=…)` (addytywny) + `templates/house_parter.json`+`house_pietro.json`
+  + `core/house_layout.py` (`generate_house` → 2 kondygnacje, klatka zgrana w pionie) +
+  smoke `notebooks/sfh_house_smoke.py`. **16 passed / 1 xfailed**; viz `output/sfh_house_smoke.png`
+  pokazuje sensowny dom (na footprincie ~9×7,5 m salon 28 / sypialnie 23/17/10 / łazienka 4,8≤5).
+- Po drodze naprawiony pre-existing `KeyError` w `_compute_target_areas` (rozszerzone programy domu;
+  addytywnie, M1-M5 nietknięte).
+
+### 🔥 Następne kroki MVP domu (kolejność)
+1. **Plan 2 — MEBLE** (`core/furniture.py`): regułowe zestawy per typ pokoju pod ściany,
+   z dala od drzwi, render w `viz/plan_renderer.py`. Spec §5 to projektuje. Napisać plan → wykonać.
+2. **Plan 3 — VIZ + UI** (render 2 kondygnacji + tryb „dom 2-kond." w Stage 4 + routing JEDNORODZINNA + przełącznik mebli).
+3. **GAP jakości do naprawy:** na footprincie ZBYT DUŻYM dla programu nadmiar (F1 = 100% pokrycia)
+   wpychany w jeden pokój (salon 48 m², sypialnia 44 m² na 99 m²/kondygnację). Dla DOMU dystrybucja
+   nadmiaru ≠ apartament (Q6 dumpuje w salon) — przemyśleć (cap rozsądnych rozmiarów pokoi domowych
+   albo „nadmiar → taras/ogród/większy hol"). Na realnym ~64 m²/kondygnację jest OK.
+4. Potem: Faza 2 (pełny Stage 2/3 + płynne wpięcie 1→2→3→4).
+
+> ⚠️ Praca jest na gałęzi `feat/sfh-2storey-mvp`, **NIE na main, NIE pushnięta**. 7 commitów
+> (monster fix + docs + spec/plan + 4× implementacja Planu 1). Decyzja o merge/PR — patrz koniec.
+
+---
+
+## ✅ STAN po sesji 14 cz.1 (2026-05-29 — MONSTER BUG NAPRAWIONY)
 
 Sesja 14 = **focused rewrite obsługi oversized/road-less parcel** (PRIO 1 z sesji 13).
 Bug Dawida z AC (S7 = 19 664 m²) **rozwiązany**, zero regresji.
