@@ -3,7 +3,7 @@
 > Updated after every working session. If it doesn't reflect reality —
 > Claude updates immediately.
 >
-> **Last update:** 2026-05-27 (Stage 1 → Stage 4 integration shipped — Mode B SF sub-plot opens directly in Stage 4 with auto-detected entry/walls)
+> **Last update:** 2026-05-29 (Session 14 — monster sub-plot bug fixed: focused rewrite of oversized/road-less parcel handling + dead-end road trim; full non-GUI suite 301 passed / 0 failed)
 >
 > Earlier sessions documented in Polish are preserved at the bottom; from
 > 2026-05-05 onwards everything is in English so the project can be shared
@@ -417,6 +417,39 @@ flow, richer VariantInfo metrics.
    **Out of scope (still on backlog):**
    - Mode A → Stage 4 (different UX — choose variant first).
    - Wielorodzinna → multi-apartment in one building (needs Stage 3 floor layout first).
+
+   **Stage 1 Session 14 (2026-05-29) — monster sub-plot fix (focused rewrite):**
+
+   Fixed Dawid's AC bug (2026-05-28): on an irregular plot where a notch cuts a
+   band off from the single-side road tree, `_absorb_leftover`'s unconditional
+   scored-merge glued the whole road-less band into one giant parcel (S7 =
+   19 664 m² / cap 1000 m²). B1 rewrite (not patch), one owner decision: **rescue
+   then demote** (Dawid 2026-05-29) + **trim dead-end road tips** (full clean).
+
+   | Component | Status |
+   |---|---|
+   | `core/plot_subdivider.py` `_absorb_leftover` | ✅ road-less leftover band ≥ min_area is kept as a STANDALONE road-less sub-plot (NOT glued into a road-accessible neighbour — that was the monster's root cause). Tiny road-less slivers still merge. |
+   | `core/plot_subdivider.py` `_resolve_oversized_parcels` | ✅ NEW terminal post-pass, runs ONCE after the absorb/split loop converges (no absorb↔split oscillation). Per sub: road-accessible oversized → plain split; else (road-less or awkward) → legal-spur rescue (partial-accept); else → demote to nieużytek (Q16(a)/Q1.1(d)). Never keeps a monster. |
+   | `core/plot_subdivider.py` `_rescue_or_demote` | ✅ carves an access spur into a cut-off band, cheap-selects the best legal spur by reachable area, then splits only the top-3 candidates (perf: splitting all 14 hung the suite). Partial-accept keeps legal children. |
+   | `core/plot_subdivider.py` `_spur_is_legal_access` | ✅ a rescue spur is legal iff it connects to the road network AND does not dead-end on a non-DROGA boundary > `min_road_width*0.5` (owner urban rule 2026-05-10). |
+   | `core/plot_subdivider.py` `_trim_dead_end_roads` | ✅ trims road end-caps that dead-end on a non-DROGA boundary, GATED on layouts that already carry waste (`nieużytek > 1 m²`). Clean zero-nieużytek layouts (incl. roads grazing a sloped edge) are left untouched → no waste invented, no regression. |
+   | `tests/test_plot_subdivider.py` | ✅ `TestMonsterOnIrregularSingleSideRoad`: `test_no_roadless_monster_subplot` (DETACHED+TWIN — was xfail, now GREEN), `test_coverage_holds_with_nieuzytek`, `test_rescue_spur_does_not_dead_end_on_non_road_boundary` (DETACHED+TWIN, NEW). |
+   | `notebooks/stage1_notch_sanity.py` + `output/notch_sanity_*.png` | ✅ NEW visual sanity check (reuses the q21 renderer). |
+
+   **Verification (2026-05-29):**
+   - Notch 284×166: DETACHED 48 sub-plots max 932 m² (cap 1050), TWIN 98 max 427 m²
+     — NO monster; every retained sub-plot has road access; Q16 coverage diff=0.00;
+     nieużytek 7.4% / 6.7% (the genuinely cut-off corner, dead-end roads trimmed).
+   - `tests/test_plot_subdivider.py`: **42 passed, 0 failed**.
+   - Full non-GUI suite (`pytest --ignore=notebooks --ignore=tests/test_gui.py`):
+     **301 passed, 30 skipped, 1 xpassed, 0 failed** (exit 0, 9:03). Baseline was
+     295 passed / 3 xfailed → +6 passed (2 monster un-xfailed, 2 new dead-end,
+     +2 noise), 0 regressions.
+
+   **Gotcha for future sessions:** the tight-bounds 600-800 subdivision test is
+   pre-existing pathologically slow (~7 min) and non-deterministic (road-tree
+   `oriented_envelope` degeneracies) — NOT a regression. Don't chase a "hanging"
+   subdivision test; verify with a ≥900 s timeout or `git stash` the baseline first.
 
 5. **Stage 2 (volumetric generator)** — not started
 

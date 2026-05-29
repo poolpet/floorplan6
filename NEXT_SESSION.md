@@ -1,4 +1,4 @@
-# Briefing — następna sesja FP6 (po 2026-05-28, sesja 13)
+# Briefing — następna sesja FP6 (po 2026-05-29, sesja 15)
 
 > **Jak zacząć:**
 >
@@ -8,6 +8,38 @@
 > ```
 >
 > Pierwsza wiadomość: **"Czytaj NEXT_SESSION.md i kontynuujemy."**
+
+---
+
+## ✅ STAN po sesji 14 (2026-05-29 — MONSTER BUG NAPRAWIONY)
+
+Sesja 14 = **focused rewrite obsługi oversized/road-less parcel** (PRIO 1 z sesji 13).
+Bug Dawida z AC (S7 = 19 664 m²) **rozwiązany**, zero regresji.
+
+### Co zrobione (pełny opis w `docs/STATE.md` → "Stage 1 Session 14")
+- **Root cause zabity u źródła:** `_absorb_leftover` już NIE skleja bezdrożnego
+  pasa ≥ min_area w road-accessible sąsiada — zostawia go jako standalone
+  road-less sub (drobne slivers nadal merge).
+- **Nowy terminalny post-pass** `_resolve_oversized_parcels` (raz, po pętli →
+  brak oscylacji absorb↔split): road-accessible oversized → split; bezdrożny/
+  dziwny → legalny spur rescue (partial-accept); reszta → demote do nieużytku.
+- **Decyzja właściciela (2026-05-29):** „rescue then demote" + „pełny clean"
+  (trim ślepych dróg). `_trim_dead_end_roads` **gated** na `nieużytek > 1 m²` —
+  czyste układy zero-nieużytku (w tym droga grazująca skośną krawędź) nietknięte.
+- **Testy:** `test_no_roadless_monster_subplot` (DETACHED+TWIN, było xfail → GREEN),
+  `test_rescue_spur_does_not_dead_end...` (nowy), `test_coverage_holds_with_nieuzytek`.
+- **Viz:** `notebooks/stage1_notch_sanity.py` → `output/notch_sanity_*.png`.
+
+### Weryfikacja
+- Notch: DETACHED max 932 m² / TWIN max 427 m² (cap 1050) — **brak monstera**;
+  każdy sub ma dostęp do drogi; Q16 diff=0.00; nieużytek 7% (odcięty róg).
+- **Pełny non-GUI suite: 301 passed, 30 skipped, 1 xpassed, 0 failed** (exit 0).
+  Baseline 295 passed / 3 xfailed → +6 passed, zero regresji.
+
+> ⚠️ **Zmiany NIE zacommitowane** (czekają na decyzję Dawida o commit/PR).
+> ⚠️ **Gotcha:** test 600-800 jest pre-existing wolny (~7 min) + niedeterministyczny
+> — to NIE regresja. „Wiszący" test subdivision = ta powolność; weryfikuj timeoutem
+> ≥900 s albo `git stash` baseline. (Zapisane też w pamięci projektu.)
 
 ---
 
@@ -44,34 +76,15 @@ Sesja 12 była **manualnym smoke testem integracji Stage 1 → Stage 4** (PRIO 1
 
 ---
 
-## 🔥 PRIO 1 dla sesji 13 — monster sub-działka na nieregularnym kształcie
+## PRIO 1 dla sesji 15 — UX fix: hint "kliknij sub-działkę"
 
-**Decyzja workflow z sesji 12:** plan A diagnostyki (button "Eksportuj geometrię działki JSON" w Stage 1) zaproponowany, nie potwierdzony przez Dawida przed zamknięciem sesji. Sesja 13 zaczyna od potwierdzenia planu A vs B vs C.
-
-**Plan A (rekomendowany):**
-1. Dodać tymczasowy button "Eksportuj geometrię działki (JSON)" w `ui/stage1_window.py` — zapisuje `~/Desktop/fp6_plot_debug.json` z `polygon` (WKT), `boundaries` (lista z typami DROGA/SASIAD_*), `MPZP params`. Nie zmienia logiki algorytmu, ~30 linii.
-2. Dawid: Load from ArchiCAD ten sam nieregularny plot → Generate → Eksportuj. Przesyła JSON.
-3. Claude: buduje test repro w `tests/test_plot_subdivider.py` (RED test który replikuje monstera), diagnozuje root cause w `_absorb_leftover` / `subdivision_roads` / `_split_oversized_subplots`.
-4. Plain-language plan fixu → OK od Dawida → implementacja → GREEN.
-5. Po fix: usunąć tymczasowy button.
-
-**Plan B (lżejszy):** wstawić `print(plot.polygon.wkt + boundaries)` w `_run_mode_b`, Dawid kopiuje z terminala. 3 linie, brzydsze.
-
-**Plan C (bez Dawida):** syntetyczny nieregularny plot (np. trójkąt + prostokąt z drogą po jednej stronie) który da monster — buduje go Claude. Plus: niezależne od AC. Minus: może nie replikować dokładnie problemu.
-
----
-
-## PRIO 2 dla sesji 13 — UX fix: hint "kliknij sub-działkę"
-
-Drobnostka po monster bug fix.
+Drobnostka (monster fix z sesji 14 już zrobiony).
 - Status bar w Stage 1 po Generate: "Kliknij sub-działkę aby zaznaczyć…"
 - Tooltip na disabled "Otwórz wybraną sub-działkę w Stage 4": "Najpierw kliknij sub-działkę na podglądzie"
 
-Może być dorzucone w tym samym commicie co fix monstera albo osobno.
-
 ---
 
-## PRIO 3 — wybór z większego backlogu (po PRIO 1+2)
+## PRIO 2 — wybór z większego backlogu
 
 W kolejności potencjalnej wartości:
 
@@ -118,10 +131,15 @@ w katalogu `claude code/`.
 
 ---
 
-## Pytest baseline po sesji 12 (2026-05-28)
+## Pytest baseline po sesji 14 (2026-05-29)
 
-```
-296 passed, 30 skipped, 1 xpassed, 11636 warnings in 608.83s (0:10:08)
-```
+Pełny non-GUI suite (`pytest --ignore=notebooks --ignore=tests/test_gui.py -q`)
+zweryfikowany do końca: **301 passed, 30 skipped, 1 xpassed, 0 failed** (exit 0,
+~9 min). `tests/test_plot_subdivider.py`: **42 passed**.
 
-Identyczne z baseline po sesji 11 (296 passed, 29 skip, 1 xpass) modulo 1 skip — żadnej regresji. Sesja 12 nie ruszała kodu.
+Względem baseline na starcie sesji 14 (295 passed / 32 skipped / 3 xfailed):
++6 passed (2 monster un-xfailed po naprawie, 2 nowe testy dead-end, +2 szum
+niedeterministyczny), 0 xfailed (monster zdjęte; `hub_adjacency_m3` flake → xpassed).
+
+> ⚠️ Sesja 15 może potwierdzić baseline na starcie tym samym poleceniem
+> (~9-10 min; wolne głównie przez pre-existing test 600-800, patrz gotcha wyżej).
