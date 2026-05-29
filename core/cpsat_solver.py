@@ -194,6 +194,16 @@ def _compute_target_areas(
 
     salons = [s for s in specs if "salon" in s.id]
     sypialnie = [s for s in specs if "sypialnia" in s.id]
+
+    # Pozostałe pokoje (nie service/hub/salon/sypialnia, np. kuchnia, kotłownia,
+    # spiżarnia, wiatrołap, garderoba w programie domu) stoją na opt/min — to ich
+    # baseline w dystrybucji nadmiaru poniżej. Bez tego KeyError na rozszerzonych
+    # szablonach (house_parter/house_pietro).
+    others = [s for s in specs
+              if s.id not in targets and s not in salons and s not in sypialnie]
+    for spec in others:
+        targets[spec.id] = spec.opt_powierzchnia or spec.min_powierzchnia
+
     fixed_sum = sum(targets.values())
     available = usable_area_m2 - fixed_sum
 
