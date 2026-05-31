@@ -3,11 +3,33 @@
 > Updated after every working session. If it doesn't reflect reality —
 > Claude updates immediately.
 >
-> **Last update:** 2026-05-29 (Session 14 — monster sub-plot bug fixed: focused rewrite of oversized/road-less parcel handling + dead-end road trim; full non-GUI suite 301 passed / 0 failed)
+> **Last update:** 2026-05-31 (Session 15 — see `docs/ROADMAP_domy.md`, authoritative: Stages 1/2/3 FROZEN, all energy on Stage 4 driven by single-family-house plans. Merged `feat/sfh-2storey-mvp` → main (`ca92621`, no push); shipped Plan 2 furniture + 2-storey furnished renderer on `feat/sfh-furniture` (`dc77773`, not merged). 17 SFH/furniture tests green.)
 >
 > Earlier sessions documented in Polish are preserved at the bottom; from
 > 2026-05-05 onwards everything is in English so the project can be shared
 > with international collaborators.
+
+---
+
+## Session 15 (2026-05-31 — house ROADMAP + merge + furniture)
+
+**Authoritative direction now `docs/ROADMAP_domy.md`:** freeze Stages 1/2/3 (mark legacy),
+focus Stage 4 (CP-SAT) on real house plans (detached → twin → terraced). Brain = Python
+forever; C++ only as the AC shell (Tapir).
+
+- **Merged** `feat/sfh-2storey-mvp` → `main` (fast-forward `ca92621`, **not pushed**).
+- **F2 guard** added (`test_house_wet_rooms_never_exceed_wt_cap`): verified the bathroom
+  ≤5 m² cap holds structurally (solver `upper_bound` via `WT_MAX_AREA`); without the cap a
+  16×13 footprint yields a 7.76 m² bathroom — test bites. No solver change needed.
+- **Plan 2 — furniture** (`core/furniture.py`, branch `feat/sfh-furniture`, `dc77773`):
+  canonical PL furniture sets per room type (spec §5), greedy wall placement, Shapely
+  collision, skip-if-no-fit. **Doors inferred only from edges shared with a KOMUNIKACJA room
+  (F5)** — pure geometric adjacency over-constrained placement (starved bathtub/shelves).
+- **2-storey renderer** `viz/plan_renderer.py::render_two_storey` — PARTER|PIĘTRO panels,
+  furniture, aligned staircase symbol (correct bbox offset: rooms absolute, `stair_core`
+  bbox-relative). PNG `notebooks/output/sfh_furnished.png`.
+- **NOT done / next (per roadmap):** Plan 3 UI (JEDNORODZINNA mode + furniture toggle),
+  house excess-distribution quality gap (needs Dawid's call), twin/terraced types.
 
 ---
 

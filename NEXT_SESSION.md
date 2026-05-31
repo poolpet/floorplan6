@@ -11,6 +11,46 @@
 
 ---
 
+## ✅ STAN po sesji 15 (2026-05-31 — ROADMAP domów + MERGE do main + Plan 2 MEBLE)
+
+**Roadmap (nadrzędny):** `docs/ROADMAP_domy.md` — Etapy 1/2/3 **ZAMROŻONE**, cała energia w
+Etap 4 (CP-SAT) napędzany realnym przypadkiem: **rzuty domów** (wolnostojący → bliźniak →
+szeregowiec). Mózg = Python na zawsze; C++ tylko jako powłoka (Tapir) do dystrybucji.
+
+**Zrobione w sesji 15 (gałąź `feat/sfh-furniture`, odgałęziona od main):**
+1. **F2 guard** — `tests/test_house_layout.py::test_house_wet_rooms_never_exceed_wt_cap`
+   (parametryczny: 11×9, 16×13). Zweryfikowano: cap łazienki ≤5 m² działa strukturalnie
+   (solver `upper_bound` po `WT_MAX_AREA`), na 16×13 dociska do 4.99; bez capa łazienka 7.76
+   → test bije. Żadnej zmiany w solverze (cap już był poprawny). Commit `ca92621`.
+2. **MERGE `feat/sfh-2storey-mvp` → main** (fast-forward, czysty; **BEZ push** — repo prywatne,
+   decyzja o push odłożona). main = `ca92621` (cała praca SFH + F2 guard).
+3. **Plan 2 — MEBLE** (`core/furniture.py`): kanoniczne zestawy PL per typ pokoju (spec §5),
+   greedy pod ściany (inset 0.1), kolizje Shapely, skip jeśli nie mieści, większe pierwsze.
+   **Drzwi inferowane tylko z krawędzi wspólnej z pokojem KOMUNIKACJA (F5)** — geometryczne
+   sąsiedztwo samo dawało fałszywe strefy (łazienka↔garderoba) i wypychało wannę/półki.
+4. **Renderer 2-kond.** — `viz/plan_renderer.py::render_two_storey(layout, furniture)`: panele
+   PARTER|PIĘTRO, meble, symbol schodów (z poprawnym offsetem bbox: pokoje absolutne,
+   `stair_core` bbox-relative). PNG: `notebooks/output/sfh_furnished.png`.
+   Testy: `tests/test_furniture.py` (6), `tests/test_two_storey_render.py` (1). Commit `dc77773`.
+   **Weryfikacja: 17 passed / 0 failed** (furniture+render+house+templates+reserved_core).
+
+### 🔥 Następne kroki (wg `docs/ROADMAP_domy.md`)
+1. **Plan 3 — UI**: tryb „dom 2-kond." w zakładce Stage 4 + routing JEDNORODZINNA →
+   house templates (nie M1-M5) + przełącznik mebli on/off + wyświetlanie 2 kondygnacji.
+   (Renderer 2-kond. już gotowy — zostaje wpięcie w `ui/main_window.py`.)
+2. **GAP jakości (decyzja Dawida):** na za dużym footprincie nadmiar (F1) wpychany w salon
+   (salon 90→130 m² na 16×13). Dla DOMU: cap rozsądnych rozmiarów pokoi albo „nadmiar →
+   taras/hol/garaż". Nie zgadywać — zapytać.
+3. **Bliźniak → szeregowiec** (kolejne typy domów; sąsiednie obrysy rysowane ręcznie w AC).
+4. **Polish mebli (opcjonalnie):** wezgłowie łóżka preferuj ścianę bez okna (dziś bywa przy oknie);
+   meble liniowe (blat) dopasuj długość do realnej wolnej ściany.
+5. Później: Faza 2 (Stage 2/3 + pipeline 1→2→3→4) — ale wg roadmap to ZA zamrożeniem.
+
+> ⚠️ Praca sesji 15 na gałęzi `feat/sfh-furniture` (commit `dc77773`), **NIE zmergowana do main,
+> NIE pushnięta.** main = `ca92621`. Decyzja merge/push `feat/sfh-furniture` → Dawid.
+
+---
+
 ## ✅ STAN po sesji 14 cz.2 (2026-05-29 — PIVOT MVP + Plan 1 domu zrobiony)
 
 **Pivot MVP:** ze „raport PDF" na **pipeline domu jednorodzinnego (2 kondygnacje) + meble**
