@@ -127,6 +127,126 @@ def render_rooms_only(
     return fig
 
 
+def render_two_storey(
+    layout,
+    parter_furniture: Optional[list] = None,
+    pietro_furniture: Optional[list] = None,
+    title: Optional[str] = None,
+    save_path: Optional[Path] = None,
+    show: bool = True,
+    figsize: tuple[float, float] = (16, 8),
+) -> plt.Figure:
+    """Renderuj dom 2-kondygnacyjny (TwoStoreyLayout) — 2 panele PARTER | PIĘTRO.
+
+    Rysuje pokoje (wg strefy), wyrównaną klatkę schodową (ten sam (x,y) na obu
+    panelach — z poprawnym offsetem bbox) oraz meble (jeśli podane).
+    """
+    fig, (ax_p, ax_g) = plt.subplots(1, 2, figsize=figsize)
+
+    # stair_core jest bbox-relative (lokalny) → na absolutny frame pokoi dodaj origin bbox
+    bx0, by0 = _frame_origin(layout)
+    sx, sy, sw, sh = layout.stair_core
+    core_abs = (sx + bx0, sy + by0, sw, sh)
+
+    _draw_storey(ax_p, layout.parter_rooms, layout.boundary, core_abs,
+                 parter_furniture or [], "PARTER")
+    _draw_storey(ax_g, layout.pietro_rooms, layout.boundary, core_abs,
+                 pietro_furniture or [], "PIĘTRO")
+
+    if title is None:
+        title = "Dom jednorodzinny 2-kondygnacyjny"
+    fig.suptitle(title, fontsize=15, fontweight="bold")
+    plt.tight_layout(rect=(0, 0, 1, 0.96))
+
+    if save_path:
+        fig.savefig(save_path, dpi=150, bbox_inches="tight")
+    if show:
+        plt.show()
+    return fig
+
+
+def _frame_origin(layout) -> tuple[float, float]:
+    """Origin (minx, miny) wspólnego frame pokoi. Z boundary, fallback z pokoi."""
+    b = getattr(layout, "boundary", None)
+    if b is not None and getattr(b, "polygon", None) is not None:
+        bb = b.polygon.bounds
+        return bb[0], bb[1]
+    polys = [r.polygon for r in (*layout.parter_rooms, *layout.pietro_rooms) if r.polygon]
+    if polys:
+        return min(p.bounds[0] for p in polys), min(p.bounds[1] for p in polys)
+    return 0.0, 0.0
+
+
+def _draw_storey(ax, rooms, boundary, core_abs, furniture, title):
+    # obrys
+    if boundary is not None and getattr(boundary, "polygon", None) is not None:
+        bx, by = boundary.polygon.exterior.xy
+        ax.plot(bx, by, color="black", linewidth=2.5, zorder=2)
+        bnds = boundary.polygon.bounds
+    else:
+        xs = [c for r in rooms if r.polygon for c in (r.polygon.bounds[0], r.polygon.bounds[2])]
+        ys = [c for r in rooms if r.polygon for c in (r.polygon.bounds[1], r.polygon.bounds[3])]
+        bnds = (min(xs), min(ys), max(xs), max(ys)) if xs else (0, 0, 1, 1)
+
+    for room in rooms:
+        _draw_room(ax, room)
+    _draw_stair(ax, core_abs)
+    _draw_furniture(ax, furniture)
+
+    ax.set_title(title, fontsize=13, fontweight="bold")
+    legend_patches = [
+        mpatches.Patch(facecolor=color, edgecolor="black", label=strefa.display)
+        for strefa, color in STREFA_COLORS.items()
+        if any(r.spec.strefa == strefa for r in rooms)
+    ]
+    if furniture:
+        legend_patches.append(mpatches.Patch(facecolor="#A1887F", edgecolor="#4E342E", label="Meble"))
+    ax.legend(handles=legend_patches, loc="upper right", fontsize=8)
+
+    bx0, by0, bx1, by1 = bnds
+    margin = max(bx1 - bx0, by1 - by0) * 0.05
+    ax.set_xlim(bx0 - margin, bx1 + margin)
+    ax.set_ylim(by0 - margin, by1 + margin)
+    ax.set_aspect("equal")
+    ax.set_xlabel("x [m]")
+    ax.set_ylabel("y [m]")
+
+
+def _draw_stair(ax, core_abs):
+    """Symbol klatki schodowej — czerwony prostokąt + stopnie + strzałka 'w górę'."""
+    sx, sy, sw, sh = core_abs
+    ax.add_patch(mpatches.Rectangle((sx, sy), sw, sh, fill=False,
+                                    edgecolor="#D32F2F", linewidth=2.0, zorder=5))
+    if sw >= sh:                                   # stopnie prostopadłe do dłuższego boku
+        n = max(3, int(sw / 0.28))
+        for k in range(1, n):
+            x = sx + sw * k / n
+            ax.plot([x, x], [sy, sy + sh], color="#D32F2F", linewidth=0.5, zorder=5)
+        ax.annotate("", xy=(sx + sw * 0.88, sy + sh / 2), xytext=(sx + sw * 0.12, sy + sh / 2),
+                    arrowprops=dict(arrowstyle="->", color="#D32F2F", lw=1.2), zorder=6)
+    else:
+        n = max(3, int(sh / 0.28))
+        for k in range(1, n):
+            y = sy + sh * k / n
+            ax.plot([sx, sx + sw], [y, y], color="#D32F2F", linewidth=0.5, zorder=5)
+        ax.annotate("", xy=(sx + sw / 2, sy + sh * 0.88), xytext=(sx + sw / 2, sy + sh * 0.12),
+                    arrowprops=dict(arrowstyle="->", color="#D32F2F", lw=1.2), zorder=6)
+    ax.text(sx + sw / 2, sy + sh * 0.5, "SCHODY", ha="center", va="center", fontsize=6,
+            color="#B71C1C", fontweight="bold", zorder=7,
+            bbox=dict(boxstyle="round,pad=0.1", facecolor="white", alpha=0.6, edgecolor="none"))
+
+
+def _draw_furniture(ax, furniture):
+    for f in furniture:
+        x, y = f.polygon.exterior.xy
+        ax.fill(x, y, facecolor="#A1887F", edgecolor="#4E342E",
+                linewidth=0.8, alpha=0.85, zorder=4)
+        if f.polygon.area >= 0.45:
+            c = f.polygon.centroid
+            ax.text(c.x, c.y, f.label, ha="center", va="center",
+                    fontsize=5, color="#3E2723", zorder=6)
+
+
 def _draw_boundary(ax: plt.Axes, boundary: Boundary):
     """Rysuj obrys mieszkania."""
     x, y = boundary.polygon.exterior.xy
