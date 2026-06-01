@@ -32,3 +32,31 @@ def test_core_area_never_exceeds_cap_or_40pct():
         assert sw * sh <= STAIR_MAX_AREA + 1e-6
         assert sw <= 0.40 * W + 1e-6
         assert sh <= 0.40 * H + 1e-6
+
+
+from core.house_layout import _reserve_core, STAIR_SETBACK
+
+
+def _core_for(W, H, entry):
+    return _reserve_core((0.0, 0.0, W, H), entry)
+
+
+def test_core_is_set_back_from_south_entry():
+    cx, cy, sw, sh = _core_for(8.0, 8.0, (4.0, 0.0))
+    assert cy > 0.5                       # NIE przy ścianie wejścia (dawniej cy=0)
+    assert cy <= STAIR_SETBACK + 0.3
+    assert cx + sw <= 8.0 + 1e-6 and cy + sh <= 8.0 + 1e-6
+
+
+def test_core_is_set_back_from_west_entry():
+    cx, cy, sw, sh = _core_for(8.0, 8.0, (0.0, 4.0))
+    assert cx > 0.5                       # cofnięte od ściany zachodniej
+    assert cx <= STAIR_SETBACK + 0.3
+    assert cx + sw <= 8.0 + 1e-6 and cy + sh <= 8.0 + 1e-6
+
+
+def test_core_inside_bbox_for_all_entries():
+    for entry in [(4.0, 0.0), (4.0, 8.0), (0.0, 4.0), (8.0, 4.0)]:
+        cx, cy, sw, sh = _core_for(8.0, 8.0, entry)
+        assert cx >= -1e-6 and cy >= -1e-6
+        assert cx + sw <= 8.0 + 1e-6 and cy + sh <= 8.0 + 1e-6

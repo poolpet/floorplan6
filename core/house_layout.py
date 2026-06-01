@@ -84,20 +84,30 @@ def _entry_side(bbox, entry_point) -> str:
 
 
 def _reserve_core(bbox, entry_point) -> tuple[float, float, float, float]:
+    """Rdzeń klatki schodowej (x, y, w, h), bbox-relative.
+
+    Geometria adaptacyjna (`_stair_core_dims`), pozycja: cofnięta od ściany wejścia
+    o STAIR_SETBACK (środkowy pas głębokości), wyśrodkowana w okolicy wejścia.
+    """
     minx, miny, maxx, maxy = bbox
     W = maxx - minx
     H = maxy - miny
-    sw = min(STAIR_W, W * 0.40)
-    sh = min(STAIR_H, H * 0.40)
+    sw, sh, _kind = _stair_core_dims(W, H)
     ex = entry_point[0] - minx
     ey = entry_point[1] - miny
     side = _entry_side(bbox, entry_point)
     if side in ("south", "north"):
-        cx = min(max(ex - sw / 2, 0.0), W - sw)
-        cy = 0.0 if side == "south" else H - sh
+        cx = min(max(ex - sw / 2, 0.0), W - sw)              # bias ku x wejścia
+        if side == "south":
+            cy = min(STAIR_SETBACK, max(0.0, H - sh))        # cofnij od frontu
+        else:
+            cy = max(H - STAIR_SETBACK - sh, 0.0)
     else:
-        cy = min(max(ey - sh / 2, 0.0), H - sh)
-        cx = 0.0 if side == "west" else W - sw
+        cy = min(max(ey - sh / 2, 0.0), H - sh)              # bias ku y wejścia
+        if side == "west":
+            cx = min(STAIR_SETBACK, max(0.0, W - sw))
+        else:
+            cx = max(W - STAIR_SETBACK - sw, 0.0)
     return (round(cx, 3), round(cy, 3), round(sw, 3), round(sh, 3))
 
 
