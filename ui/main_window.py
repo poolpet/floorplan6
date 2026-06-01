@@ -270,6 +270,20 @@ class MainWindow(QMainWindow):
         # --- Lewy panel ---
         left = QVBoxLayout()
 
+        # ══════════ Tryb: mieszkanie / dom ══════════
+        mode_group = QGroupBox("Tryb")
+        mode_lay = QVBoxLayout(mode_group)
+        self.mode_apartment_radio = QRadioButton("Mieszkanie w bloku (M1-M5)")
+        self.mode_house_radio = QRadioButton("Dom jednorodzinny (2-kond.)")
+        self.mode_apartment_radio.setChecked(True)
+        self.mode_btn_group = QButtonGroup(self)
+        self.mode_btn_group.addButton(self.mode_apartment_radio)
+        self.mode_btn_group.addButton(self.mode_house_radio)
+        mode_lay.addWidget(self.mode_apartment_radio)
+        mode_lay.addWidget(self.mode_house_radio)
+        self.mode_apartment_radio.toggled.connect(self._on_mode_changed)
+        left.addWidget(mode_group)
+
         # ══════════ STEP 1: Load outline ══════════
         step1 = QGroupBox("1. Outline")
         step1_lay = QVBoxLayout(step1)
@@ -352,6 +366,11 @@ class MainWindow(QMainWindow):
         step2 = QGroupBox("2. Type and options")
         step2_lay = QVBoxLayout(step2)
 
+        # --- Opcje mieszkania (kontener, przełączany trybem) ---
+        self.apt_options = QWidget()
+        apt_opt_lay = QVBoxLayout(self.apt_options)
+        apt_opt_lay.setContentsMargins(0, 0, 0, 0)
+
         type_row = QHBoxLayout()
         type_row.addWidget(QLabel("Type:"))
         self.type_combo = QComboBox()
@@ -363,14 +382,14 @@ class MainWindow(QMainWindow):
         self.variants_spin.setRange(1, 10)
         self.variants_spin.setValue(5)
         type_row.addWidget(self.variants_spin)
-        step2_lay.addLayout(type_row)
+        apt_opt_lay.addLayout(type_row)
 
         self.wc_check = QCheckBox("Separate WC (M3+, M4+)")
         self.wc_check.setChecked(False)
         self.wc_check.setToolTip(
             "Check for M3_wc/M4_2laz (separate WC). Unchecked = M*_standard."
         )
-        step2_lay.addWidget(self.wc_check)
+        apt_opt_lay.addWidget(self.wc_check)
 
         score_row = QHBoxLayout()
         score_row.addWidget(QLabel("Min score:"))
@@ -383,12 +402,28 @@ class MainWindow(QMainWindow):
             "Rules F1-F10 always respected."
         )
         score_row.addWidget(self.min_score_spin)
-        step2_lay.addLayout(score_row)
+        apt_opt_lay.addLayout(score_row)
 
         self.facades_btn = QPushButton("Edit facades and entry...")
         self.facades_btn.setEnabled(False)
         self.facades_btn.clicked.connect(self._edit_facades)
-        step2_lay.addWidget(self.facades_btn)
+        apt_opt_lay.addWidget(self.facades_btn)
+
+        step2_lay.addWidget(self.apt_options)
+
+        # --- Opcje domu (kontener, domyślnie ukryty) ---
+        self.house_options = QWidget()
+        house_opt_lay = QVBoxLayout(self.house_options)
+        house_opt_lay.setContentsMargins(0, 0, 0, 0)
+        self.house_program_label = QLabel("Program: dom 2-kond. (parter + piętro)")
+        self.house_program_label.setStyleSheet("color: #555; font-style: italic;")
+        house_opt_lay.addWidget(self.house_program_label)
+        self.furniture_check = QCheckBox("Meble")
+        self.furniture_check.setChecked(True)
+        self.furniture_check.setToolTip("Rozstaw kanoniczne meble w pokojach (parter + piętro).")
+        house_opt_lay.addWidget(self.furniture_check)
+        step2_lay.addWidget(self.house_options)
+        self.house_options.setVisible(False)
 
         left.addWidget(step2)
 
