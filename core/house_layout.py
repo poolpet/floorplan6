@@ -27,7 +27,7 @@ STAIR_RUN_LEN = 4.2         # docelowa długość biegu prostego (m)
 STAIR_U_SIDE = 2.4          # bok klatki U/zabiegowej (m)
 STAIR_MAX_AREA = 6.0        # sufit pola schodów (m²)
 STAIR_ASPECT_THRESHOLD = 1.4  # powyżej → bieg prosty, poniżej → U
-STAIR_SETBACK = 1.3         # cofnięcie rdzenia od ściany wejścia (m)
+STAIR_SETBACK = 0.8         # cofnięcie rdzenia od ściany wejścia (m); 1.3 łamało feasibility na 9×7
 
 
 def _stair_core_dims(W: float, H: float) -> tuple[float, float, str]:
