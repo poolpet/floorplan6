@@ -38,6 +38,25 @@ path is **behaviorally unchanged** — house mode is purely additive.
 - Spec/plan: `docs/superpowers/specs/2026-06-01-stage4-house-mode-ui-design.md`,
   `docs/superpowers/plans/2026-06-01-stage4-house-mode-ui.md`.
 
+**Session 16 cz.2 — wiarygodne schody + komunikacja (Approach A):** po tym jak Dawid
+ocenił schody jako źle zlokalizowane (i dostarczył 8 wzorców ARCHON), poprawiono klatkę:
+
+- `core/house_layout.py`: nowy `_stair_core_dims(W,H)` — **adaptacyjna geometria rdzenia**
+  (bieg prosty dla wydłużonych `aspect>1.4`, U/zabiegowe dla kwadratowych; pole ~4–6 m²
+  zamiast 7.5). `_reserve_core` ustawia rdzeń **cofnięty od wejścia** (`STAIR_SETBACK=0.8`,
+  środkowy pas głębokości) zamiast przy ścianie frontowej.
+- **Setback 1.3→0.8** po diagnozie: 1.3 łamało feasibility parteru na 9×7 (bezpośrednie
+  uruchomienia solvera). 0.8 OK dla 8×8/9×7/10×7.
+- **6×11 = INFEASIBLE** — nie regresja: stary kod też to wywalał (6 m za wąskie na 7-pokojowy
+  parter). `generate_house` zwraca `ok=False`.
+- **Hub geometry-bound:** próba przycięcia hubów przez `opt` w szablonach okazała się **no-op**
+  (parter hub 10.91 m²=17%, pietro 8.64=13.5% — rozpychane przez containment rdzenia +
+  pokrycie, niezależnie od `opt`); szablony bez zmian. Część czysto-holowa ~8%; mniejszy/osobny
+  „Schody" = Approach B (fallback). Dawid zaakceptował wynik wizualnie.
+- Testy: `tests/test_house_staircase.py` (8). Renders `notebooks/output/sfh_stairs_{8x8,9x7,10x7}.png`.
+- Spec/plan: `docs/superpowers/specs/2026-06-01-house-staircase-circulation-design.md`,
+  `docs/superpowers/plans/2026-06-01-house-staircase-circulation.md`.
+
 ---
 
 ## Session 15 (2026-05-31 — house ROADMAP + merge + furniture)

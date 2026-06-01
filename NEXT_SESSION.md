@@ -32,17 +32,23 @@ jednorodzinny). Ścieżka mieszkań M1-M5 **bez zmian** — dom jest dodatkiem, 
    Spec: `docs/superpowers/specs/2026-06-01-stage4-house-mode-ui-design.md`;
    plan: `docs/superpowers/plans/2026-06-01-stage4-house-mode-ui.md`.
 
+4. **Schody + komunikacja (Approach A) — ZROBIONE:** `_stair_core_dims` (adaptacyjny rdzeń:
+   prosty/U wg proporcji), `_reserve_core` cofnięte od wejścia (setback 0.8). Reality-check
+   pokazał, że **GAP nadmiaru to artefakt za dużego obrysu** (na ~64 m²/kond. rozmiary OK) —
+   zdeprioretyzowany. Hub „Hol+schody" jest geometry-bound (~11–13%), mniejszy/osobny = Approach B.
+   8 testów; spec+plan `2026-06-01-house-staircase-circulation*`.
+
 ### 🔥 Następne kroki (wg `docs/ROADMAP_domy.md`)
-1. **GAP jakości (DECYZJA DAWIDA — pierwszy do ruszenia):** widoczny w trybie domu — na za
-   dużym footprincie nadmiar (F1) wpychany w salon (np. salon ~46 m² / sypialnia główna ~43 m²
-   na 80 m²/kondygnację). Dla DOMU: cap rozsądnych rozmiarów pokoi albo „nadmiar →
-   taras/hol/garaż". Nie zgadywać — zapytać.
+1. **Realizm mebli** (osobna runda): aranżacja zamiast „pod ścianę bez kolizji" — sofa vs RTV,
+   wezgłowie do ściany bez okna + szafki nocne, stół w jadalni; dopasowanie do realnej ściany.
+   Najbliżej widocznej poprawy po schodach. Oprzeć o wzorce ARCHON (brainstorm → spec).
 2. **Bliźniak → szeregowiec** (kolejne typy domów; sąsiednie obrysy rysowane ręcznie w AC).
-3. **Polish mebli (opcjonalnie):** wezgłowie łóżka preferuj ścianę bez okna; blat dopasuj do
-   realnej wolnej ściany.
-4. **Drobiazg UX (opcjonalnie):** wyłączać radio trybu w trakcie generowania (dziś pre-existing
-   edge case — przełączenie w trakcie samonaprawia się przy następnym Generate).
-5. Później: Faza 2 (Stage 2/3 + pipeline 1→2→3→4) — wg roadmap ZA zamrożeniem.
+3. **Approach B (fallback schodów):** osobny pokój „Schody" + „Hol/Korytarz" — tylko jeśli
+   uznamy, że scalony hub ~11 m² to za mało wiarygodne (Dawid zaakceptował A wizualnie 2026-06-01).
+4. **Export domu do AC** (ściany + drzwi) — realna „ostatnia mila" produktu (dziś tylko zony).
+5. **Drobiazg UX (opcjonalnie):** wyłączać radio trybu w Etapie 4 w trakcie generowania.
+6. **GAP nadmiaru** — tylko gdyby ktoś podał za duży footprint; na realnym domu nieistotny.
+7. Później: Faza 2 (Stage 2/3 + pipeline 1→2→3→4) — wg roadmap ZA zamrożeniem.
 
 > ⚠️ Gałąź `feat/sfh-furniture` (Sesje 15+16) **NIE zmergowana do main, NIE pushnięta.**
 > main = `ca92621`. Decyzja merge/push → Dawid.
