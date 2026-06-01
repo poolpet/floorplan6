@@ -1,4 +1,4 @@
-# Briefing — następna sesja FP6 (po 2026-05-29, sesja 15)
+# Briefing — następna sesja FP6 (po 2026-06-01, sesja 16)
 
 > **Jak zacząć:**
 >
@@ -8,6 +8,44 @@
 > ```
 >
 > Pierwsza wiadomość: **"Czytaj NEXT_SESSION.md i kontynuujemy."**
+
+---
+
+## ✅ STAN po sesji 16 (2026-06-01 — Plan 3 UI: tryb DOM w Etapie 4)
+
+**Zrobione (gałąź `feat/sfh-furniture`):** dodano do zakładki Stage 4 **równoległą ścieżkę
+domu jednorodzinnego**, przełączaną radiem „Tryb" (Mieszkanie w bloku M1-M5 / Dom
+jednorodzinny). Ścieżka mieszkań M1-M5 **bez zmian** — dom jest dodatkiem, nie zamianą.
+
+1. **`viz/house_preview.py`** (NOWY, GUI-free; 5 testów w `tests/test_house_preview.py`):
+   `furnish_layout` / `house_details_text` / `render_house_figure` — owijka na gotowy silnik
+   `generate_house` + `place_furniture` + `render_two_storey`, żeby logika UI była testowalna
+   bez PyQt (testy GUI padają headless).
+2. **`ui/main_window.py`**: radio trybu; opcje mieszkania w kontenerze `apt_options`, nowy
+   ukryty `house_options` (przełącznik `Meble`, domyślnie ON); `HouseGenerateWorker` (QThread)
+   → `generate_house` (1 układ, 2 kondygnacje); `_on_house_ready`/`_show_house` renderują
+   PARTER|PIĘTRO w istniejącym podglądzie; **Export PNG działa**; **To-ArchiCAD wyłączone dla
+   domu** (eksport do AC = późniejsza powłoka C++). Wspólny helper `_input_polygon_entry`.
+3. **Weryfikacja:** nowy moduł 5 testów zielonych; realny e2e (CP-SAT `generate_house` 8×10 →
+   `render_house_figure`) daje 2-panelowy PNG; **F2 trzyma w realnym przebiegu** (łazienka
+   4.6 m² ≤ 5.0, WC 3.0 ≤ 3.0). Klik-przez-GUI = manualnie (headless GUI padają).
+   Spec: `docs/superpowers/specs/2026-06-01-stage4-house-mode-ui-design.md`;
+   plan: `docs/superpowers/plans/2026-06-01-stage4-house-mode-ui.md`.
+
+### 🔥 Następne kroki (wg `docs/ROADMAP_domy.md`)
+1. **GAP jakości (DECYZJA DAWIDA — pierwszy do ruszenia):** widoczny w trybie domu — na za
+   dużym footprincie nadmiar (F1) wpychany w salon (np. salon ~46 m² / sypialnia główna ~43 m²
+   na 80 m²/kondygnację). Dla DOMU: cap rozsądnych rozmiarów pokoi albo „nadmiar →
+   taras/hol/garaż". Nie zgadywać — zapytać.
+2. **Bliźniak → szeregowiec** (kolejne typy domów; sąsiednie obrysy rysowane ręcznie w AC).
+3. **Polish mebli (opcjonalnie):** wezgłowie łóżka preferuj ścianę bez okna; blat dopasuj do
+   realnej wolnej ściany.
+4. **Drobiazg UX (opcjonalnie):** wyłączać radio trybu w trakcie generowania (dziś pre-existing
+   edge case — przełączenie w trakcie samonaprawia się przy następnym Generate).
+5. Później: Faza 2 (Stage 2/3 + pipeline 1→2→3→4) — wg roadmap ZA zamrożeniem.
+
+> ⚠️ Gałąź `feat/sfh-furniture` (Sesje 15+16) **NIE zmergowana do main, NIE pushnięta.**
+> main = `ca92621`. Decyzja merge/push → Dawid.
 
 ---
 

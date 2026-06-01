@@ -3,11 +3,40 @@
 > Updated after every working session. If it doesn't reflect reality —
 > Claude updates immediately.
 >
-> **Last update:** 2026-05-31 (Session 15 — see `docs/ROADMAP_domy.md`, authoritative: Stages 1/2/3 FROZEN, all energy on Stage 4 driven by single-family-house plans. Merged `feat/sfh-2storey-mvp` → main (`ca92621`, no push); shipped Plan 2 furniture + 2-storey furnished renderer on `feat/sfh-furniture` (`dc77773`, not merged). 17 SFH/furniture tests green.)
+> **Last update:** 2026-06-01 (Session 16 — Plan 3 UI: single-family **house mode** added to the Stage 4 tab via a "Tryb" radio; apartment M1-M5 path unchanged; new GUI-free `viz/house_preview.py`. See the Session 16 block below.) Previous: 2026-05-31 (Session 15 — see `docs/ROADMAP_domy.md`, authoritative: Stages 1/2/3 FROZEN, all energy on Stage 4 driven by single-family-house plans. Merged `feat/sfh-2storey-mvp` → main (`ca92621`, no push); shipped Plan 2 furniture + 2-storey furnished renderer on `feat/sfh-furniture` (`dc77773`, not merged). 17 SFH/furniture tests green.)
 >
 > Earlier sessions documented in Polish are preserved at the bottom; from
 > 2026-05-05 onwards everything is in English so the project can be shared
 > with international collaborators.
+
+---
+
+## Session 16 (2026-06-01 — Plan 3 UI: house mode in Stage 4)
+
+Added a parallel **single-family house** path to the Stage 4 tab, toggled by a
+"Tryb" radio (Mieszkanie w bloku M1-M5 / Dom jednorodzinny). The M1-M5 apartment
+path is **behaviorally unchanged** — house mode is purely additive.
+
+- **`viz/house_preview.py`** (NEW, GUI-free; 5 tests in `tests/test_house_preview.py`):
+  `furnish_layout` / `house_details_text` / `render_house_figure` wrap the existing
+  `generate_house` + `place_furniture` + `render_two_storey` engine so the UI logic is
+  testable without PyQt (GUI tests abort headless).
+- **`ui/main_window.py`**: mode radio (`mode_apartment_radio`/`mode_house_radio`);
+  apartment options wrapped in an `apt_options` container, new hidden `house_options`
+  (furniture toggle `furniture_check`, default ON); `HouseGenerateWorker` (QThread) →
+  `generate_house` (1 layout, 2 storeys); `_on_house_ready`/`_show_house` render
+  PARTER|PIĘTRO into the existing preview; **PNG export works**; **To-ArchiCAD disabled
+  for houses** (AC export = later C++ shell). Shared outline helper `_input_polygon_entry`
+  (DRY — both modes use it).
+- **Verified:** new module 5 tests green; real end-to-end (CP-SAT `generate_house` on an
+  8×10 outline → `render_house_figure`) produces a 2-panel PNG; **F2 holds in the real run**
+  (bathroom 4.6 m² ≤ 5.0, WC 3.0 ≤ 3.0). GUI click-through = manual (headless GUI tests abort).
+- **Known / deferred:** house excess-distribution GAP is VISIBLE (e.g. salon ~46 m² /
+  master bedroom ~43 m² on an 80 m²/storey footprint) — Dawid's architectural call, NOT
+  fixed this session. Minor: mode radios are not disabled mid-generation (pre-existing
+  pattern, self-corrects). Branch `feat/sfh-furniture` still not merged/pushed (Dawid's call).
+- Spec/plan: `docs/superpowers/specs/2026-06-01-stage4-house-mode-ui-design.md`,
+  `docs/superpowers/plans/2026-06-01-stage4-house-mode-ui.md`.
 
 ---
 
@@ -28,8 +57,9 @@ forever; C++ only as the AC shell (Tapir).
 - **2-storey renderer** `viz/plan_renderer.py::render_two_storey` — PARTER|PIĘTRO panels,
   furniture, aligned staircase symbol (correct bbox offset: rooms absolute, `stair_core`
   bbox-relative). PNG `notebooks/output/sfh_furnished.png`.
-- **NOT done / next (per roadmap):** Plan 3 UI (JEDNORODZINNA mode + furniture toggle),
-  house excess-distribution quality gap (needs Dawid's call), twin/terraced types.
+- **NOT done / next (per roadmap):** ~~Plan 3 UI (JEDNORODZINNA mode + furniture toggle)~~
+  ✅ **done in Session 16**; house excess-distribution quality gap (needs Dawid's call),
+  twin/terraced types.
 
 ---
 
