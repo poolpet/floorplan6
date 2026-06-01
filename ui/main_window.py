@@ -24,6 +24,7 @@ from PyQt5.QtWidgets import (
     QPushButton, QStatusBar, QScrollArea, QSplitter, QTextEdit,
     QFileDialog, QMessageBox, QProgressBar, QCheckBox, QDialog,
     QDialogButtonBox, QGridLayout, QStackedWidget, QTabWidget,
+    QRadioButton, QButtonGroup,
 )
 from PyQt5.QtCore import Qt, QThread, pyqtSignal, QEvent
 from PyQt5.QtGui import QPixmap, QImage
@@ -38,8 +39,10 @@ from matplotlib.figure import Figure
 from shapely.geometry import Polygon
 
 from core.variant_generator import generate_variants
+from core.house_layout import generate_house
 from core.models import FloorPlan, WallType
 from viz.plan_renderer import render_floor_plan
+from viz.house_preview import render_house_figure, house_details_text
 
 
 class FacadeDialog(QDialog):
@@ -180,6 +183,24 @@ class GenerateWorker(QThread):
             self.error.emit(str(e))
 
 
+class HouseGenerateWorker(QThread):
+    """Worker thread: generuje dom 2-kondygnacyjny (generate_house). 1 układ."""
+    finished = pyqtSignal(object)  # TwoStoreyLayout
+    error = pyqtSignal(str)
+
+    def __init__(self, polygon, entry_point):
+        super().__init__()
+        self.polygon = polygon
+        self.entry_point = entry_point
+
+    def run(self):
+        try:
+            layout = generate_house(self.polygon, self.entry_point)
+            self.finished.emit(layout)
+        except Exception as e:
+            self.error.emit(str(e))
+
+
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -189,6 +210,9 @@ class MainWindow(QMainWindow):
         self.variants: list[FloorPlan] = []
         self.current_idx = 0
         self.worker = None
+        self.house_worker = None
+        self._house_layout = None
+        self._with_furniture = True
         self._imported_polygon = None  # Polygon z ArchiCAD (L-kształt etc.)
         self._imported_entry = None
         self._imported_wall_types = None  # ustawione w dialogu po imporcie
