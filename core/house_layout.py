@@ -21,6 +21,45 @@ STAIR_W = 2.5
 STAIR_H = 3.0
 MIN_STOREY_AREA = 60.0
 
+# Adaptive staircase core (Approach A — spec 2026-06-01)
+STAIR_RUN_W = 1.1            # szerokość biegu prostego (m)
+STAIR_RUN_LEN = 4.2         # docelowa długość biegu prostego (m)
+STAIR_U_SIDE = 2.4          # bok klatki U/zabiegowej (m)
+STAIR_MAX_AREA = 6.0        # sufit pola schodów (m²)
+STAIR_ASPECT_THRESHOLD = 1.4  # powyżej → bieg prosty, poniżej → U
+STAIR_SETBACK = 1.3         # cofnięcie rdzenia od ściany wejścia (m)
+
+
+def _stair_core_dims(W: float, H: float) -> tuple[float, float, str]:
+    """(sw, sh, kind) — geometria rdzenia schodów wg proporcji obrysu.
+
+    Wydłużony obrys (aspect > próg) → bieg prosty: wąski, długi wzdłuż dłuższej osi.
+    Kwadratowy → U/zabiegowe: zwarty kwadrat. Pole ≤ STAIR_MAX_AREA oraz ≤ 0.40·W × 0.40·H.
+    """
+    cap_w = 0.40 * W
+    cap_h = 0.40 * H
+    long_dim = max(W, H)
+    short_dim = min(W, H)
+    aspect = long_dim / short_dim if short_dim > 0 else 1.0
+    if aspect > STAIR_ASPECT_THRESHOLD:
+        run_len = min(STAIR_RUN_LEN, 0.6 * long_dim)
+        if W >= H:                       # dłuższa oś = X → bieg poziomy
+            sw, sh = run_len, STAIR_RUN_W
+        else:                            # dłuższa oś = Y → bieg pionowy
+            sw, sh = STAIR_RUN_W, run_len
+        kind = "straight"
+    else:
+        side = min(STAIR_U_SIDE, cap_w, cap_h)
+        sw = sh = side
+        kind = "u"
+    sw = min(sw, cap_w)
+    sh = min(sh, cap_h)
+    if sw * sh > STAIR_MAX_AREA:
+        scale = (STAIR_MAX_AREA / (sw * sh)) ** 0.5
+        sw *= scale
+        sh *= scale
+    return round(sw, 3), round(sh, 3), kind
+
 
 @dataclass
 class TwoStoreyLayout:
