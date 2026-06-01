@@ -60,3 +60,24 @@ def test_core_inside_bbox_for_all_entries():
         cx, cy, sw, sh = _core_for(8.0, 8.0, entry)
         assert cx >= -1e-6 and cy >= -1e-6
         assert cx + sw <= 8.0 + 1e-6 and cy + sh <= 8.0 + 1e-6
+
+
+def test_generate_house_feasible_and_hub_contains_core():
+    """generate_house dalej feasible, a hub zawiera rdzeń schodów.
+
+    Hub „Hol+schody" jest geometry-bound (containment rdzenia + pokrycie) — bywa
+    >15% usable (apartmentowy cap F4), bo zawiera klatkę schodową; część czysto-holowa
+    to ~8%. Mniejszy/osobny hub = Approach B (osobny pokój „Schody").
+    """
+    from shapely.geometry import Polygon
+    from core.house_layout import generate_house
+    from core.models import Strefa
+    layout = generate_house(Polygon([(0, 0), (8, 0), (8, 8), (0, 8)]), (4.0, 0.0))
+    assert layout.ok, layout.message
+    sw, sh, _ = _stair_core_dims(8.0, 8.0)
+    core_area = sw * sh
+    for rooms in (layout.parter_rooms, layout.pietro_rooms):
+        hub = next(r for r in rooms
+                   if r.spec.id == "hub" and r.spec.strefa == Strefa.KOMUNIKACJA)
+        assert hub.area >= core_area - 1e-6        # hub zawiera rdzeń schodów
+        assert hub.area <= 0.20 * 64.0             # sanity: hub nie eksploduje
