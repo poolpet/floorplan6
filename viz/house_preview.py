@@ -10,17 +10,18 @@ from pathlib import Path
 from typing import Optional
 
 from core.furniture import place_furniture
+from core.house_layout import TwoStoreyLayout
 from viz.plan_renderer import render_two_storey
 
 
-def furnish_layout(layout, with_furniture: bool) -> tuple[list, list]:
+def furnish_layout(layout: TwoStoreyLayout, with_furniture: bool) -> tuple[list, list]:
     """(parter_furniture, pietro_furniture). Puste listy gdy with_furniture=False."""
     if not with_furniture:
         return [], []
     return place_furniture(layout.parter_rooms), place_furniture(layout.pietro_rooms)
 
 
-def house_details_text(layout) -> str:
+def house_details_text(layout: TwoStoreyLayout) -> str:
     """Opis tekstowy domu: obie kondygnacje + pokoje/powierzchnie (panel UI)."""
     area = getattr(getattr(layout, "boundary", None), "area", None)
     if area is None:
@@ -35,7 +36,7 @@ def house_details_text(layout) -> str:
     return "\n".join(lines)
 
 
-def render_house_figure(layout, with_furniture: bool, title: Optional[str] = None,
+def render_house_figure(layout: TwoStoreyLayout, with_furniture: bool, title: Optional[str] = None,
                         save_path: Optional[Path] = None, show: bool = False):
     """Renderuj gotowy TwoStoreyLayout jako 2-panelowy rzut (PARTER | PIĘTRO)."""
     parter_furniture, pietro_furniture = furnish_layout(layout, with_furniture)

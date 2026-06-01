@@ -33,11 +33,11 @@ def _layout():
 
 def test_furnish_layout_toggle():
     layout = _layout()
-    pf_on, gf_on = furnish_layout(layout, with_furniture=True)
-    pf_off, gf_off = furnish_layout(layout, with_furniture=False)
-    assert len(pf_on) > 0          # salon dostaje meble
-    assert len(gf_on) > 0          # sypialnia dostaje meble
-    assert pf_off == [] and gf_off == []
+    pf_on, pif_on = furnish_layout(layout, with_furniture=True)
+    pf_off, pif_off = furnish_layout(layout, with_furniture=False)
+    assert len(pf_on) > 0          # parter: salon dostaje meble
+    assert len(pif_on) > 0         # piętro: sypialnia dostaje meble
+    assert pf_off == [] and pif_off == []
 
 
 def test_house_details_text_has_both_storeys():
@@ -57,3 +57,11 @@ def test_render_house_figure_writes_png(tmp_path):
     fig = render_house_figure(_layout(), with_furniture=False, save_path=out, show=False)
     assert out.exists() and out.stat().st_size > 0
     plt.close(fig)
+
+
+def test_house_details_text_uses_boundary_area():
+    from core.boundary_analyzer import analyze_boundary
+    layout = _layout()
+    layout.boundary = analyze_boundary(Polygon([(0, 0), (8, 0), (8, 10), (0, 10)]), (4.0, 0.0))
+    text = house_details_text(layout)
+    assert "80.0 m²" in text
