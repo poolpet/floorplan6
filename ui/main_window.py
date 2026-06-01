@@ -553,24 +553,38 @@ class MainWindow(QMainWindow):
                 f"Facades: {n_facade}/{len(new_wall_types)} edges"
             )
 
-    def _on_generate(self):
+    def _on_mode_changed(self, *args):
+        """Przełącz UI między trybem mieszkania (M1-M5) a domu jednorodzinnego."""
+        house = self.mode_house_radio.isChecked()
+        self.apt_options.setVisible(not house)
+        self.house_options.setVisible(house)
+        # reset wyniku przy zmianie trybu
+        self.variants = []
+        self.current_idx = 0
+        self._house_layout = None
+        self.prev_btn.setEnabled(False)
+        self.next_btn.setEnabled(False)
+        self.export_btn.setEnabled(False)
+        self.archicad_btn.setEnabled(False)
+        self.variant_label.setText("—")
+        self.details.clear()
+        self.image_label.setText(
+            "Tryb domu — kliknij 'Generate' (obrys + entry z kroku 1)." if house
+            else "Click 'Load outline' or 'Generate layouts' to start"
+        )
+        self.preview_stack.setCurrentWidget(self.image_label)
+        self.archicad_btn.setToolTip(
+            "Eksport domu do AC — później (shell C++)." if house else ""
+        )
+
+    def _input_polygon_entry(self):
+        """(polygon, entry_point, wall_types) z aktualnych pól (import / notch / prostokąt)."""
         w = self.width_spin.value()
         h = self.height_spin.value()
         ex = self.entry_x_spin.value()
         ey = self.entry_y_spin.value()
-        mtype = self.type_combo.currentText()
-        max_v = self.variants_spin.value()
         wall_types = None
-        template_filter = None
-
-        # Filtr szablonów wg checkboxa "Osobny WC"
-        if mtype == "M3":
-            template_filter = ["M3_wc"] if self.wc_check.isChecked() else ["M3_standard"]
-        elif mtype == "M4":
-            template_filter = ["M4_2laz"] if self.wc_check.isChecked() else ["M4_standard"]
-
         if self._imported_polygon is not None:
-            # Użyj oryginalnego polygonu z ArchiCAD
             polygon = self._imported_polygon
             ex, ey = self._imported_entry or (ex, ey)
             wall_types = self._imported_wall_types
@@ -586,9 +600,30 @@ class MainWindow(QMainWindow):
             ])
         else:
             polygon = Polygon([(0, 0), (w, 0), (w, h), (0, h)])
+        return polygon, (ex, ey), wall_types
+
+    def _on_generate(self):
+        if self.mode_house_radio.isChecked():
+            self._on_generate_house()
+            return
+
+        w = self.width_spin.value()
+        h = self.height_spin.value()
+        mtype = self.type_combo.currentText()
+        max_v = self.variants_spin.value()
+        template_filter = None
+
+        # Filtr szablonów wg checkboxa "Osobny WC"
+        if mtype == "M3":
+            template_filter = ["M3_wc"] if self.wc_check.isChecked() else ["M3_standard"]
+        elif mtype == "M4":
+            template_filter = ["M4_2laz"] if self.wc_check.isChecked() else ["M4_standard"]
+
+        polygon, (ex, ey), wall_types = self._input_polygon_entry()
 
         self.generate_btn.setEnabled(False)
         self.generate_btn.setText("Generating...")
+        self.progress_bar.setRange(0, 100)
         self.progress_bar.setValue(0)
         self.progress_bar.setVisible(True)
         self.statusBar().showMessage(f"Generating {mtype} {w}x{h}m...")
@@ -604,6 +639,61 @@ class MainWindow(QMainWindow):
         self.worker.error.connect(self._on_error)
         self.worker.progress.connect(self._on_progress)
         self.worker.start()
+
+    def _on_generate_house(self):
+        polygon, entry, _wall_types = self._input_polygon_entry()
+        self._with_furniture = self.furniture_check.isChecked()
+        self.generate_btn.setEnabled(False)
+        self.generate_btn.setText("Generating...")
+        self.progress_bar.setRange(0, 0)   # busy — generate_house nie ma callbacku
+        self.progress_bar.setVisible(True)
+        self.statusBar().showMessage("Generating house (parter + piętro)...")
+        self.house_worker = HouseGenerateWorker(polygon, entry)
+        self.house_worker.finished.connect(self._on_house_ready)
+        self.house_worker.error.connect(self._on_error)
+        self.house_worker.start()
+
+    def _on_house_ready(self, layout):
+        self.generate_btn.setEnabled(True)
+        self.generate_btn.setText("3. Generate layouts")
+        self.progress_bar.setRange(0, 100)
+        self.progress_bar.setVisible(False)
+        self.prev_btn.setEnabled(False)
+        self.next_btn.setEnabled(False)
+        self.archicad_btn.setEnabled(False)
+        if not getattr(layout, "ok", False):
+            self._house_layout = None
+            self.export_btn.setEnabled(False)
+            self.variant_label.setText("—")
+            self.statusBar().showMessage(f"Dom: {layout.message}")
+            self.image_label.setText(
+                f"Nie udało się wygenerować domu:\n\n{layout.message}"
+            )
+            self.preview_stack.setCurrentWidget(self.image_label)
+            self.details.clear()
+            return
+        self._house_layout = layout
+        self.export_btn.setEnabled(True)
+        self.variant_label.setText("Dom (PARTER + PIĘTRO)")
+        self.statusBar().showMessage("Wygenerowano dom 2-kondygnacyjny.")
+        self._show_house()
+
+    def _show_house(self):
+        layout = self._house_layout
+        if layout is None:
+            return
+        fig = render_house_figure(
+            layout, with_furniture=self._with_furniture,
+            title="Dom jednorodzinny 2-kondygnacyjny", show=False,
+        )
+        pixmap = self._fig_to_pixmap(fig)
+        plt.close(fig)
+        scaled = pixmap.scaled(
+            self.image_label.size(), Qt.KeepAspectRatio, Qt.SmoothTransformation,
+        )
+        self.image_label.setPixmap(scaled)
+        self.preview_stack.setCurrentWidget(self.image_label)
+        self.details.setText(house_details_text(layout))
 
     def _on_progress(self, pct: int):
         self.progress_bar.setValue(pct)
@@ -654,6 +744,7 @@ class MainWindow(QMainWindow):
     def _on_error(self, msg: str):
         self.generate_btn.setEnabled(True)
         self.generate_btn.setText("3. Generate layouts")
+        self.progress_bar.setRange(0, 100)
         self.progress_bar.setVisible(False)
         self.statusBar().showMessage(f"Error: {msg}")
         QMessageBox.critical(self, "Error", msg)
@@ -713,6 +804,22 @@ class MainWindow(QMainWindow):
             self._show_variant(self.current_idx + 1)
 
     def _export_png(self):
+        if self.mode_house_radio.isChecked():
+            if self._house_layout is None:
+                return
+            path, _ = QFileDialog.getSaveFileName(
+                self, "Save PNG", "dom_2kond.png", "PNG (*.png)",
+            )
+            if path:
+                fig = render_house_figure(
+                    self._house_layout, with_furniture=self._with_furniture,
+                    title="Dom jednorodzinny 2-kondygnacyjny", show=False,
+                )
+                fig.savefig(path, dpi=150, bbox_inches="tight")
+                plt.close(fig)
+                self.statusBar().showMessage(f"Saved: {path}")
+            return
+
         if not self.variants:
             return
         plan = self.variants[self.current_idx]
