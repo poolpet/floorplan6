@@ -798,6 +798,31 @@ def _add_overlap_constraint(
     model.add(min_end - max_start >= min_overlap).only_enforce_if(enforcer)
 
 
+def _touches_bool(model, ax, ay, axe, aye, bx, by, bxe, bye,
+                  min_shared: int, BW: int, BH: int, name: str):
+    """Zreifikowane sąsiedztwo: zwraca BoolVar `touches` taki, że touches → prostokąty
+    A i B współdzielą krawędź ≥ min_shared (jeden z 4 przypadków). Gdy touches=False —
+    żadnego ograniczenia (prostokąty mogą, ale nie muszą się stykać). Pozwala składać
+    'A dotyka B przez rect1 LUB rect2' dla pokoi L-kształtnych (Approach 2b)."""
+    touches = model.new_bool_var(f"touch_{name}")
+    cl = model.new_bool_var(f"touch_{name}_l")
+    cr = model.new_bool_var(f"touch_{name}_r")
+    cb = model.new_bool_var(f"touch_{name}_b")
+    ct = model.new_bool_var(f"touch_{name}_t")
+    for c in (cl, cr, cb, ct):
+        model.add_implication(c, touches)          # przypadek aktywny tylko gdy touches
+    model.add_bool_or([cl, cr, cb, ct]).only_enforce_if(touches)
+    model.add(axe == bx).only_enforce_if(cl)        # A na lewo od B
+    _add_overlap_constraint(model, ay, aye, by, bye, min_shared, BH, cl, f"touch_{name}_l")
+    model.add(bxe == ax).only_enforce_if(cr)        # A na prawo od B
+    _add_overlap_constraint(model, ay, aye, by, bye, min_shared, BH, cr, f"touch_{name}_r")
+    model.add(aye == by).only_enforce_if(cb)        # A poniżej B
+    _add_overlap_constraint(model, ax, axe, bx, bxe, min_shared, BW, cb, f"touch_{name}_b")
+    model.add(bye == ay).only_enforce_if(ct)        # A powyżej B
+    _add_overlap_constraint(model, ax, axe, bx, bxe, min_shared, BW, ct, f"touch_{name}_t")
+    return touches
+
+
 def _add_facade_constraint(
     model: cp_model.CpModel,
     i: int,
