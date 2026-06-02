@@ -188,8 +188,20 @@ def _draw_storey(ax, rooms, boundary, core_abs, furniture, title):
         ys = [c for r in rooms if r.polygon for c in (r.polygon.bounds[1], r.polygon.bounds[3])]
         bnds = (min(xs), min(ys), max(xs), max(ys)) if xs else (0, 0, 1, 1)
 
+    # Open-plan day-zone (faza 1): pokoje DZIENNA (salon+kuchnia) to JEDNA otwarta
+    # przestrzeń — rysuj je bez krawędzi wewnętrznych, a potem jeden obrys ich unii
+    # (brak linii ściany między salon↔kuchnia; ta sama barwa DZIENNA scala je wizualnie).
+    day_rooms = [r for r in rooms if r.polygon is not None and r.spec.strefa == Strefa.DZIENNA]
     for room in rooms:
-        _draw_room(ax, room)
+        _draw_room(ax, room, draw_edge=(room not in day_rooms))
+    if len(day_rooms) >= 2:
+        from shapely.ops import unary_union
+        union = unary_union([r.polygon for r in day_rooms])
+        geoms = union.geoms if union.geom_type == "MultiPolygon" else [union]
+        edge = STREFA_EDGE_COLORS.get(Strefa.DZIENNA, "#333333")
+        for g in geoms:
+            gx, gy = g.exterior.xy
+            ax.plot(gx, gy, color=edge, linewidth=1.5, zorder=3)
     # Approach B: schody to OSOBNY pokój — rysuj symbol biegu WEWNĄTRZ niego (orientacja
     # wg krawędzi z holem). Fallback (układ bez pokoju 'schody', np. smoke) → overlay rdzenia.
     schody = next((r for r in rooms if r.spec.id == "schody"), None)
@@ -327,22 +339,24 @@ def _draw_boundary(ax: plt.Axes, boundary: Boundary):
     ax.set_ylim(by0 - margin, by1 + margin)
 
 
-def _draw_room(ax: plt.Axes, room: Room):
-    """Rysuj pojedynczy pokój."""
+def _draw_room(ax: plt.Axes, room: Room, draw_edge: bool = True):
+    """Rysuj pojedynczy pokój. draw_edge=False → tylko wypełnienie bez krawędzi
+    (dla pokoi open-plan, których wspólny obrys rysuje się osobno)."""
     if room.polygon is None:
         return
 
     color = STREFA_COLORS.get(room.spec.strefa, "#E0E0E0")
-    edge_color = STREFA_EDGE_COLORS.get(room.spec.strefa, "#333333")
+    edge_color = STREFA_EDGE_COLORS.get(room.spec.strefa, "#333333") if draw_edge else "none"
+    lw = 1.5 if draw_edge else 0.0
 
     # Obsługa MultiPolygon (L-kształtne pokoje po carving)
     if room.polygon.geom_type == "MultiPolygon":
         for geom in room.polygon.geoms:
             x, y = geom.exterior.xy
-            ax.fill(x, y, alpha=0.6, facecolor=color, edgecolor=edge_color, linewidth=1.5)
+            ax.fill(x, y, alpha=0.6, facecolor=color, edgecolor=edge_color, linewidth=lw)
     else:
         x, y = room.polygon.exterior.xy
-        ax.fill(x, y, alpha=0.6, facecolor=color, edgecolor=edge_color, linewidth=1.5)
+        ax.fill(x, y, alpha=0.6, facecolor=color, edgecolor=edge_color, linewidth=lw)
 
     # Etykieta w centrum pokoju
     cx = room.polygon.centroid.x

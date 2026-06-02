@@ -11,6 +11,47 @@
 
 ---
 
+## ✅ STAN po sesji 19 (2026-06-02 — open-plan day-zone + korytarz minimalny; branch `feat/sfh-open-plan-day-zone`)
+
+**Ugruntowane w Twoich rzutach:** przeanalizowane **wszystkie 49 rzutów PROJ-BUD/Łącko** (meble +
+układ/zależności) + **Neufert** (odstępy) — dwa workflow-panele. Główne: strefa dzienna **open-plan**
+(salon+kuchnia+jadalnia = jedna przestrzeń, często **L**), korytarz **minimalny** (F4).
+Spec: `docs/superpowers/specs/2026-06-02-stage4-open-plan-house-furniture-design.md` (dekompozycja
+1→2→3→4, footprinty 35/70/120, L/U/trapez footprintu odłożone).
+
+**Zrobione (zielone):**
+- **Faza 1 — open-plan day-zone (Approach B):** salon+kuchnia renderują się jako JEDNA otwarta
+  przestrzeń DZIENNA w **L** (bez ściany wewn.), **łączny cap** (`day_zone_cap` pct 0.60/max 45), salon
+  na **fasadzie ogrodowej** (przeciwnej do wejścia, niezawodnie 9/9). `tests/test_open_plan_dayzone.py`.
+- **Faza 2a — korytarz minimalny (Twój feedback):** przywrócona kara hub-minimal (F4), nadmiar →
+  **sypialnie** (poddasze) / strefa dzienna (parter), NIE hub (cofa błąd sesji 18). Podest 15,6→6,3,
+  sypialnie urosły 12-15,5; wszystkie korytarze ≤F4. Test bloatu przerobiony na
+  `test_corridor_minimal_excess_to_bedrooms`. Patrz `[[feedback_corridor_minimal_lshaped_rooms]]`.
+
+### 🔥 Następne kroki (sesja 20 — kolejność)
+1. **🔴 Faza 2b — natywne L-pokoje (skopowane), PRIORYTET.** Decyzja Dawida: **natywny CP-SAT, NIE
+   post-process** (natywny współ-optymalizuje, post-process tylko łata). L-capable = **hol (obie
+   kondygnacje) + sypialnie (poddasze, wyjątkowo)**; każdy może być unią 2 prostokątów (L) lub zostać
+   prostokątem; solver wybiera L tylko gdy MINIMALIZUJE korytarz. Mechanizm: **opcjonalny 2. prostokąt**
+   per L-capable (`new_optional_interval_var` + literał obecności); NoOverlap2D nad prostokąt+opcjonalny;
+   pokrycie sumuje obecne pola; sąsiedztwo = którykolwiek prostokąt; 2 prostokąty ciągłe → L.
+   **To naprawia 2 bugi flagowane przez Dawida BEZ rozdęcia korytarza:** (a) **WC landlocked** → musi
+   dotykać ściany zewnętrznej; (b) **wiatrołap nie przy drzwiach** → ma być airlockiem przy ścianie
+   wejścia (mały, hol za nim). Próby fixów w modelu prostokątnym **cofnięte** (rozdymały hol 7→11 >F4 —
+   genuine konflikt; L-hol owinie wiatrołap/WC trzymając pole minimalne). **RYZYKO:** istotna, delikatna
+   zmiana CP-SAT (lekcja sesji 18) — **TDD: najpierw RED testy feasibility na macierzy obrysów/wejść.**
+2. **Faza 2c — skalowany zestaw pokoi (dla 120):** duże obrysy balonują (10×12: dzień 83, sypialnie
+   27-38) — dodaj gabinet → 4. sypialnię → garaż. Sygnał z hub_target > sufit holu.
+3. **Faza 3 — single-storey (35):** szablon bez schodów/wiatrołapu, `MIN_STOREY_AREA` ~32.
+4. **Faza 4 — meble:** Neufert+rzuty, świadomość okien (`place_furniture(rooms, boundary)`).
+5. **GUI 2-zakładki** (`[[project_gui_product_structure.md]]`) — po algorytmie. Podział działki /
+   Podział rzutu; Etap 2/3 znikają; moduł wielorodzinny (Q23) warunkowo; docelowo natywny dodatek AC.
+
+> ⚠️ Praca sesji 19 na `feat/sfh-open-plan-day-zone` (od `feat/sfh-staircase-approach-b`). Faza 1+2a
+> zacommitowana jako czysty checkpoint; 2b = świeży start. NIEpushnięte. `rzuty/` (12M) NIEśledzone.
+
+---
+
 ## ✅ STAN po sesji 18 (2026-06-02 — SCHODY Approach B: osobny pokój „Schody" + kompaktowy „Hol")
 
 **Zrobione (zatwierdzone przez Dawida 2026-06-02: pinned schody, podest przy Holu/bieg w głąb,

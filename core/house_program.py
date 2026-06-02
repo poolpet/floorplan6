@@ -29,6 +29,16 @@ class HouseProgramConfig:
     storey: str = "parter"  # "parter" | "poddasze" — steruje cap-em łazienki
     master_id: str | None = None  # id pokoju traktowanego jak master (cap "master")
     pct_overrides: dict[str, tuple[float, float]] = field(default_factory=dict)
+    # Open-plan (faza 1): strefa dzienna (DZIENNA) ma ŁĄCZNY cap = min(pct·usable, max).
+    # To SUFIT anty-bloat (nie target): wiąże głównie przez `max` na dużych obrysach
+    # (ARCHON day-zone ~43 @120 m²); pct=0.50 luźny, by nie klipować normalnych domów,
+    # gdzie udział day-zone naturalnie ~0.40-0.47 (rośnie na małych obrysach).
+    day_zone_cap_pct: float = 0.60
+    day_zone_cap_max: float = 45.0
+
+    def day_zone_cap(self, usable_area_m2: float) -> float:
+        """Łączny cap strefy dziennej (salon+kuchnia+jadalnia jako jedna otwarta przestrzeń)."""
+        return min(self.day_zone_cap_pct * usable_area_m2, self.day_zone_cap_max)
 
     def cap_for(self, spec: RoomSpec) -> float:
         key = spec.id.split("_")[0]
@@ -87,30 +97,56 @@ def compute_house_targets(
         caps[s.id] = cap
         mins[s.id] = s.min_powierzchnia
 
+    # Open-plan (faza 1): strefa dzienna (DZIENNA) ma ŁĄCZNY cap. Per-pokój cap-y
+    # zostają jako pod-sufity, ale suma salon+kuchnia(+jadalnia) ≤ day_cap. Jeśli
+    # %-targety przekraczają łączny cap — ściśnij grupę DZIENNA powyżej min.
+    day_ids = [s.id for s in specs if s.strefa == Strefa.DZIENNA]
+    day_cap = config.day_zone_cap(usable_area_m2)
+    if day_ids:
+        day_sum = sum(targets[k] for k in day_ids)
+        if day_sum > day_cap + 1e-9:
+            excess = day_sum - day_cap
+            slack = {k: targets[k] - mins[k] for k in day_ids if targets[k] - mins[k] > 1e-9}
+            total_slack = sum(slack.values())
+            if total_slack > 1e-9:
+                red = min(excess, total_slack)
+                for k, sl in slack.items():
+                    targets[k] -= red * (sl / total_slack)
+
     leftover = usable_area_m2 - sum(targets.values())
 
     if leftover > 1e-9:
-        # ARCHON: nadmiar (F1) idzie do STREFY DZIENNEJ (salon/kuchnia) do cap-ów,
-        # a RESZTĘ wchłania HUB (elastyczny hol/podest). Sypialnie i usługowe NIE
-        # puchną — zostają na %-targecie ≤ cap. (Stara wersja rozlewała nadmiar po
-        # wszystkich headroomach, więc przeciekał w sypialnie — bloat na małym holu.)
+        # ARCHON: nadmiar (F1) idzie do STREFY DZIENNEJ do ŁĄCZNEGO cap-u, a RESZTĘ
+        # wchłania HUB (elastyczny hol/podest). Sypialnie i usługowe NIE puchną.
         hub_id = next((s.id for s in specs if s.strefa == Strefa.KOMUNIKACJA and s.id == "hub"), None)
         if hub_id is None:
             hub_id = next((s.id for s in specs if s.strefa == Strefa.KOMUNIKACJA), None)
-        day_ids = [s.id for s in specs if s.strefa == Strefa.DZIENNA]
-        for _ in range(200):  # 1) wypełnij strefę dzienną do cap-ów
+        for _ in range(200):  # 1) wypełnij strefę dzienną do ŁĄCZNEGO cap-u (grupa, nie per-pokój)
+            group_room = day_cap - sum(targets[k] for k in day_ids)
+            if group_room <= 1e-9 or leftover <= 1e-9:
+                break
             headroom = {k: caps[k] - targets[k] for k in day_ids
                         if not math.isinf(caps[k]) and caps[k] - targets[k] > 1e-9}
-            if not headroom or leftover <= 1e-9:
-                break
             total_head = sum(headroom.values())
-            add = min(leftover, total_head)
+            if total_head <= 1e-9:
+                break
+            add = min(leftover, group_room, total_head)
             for k, h in headroom.items():
                 targets[k] += add * (h / total_head)
             leftover = usable_area_m2 - sum(targets.values())
-        if leftover > 1e-9:  # 2) resztę do huba (elastyczny sink); brak huba → największy pokój
-            sink_id = hub_id if hub_id is not None else max(targets, key=lambda k: targets[k])
-            targets[sink_id] += leftover
+        if leftover > 1e-9:
+            # 2) RESZTĘ do SYPIALNI (poddasze) lub STREFY DZIENNEJ (parter) — NIGDY do huba.
+            # Reguła Dawida: korytarz możliwie najmniejszy (F4); nadmiar zyskują pokoje, nie korytarz.
+            night_ids = [s.id for s in specs if s.strefa == Strefa.NOCNA]
+            if night_ids:
+                sink_pool = night_ids
+            elif day_ids:
+                sink_pool = day_ids                      # parter: dzień wchłania (soft ponad łączny cap)
+            else:
+                sink_pool = [k for k in targets if k != hub_id] or list(targets)
+            total = sum(targets[k] for k in sink_pool) or 1.0
+            for k in sink_pool:
+                targets[k] += leftover * (targets[k] / total)
             leftover = usable_area_m2 - sum(targets.values())
     elif leftover < -1e-9:  # mały obrys: ściśnij pokoje powyżej min ku min
         for _ in range(200):

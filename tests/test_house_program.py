@@ -39,25 +39,35 @@ def _house_caps():
     }
 
 
-def test_salon_target_capped_not_inflated():
-    """Na dużym obrysie salon NIE może urosnąć ponad cap (stary Q6 dawał ~46)."""
-    specs = _parter_specs()
-    cfg = HouseProgramConfig(caps=_house_caps())
-    targets = compute_house_targets(specs, usable_area_m2=90.0, config=cfg)
-    assert targets["salon"] <= 35.0 + 1e-6
-
-
-def test_all_room_caps_respected():
-    """Żaden pokój nie przekracza swojego cap-u, niezależnie od obrysu."""
+def test_day_zone_capped_overflow_to_bedrooms():
+    """Open-plan + reguła Dawida: gdy jest sink SYPIALNI, nadmiar idzie do sypialni,
+    a strefa dzienna trzyma się ŁĄCZNEGO cap-u (salon NIE balonuje). Korytarz minimalny."""
     specs = _parter_specs() + [
         _spec("sypialnia_1", Strefa.NOCNA, 11.0, 14.0, (0.15, 0.25)),
-        _spec("master", Strefa.NOCNA, 12.0, 16.0, (0.18, 0.28)),
+        _spec("sypialnia_2", Strefa.NOCNA, 9.0, 12.0, (0.12, 0.22)),
     ]
     cfg = HouseProgramConfig(caps=_house_caps())
-    targets = compute_house_targets(specs, usable_area_m2=120.0, config=cfg)
-    assert targets["sypialnia_1"] <= 13.0 + 1e-6
-    assert targets["master"] <= 16.5 + 1e-6
-    assert targets["kuchnia"] <= 13.0 + 1e-6
+    usable = 120.0
+    targets = compute_house_targets(specs, usable, cfg)
+    combined = cfg.day_zone_cap(usable)
+    assert targets["salon"] + targets["kuchnia"] <= combined + 1e-6     # dzień ≤ łączny cap
+    # nadmiar zyskały SYPIALNIE (urosły ponad %-target/cap), nie hub
+    assert targets["sypialnia_1"] > 14.0 or targets["sypialnia_2"] > 12.0
+    assert abs(sum(targets.values()) - usable) < 1e-6
+
+
+def test_bedrooms_absorb_overflow_f2_still_capped():
+    """Reguła Dawida: SYPIALNIE wchłaniają nadmiar (mogą rosnąć ponad cap ARCHON, bo
+    korytarz ma być minimalny). Ale F2 (łazienka ≤5) i łączny cap dnia ZOSTAJĄ twarde."""
+    specs = _parter_specs() + [
+        _spec("sypialnia_1", Strefa.NOCNA, 11.0, 14.0, (0.15, 0.25)),
+        _spec("lazienka", Strefa.USLUGOWA, 2.5, 4.8, (0.06, 0.12)),
+    ]
+    cfg = HouseProgramConfig(caps=_house_caps(), storey="parter")
+    targets = compute_house_targets(specs, 120.0, cfg)
+    assert targets["sypialnia_1"] > 14.0                          # sypialnia wchłonęła nadmiar
+    assert targets["lazienka"] <= 5.0 + 1e-6                      # F2 trzyma twardo
+    assert targets["salon"] + targets["kuchnia"] <= cfg.day_zone_cap(120.0) + 1e-6
 
 
 def test_pct_share_used_within_bounds():
@@ -97,6 +107,26 @@ def test_bathroom_cap_per_storey():
     assert tpod["lazienka"] > 5.0  # poddasze dopuszcza większą łazienkę rodzinną
 
 
+def test_day_zone_combined_cap():
+    """Open-plan (faza 1): strefa dzienna (DZIENNA = salon+kuchnia) ma ŁĄCZNY cap
+    (~0.36·usable), nie sumę per-pokój 35+13=48. Otwarta przestrzeń sizowana jako
+    całość; per-pokój cap-y zostają jako pod-sufity, łączny jest wiążący dla grupy."""
+    specs = [
+        _spec("salon", Strefa.DZIENNA, 18.0, 25.0, (0.35, 0.45)),
+        _spec("kuchnia", Strefa.DZIENNA, 8.0, 10.0, (0.12, 0.18)),
+        _spec("hub", Strefa.KOMUNIKACJA, 4.0, 6.0, (0.04, 0.10)),
+        _spec("sypialnia_1", Strefa.NOCNA, 11.0, 14.0, (0.15, 0.25)),
+    ]
+    cfg = HouseProgramConfig(caps=_house_caps())
+    usable = 120.0
+    targets = compute_house_targets(specs, usable, cfg)
+    combined = cfg.day_zone_cap(usable)
+    assert combined < _house_caps()["salon"] + _house_caps()["kuchnia"]  # łączny < suma per-pokój
+    assert targets["salon"] + targets["kuchnia"] <= combined + 1e-6
+    assert abs(sum(targets.values()) - usable) < 1e-6                    # F1 trzyma
+    assert targets["kuchnia"] <= _house_caps()["kuchnia"] + 1e-6         # per-pokój sub-cap zostaje
+
+
 def test_targets_sum_to_usable_even_without_hub():
     """Inwariant Σtargets==usable trzyma też gdy program nie ma pokoju KOMUNIKACJA/hub
     (fallback sink = największy pokój), nadmiar nie znika ani nie psuje F1."""
@@ -110,19 +140,22 @@ def test_targets_sum_to_usable_even_without_hub():
     assert abs(sum(targets.values()) - 80.0) < 1e-6
 
 
-def test_generate_house_no_room_bloat_realistic():
-    """E2E: na realnym 9×7 (~63 m²/kondygn.) master ≤16.5 i salon ≤35 — stary
-    kod pompował master do ~20 i salon na większych do ~47 (reguła Q6)."""
+def test_corridor_minimal_excess_to_bedrooms():
+    """Reguła Dawida (2026-06-02): korytarz możliwie NAJMNIEJSZY (F4 hub ≤15%); nadmiar
+    ZYSKUJĄ sypialnie, NIE korytarz. (Sesja 18 błędnie robiła hub sinkiem → podest 22%.)
+    Sypialnie mogą rosnąć (cap to miękki guide), ale bez eksplozji; salon ≤ ~cap."""
     from core.house_layout import generate_house
-    poly = Polygon([(0, 0), (9, 0), (9, 7), (0, 7)])
+    poly = Polygon([(0, 0), (9, 0), (9, 7), (0, 7)])  # ~63 m²/kondygnację
     layout = generate_house(poly, entry_point=(4.5, 0.0), num_storeys=2, time_limit_s=25.0)
     assert layout.ok, layout.message
-    by_id = {r.spec.id: r.area for r in (*layout.parter_rooms, *layout.pietro_rooms)}
-    # master (sypialnia_1) i każda sypialnia nie puchną ponad cap ARCHON
-    for rid, area in by_id.items():
-        if rid == "sypialnia_1":
-            assert area <= 16.5 + 0.3, f"master {area:.1f} > 16.5"
-        elif rid.startswith("sypialnia"):
-            assert area <= 13.0 + 0.5, f"{rid} {area:.1f} > 13"
-        elif rid == "salon":
-            assert area <= 35.0 + 0.5, f"salon {area:.1f} > 35"
+    usable = 63.0
+    # korytarz minimalny na OBU kondygnacjach
+    for rooms in (layout.parter_rooms, layout.pietro_rooms):
+        hub = next(r for r in rooms if r.spec.id == "hub")
+        assert hub.area <= 0.15 * usable + 1.0, f"korytarz {hub.area:.1f} > F4 (15% = {0.15*usable:.1f})"
+    # sypialnie wchłaniają nadmiar (mogą rosnąć), ale bez eksplozji
+    for r in layout.pietro_rooms:
+        if r.spec.id.startswith("sypialnia"):
+            assert r.area <= 20.0, f"{r.spec.id} {r.area:.1f} eksploduje (>20)"
+    salon = next(r for r in layout.parter_rooms if r.spec.id == "salon")
+    assert salon.area <= 35.0 + 2.0, f"salon {salon.area:.1f} za duży"

@@ -248,6 +248,7 @@ def solve_cpsat(
     program_config: Optional[HouseProgramConfig] = None,
     stair_room_id: Optional[str] = None,
     hub_at_entry: bool = True,
+    entry_room_id: Optional[str] = None,
 ) -> CpsatResult:
     """Solver CP-SAT — umieszcza pokoje szablonu w obrysie.
 
@@ -416,6 +417,12 @@ def solve_cpsat(
             hub_idx = i
             break
 
+    # Pokój przy wejściu (zawiera drzwi + dotyka ściany wejścia). Dom: WIATROŁAP
+    # (przedsionek/airlock — przez niego się wchodzi), NIE hol. Mieszkania: hub (default).
+    entry_idx = hub_idx
+    if entry_room_id is not None:
+        entry_idx = next((i for i, s in enumerate(specs) if s.id == entry_room_id), hub_idx)
+
     # Zbuduj zbiór wymaganych sąsiedztw (pomijając _outside)
     required_adj: list[tuple[int, int]] = []
     for rule in template.sasiedztwo:
@@ -470,28 +477,28 @@ def solve_cpsat(
         # mieszkania). Piętro domu (hub_at_entry=False) NIE ma drzwi: podest łączy się
         # ze schodami, nie z fasadą wejścia — wymuszanie hol↔ściana wejścia robiło
         # piętro INFEASIBLE dla wejść W/E na 9×7/10×7 (3 sypialnie z oknami nie mieściły się).
-        if hub_at_entry:
+        if hub_at_entry and entry_idx is not None:
             bx0 = boundary.bbox[0]
             by0 = boundary.bbox[1]
             entry_x_cm = round((boundary.entry_point[0] - bx0) * SCALE)
             entry_y_cm = round((boundary.entry_point[1] - by0) * SCALE)
 
-            # Hub zawiera punkt drzwi
-            model.add(x[hub_idx] <= entry_x_cm)
-            model.add(x_ends[hub_idx] >= entry_x_cm)
-            model.add(y[hub_idx] <= entry_y_cm)
-            model.add(y_ends[hub_idx] >= entry_y_cm)
+            # Pokój wejściowy (dom: WIATROŁAP) zawiera punkt drzwi...
+            model.add(x[entry_idx] <= entry_x_cm)
+            model.add(x_ends[entry_idx] >= entry_x_cm)
+            model.add(y[entry_idx] <= entry_y_cm)
+            model.add(y_ends[entry_idx] >= entry_y_cm)
 
-            # Hub dotyka ściany z drzwiami (jeśli drzwi nie są wewnątrz notch-a)
+            # ...i dotyka ściany z drzwiami (jeśli drzwi nie są wewnątrz notch-a)
             if notch is None:
                 if entry_side == "south":
-                    model.add(y[hub_idx] == 0)
+                    model.add(y[entry_idx] == 0)
                 elif entry_side == "north":
-                    model.add(y_ends[hub_idx] == BH)
+                    model.add(y_ends[entry_idx] == BH)
                 elif entry_side == "west":
-                    model.add(x[hub_idx] == 0)
+                    model.add(x[entry_idx] == 0)
                 elif entry_side == "east":
-                    model.add(x_ends[hub_idx] == BW)
+                    model.add(x_ends[entry_idx] == BW)
 
         # Reserved core: fallback (brak osobnego pokoju schodów) — hub zawiera rdzeń.
         # Gdy stair_idx ustawione (Approach B), rdzeń przejmuje przypięty pokój
@@ -614,8 +621,10 @@ def solve_cpsat(
     diff = usable_area - sum(target_areas_cm2)
     if target_areas_cm2:
         if program_config is not None and hub_idx is not None:
-            # Dom: resztę (po nasyceniu cap-ów) wchłania hub jako pokój elastyczny
-            target_areas_cm2[hub_idx] += diff
+            # Dom: korektę (zaokrąglenia) bierze największy pokój NIE-hub (korytarz minimalny).
+            non_hub = [i for i in range(n) if i != hub_idx]
+            biggest_idx = max(non_hub, key=lambda i: target_areas_cm2[i]) if non_hub else hub_idx
+            target_areas_cm2[biggest_idx] += diff
         else:
             # Mieszkania (Q6): reszta do największego targetu
             biggest_idx = max(range(n), key=lambda i: target_areas_cm2[i])
@@ -646,11 +655,11 @@ def solve_cpsat(
         # Skaluj proporcjonalnie (mniejszy pokój = mniejsza kara absolutna)
         obj_terms.append(prop_dev)
 
-    # Hub: kara za nadmiar powierzchni (>12%) — TYLKO mieszkania M1-M5 (F4 hub ≤15%).
-    # DOM (program_config != None): hub = elastyczny sink nadmiaru (hol/podest), więc
-    # NIE karzemy go za rozrost — inaczej kara 3× spychała hub i nadmiar przeciekał
-    # w sypialnie (master bloat). Na parterze nadmiar bierze salon, hol zostaje mały.
-    if hub_idx is not None and program_config is None:
+    # Hub: kara za nadmiar powierzchni (>12%) — F4 "korytarz możliwie najmniejszy"
+    # (reguła Dawida). Mieszkania M1-M5 ZAWSZE; DOM też — bo nadmiar idzie teraz do
+    # SYPIALNI/strefy dziennej (house_program), NIE do huba, więc kara nie ma z czym walczyć
+    # i utrzymuje korytarz minimalny (sesja 18 błędnie ją wyłączała, robiąc hub sinkiem).
+    if hub_idx is not None:
         hub_target_12pct = round(0.12 * usable_area)
         hub_excess = model.new_int_var(0, B_AREA, f"hub_excess")
         hub_diff = model.new_int_var(-B_AREA, B_AREA, f"hub_diff")

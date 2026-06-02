@@ -3,18 +3,67 @@
 > Updated after every working session. If it doesn't reflect reality —
 > Claude updates immediately.
 >
-> **Last update:** 2026-06-02 (Session 18 — staircase **Approach B**: stairs are now a SEPARATE
-> pinned `schody` room (== reserved stair core) + a separate compact `hol` hub; stair-run orientation
-> fixed (landing at the hol, run into depth); house overflow re-routed (day-zone→hub sink) so bedrooms
-> stay capped; upper storey freed from the entry wall (`hub_at_entry=False`) — fixes W/E entries on
-> 9×7/10×7. M1-M5 byte-identical. Full non-GUI suite **346 passed / 30 skipped / 1 xpassed / 0 failed**.
-> See the Session 18 block below.) Previous: 2026-06-01 (Session 16 — house mode UI + Approach-A
-> staircase); 2026-05-31 (Session 15 — `docs/ROADMAP_domy.md`: Stages 1/2/3 FROZEN, all energy on
-> Stage 4 house plans).
+> **Last update:** 2026-06-02 (Session 19 — branch `feat/sfh-open-plan-day-zone`: **open-plan day zone**
+> (Approach B — salon+kuchnia render as one un-walled L-shaped DZIENNA space, combined cap, garden
+> facade) + **minimal corridor** (re-enforced hub-minimal F4, overflow→bedrooms; reverses session-18's
+> overflow→hub; podest 15.6→6.3). Grounded in all 49 Dawid PROJ-BUD plans + Neufert. NEXT = **phase 2b
+> scoped NATIVE L-rooms** (hol + bedrooms; optional 2nd rect) to fix the WC-landlocked + wiatrołap-not-
+> at-door bugs WITHOUT bloating the corridor. See Session 19 block + spec
+> `docs/superpowers/specs/2026-06-02-stage4-open-plan-house-furniture-design.md`.) Previous: 2026-06-02
+> (Session 18 — staircase Approach B, committed on `feat/sfh-staircase-approach-b`, 346 passed).
 >
 > Earlier sessions documented in Polish are preserved at the bottom; from
 > 2026-05-05 onwards everything is in English so the project can be shared
 > with international collaborators.
+
+---
+
+## Session 19 (2026-06-02 — open-plan day zone + minimal corridor; branch `feat/sfh-open-plan-day-zone`)
+
+Drove the house layout from Dawid's real corpus: vision-analyzed **all 49 PROJ-BUD/Łącko reference
+plans** (furniture + room-layout/dependencies) + a **Neufert** clearance pass (two design-panel
+workflows). Headline finding: the day zone is **open-plan** (kitchen+dining+living = one space, often
+**L-shaped**), and the corridor must be **minimal** (F4). Spec:
+`docs/superpowers/specs/2026-06-02-stage4-open-plan-house-furniture-design.md` (approved decomposition
+1→2→3→4; footprints 35/70/120; L/U/trapezoid footprints deferred).
+
+**Phase 1 — open-plan day zone (Approach B, DONE):**
+- `core/house_program.py`: `HouseProgramConfig.day_zone_cap` (pct 0.60 / max 45) — the DZIENNA group
+  (salon+kuchnia) shares ONE combined cap (soft anti-bloat ceiling on big footprints), not per-room caps.
+- Solver: salon lands on the **garden facade** (= wall opposite the entry) reliably (verified 9/9, no
+  forcing needed) → day-zone is contiguous and free to form an **L**.
+- `viz/plan_renderer.py`: DZIENNA rooms drawn with NO internal wall (one open space) — `draw_edge` flag +
+  the DZIENNA union outline. `tests/test_open_plan_dayzone.py` + `test_day_zone_combined_cap`.
+
+**Phase 2a — minimal corridor (Dawid's feedback, DONE):** re-enforced the hub-minimal (F4) penalty for
+houses; F1 overflow now routes to **bedrooms** (poddasze) / **day-zone** (parter), NOT the hub —
+**reverses session-18's overflow→hub** (which I'd added to keep bedrooms ≤ cap; wrong trade-off).
+Result on 9×7: podest **15.6→6.3**, bedrooms grew to 12–15.5; all corridors ≤F4 across 8×8…10×12.
+Bloat test reframed to `test_corridor_minimal_excess_to_bedrooms`; `test_house_program.py` unit tests
+updated to the new model (bedrooms absorb; day-zone combined cap; F2 hard). See
+[[feedback_corridor_minimal_lshaped_rooms]].
+
+**Bugs Dawid flagged on the render (NOT yet fixed — fix WITH phase 2b):**
+1. **WC landlocked** in the center — must touch an external wall.
+2. **Wiatrołap not at the entry door** — you enter through it, so it must be the airlock at the entry
+   wall (small), with the hol behind.
+Both were ATTEMPTED and **reverted**: on the rectangular model, forcing the correct WC/wiatrołap
+placement bloats the hol 7→11 (>F4) — a genuine conflict with corridor-minimal. The clean resolution is
+phase 2b L-rooms.
+
+**NEXT — Phase 2b: scoped NATIVE L-rooms (Dawid chose native over post-process).** L-capable = **hol
+(both storeys) + bedrooms (poddasze, exceptional)**; each may be a union of 2 rects (L) or stay
+rectangular; solver picks L only when it MINIMIZES the corridor. Mechanism: an OPTIONAL 2nd rectangle
+per L-capable room (CP-SAT `new_optional_interval_var` + presence literal); NoOverlap2D over
+primary+optional; coverage sums present areas; adjacency = either rect; the 2 rects contiguous → L.
+Fixes the WC/wiatrołap bugs without bloating the corridor (an L-hol wraps them). **RISK:** substantial,
+feasibility-delicate CP-SAT change (session-18 lesson) — TDD with RED feasibility tests FIRST across the
+footprint/entry matrix. Then 2c (scaled room-set: 10×12 day-zone 83 / bedrooms 27–38 needs it), phase 3
+(single-storey 35), phase 4 (furniture: Neufert+plans, window-aware).
+
+> ⚠️ Session 19 work on branch `feat/sfh-open-plan-day-zone` (off `feat/sfh-staircase-approach-b`).
+> Phase 1+2a committed as a clean checkpoint; phases 2b+ are a fresh start. NOT pushed (Dawid's call).
+> Also pending: **GUI 2-tab restructure** ([[project_gui_product_structure.md]]) after the algorithm.
 
 ---
 
