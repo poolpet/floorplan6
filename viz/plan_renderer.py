@@ -190,7 +190,14 @@ def _draw_storey(ax, rooms, boundary, core_abs, furniture, title):
 
     for room in rooms:
         _draw_room(ax, room)
-    _draw_stair(ax, core_abs)
+    # Approach B: schody to OSOBNY pokój — rysuj symbol biegu WEWNĄTRZ niego (orientacja
+    # wg krawędzi z holem). Fallback (układ bez pokoju 'schody', np. smoke) → overlay rdzenia.
+    schody = next((r for r in rooms if r.spec.id == "schody"), None)
+    if schody is not None and schody.polygon is not None:
+        hol = next((r for r in rooms if r.spec.id == "hub"), None)
+        _draw_stair_in_room(ax, schody, hol)
+    else:
+        _draw_stair(ax, core_abs)
     _draw_furniture(ax, furniture)
 
     ax.set_title(title, fontsize=13, fontweight="bold")
@@ -210,6 +217,60 @@ def _draw_storey(ax, rooms, boundary, core_abs, furniture, title):
     ax.set_aspect("equal")
     ax.set_xlabel("x [m]")
     ax.set_ylabel("y [m]")
+
+
+def stair_run_orientation(schody_bounds, hol_bounds):
+    """(run_axis, arrow_dir) dla symbolu schodów (Approach B).
+
+    Bieg idzie wzdłuż DŁUŻSZEJ osi rdzenia (stopnie prostopadle). Strzałka 'w górę'
+    odchodzi OD holu (podest/wejście na bieg po stronie holu — wspinasz się w głąb).
+    run_axis: 'horizontal' | 'vertical'. arrow_dir: 'N'|'S'|'E'|'W'.
+    schody_bounds/hol_bounds: (minx, miny, maxx, maxy); hol_bounds może być None.
+    """
+    sx0, sy0, sx1, sy1 = schody_bounds
+    sw, sh = sx1 - sx0, sy1 - sy0
+    scx, scy = (sx0 + sx1) / 2.0, (sy0 + sy1) / 2.0
+    if hol_bounds is not None:
+        dx = (hol_bounds[0] + hol_bounds[2]) / 2.0 - scx
+        dy = (hol_bounds[1] + hol_bounds[3]) / 2.0 - scy
+    else:
+        dx = dy = 0.0
+    tol = 0.15  # rdzeń ~kwadratowy (U): oś biegu zależy od strony holu, nie szumu float
+    if abs(sw - sh) <= tol:
+        run_x = abs(dx) >= abs(dy)
+    else:
+        run_x = sw > sh  # wyraźny prostokąt → bieg wzdłuż dłuższej osi
+    if run_x:  # bieg poziomy, strzałka 'w górę' odchodzi OD holu (W jeśli hol na E)
+        return ("horizontal", "W" if dx > 0 else "E")
+    return ("vertical", "S" if dy > 0 else "N")
+
+
+def _draw_stair_in_room(ax, schody, hol):
+    """Symbol biegu WEWNĄTRZ pokoju 'schody' — stopnie + strzałka 'w górę' (bez
+    osobnego prostokąta/etykiety; pokój jest już narysowany i podpisany 'Schody')."""
+    sx, sy, ex, ey = schody.polygon.bounds
+    sw, sh = ex - sx, ey - sy
+    color = "#B71C1C"
+    hb = hol.polygon.bounds if (hol is not None and hol.polygon is not None) else None
+    axis, arrow = stair_run_orientation(schody.polygon.bounds, hb)
+    if axis == "vertical":                      # bieg ↕ — stopnie poziome
+        n = max(3, int(sh / 0.28))
+        for k in range(1, n):
+            y = sy + sh * k / n
+            ax.plot([sx, ex], [y, y], color=color, linewidth=0.5, zorder=5)
+        x_mid = sx + sw / 2
+        y0, y1 = (sy + sh * 0.12, sy + sh * 0.88) if arrow == "N" else (sy + sh * 0.88, sy + sh * 0.12)
+        ax.annotate("", xy=(x_mid, y1), xytext=(x_mid, y0),
+                    arrowprops=dict(arrowstyle="->", color=color, lw=1.2), zorder=6)
+    else:                                       # bieg ↔ — stopnie pionowe
+        n = max(3, int(sw / 0.28))
+        for k in range(1, n):
+            x = sx + sw * k / n
+            ax.plot([x, x], [sy, ey], color=color, linewidth=0.5, zorder=5)
+        y_mid = sy + sh / 2
+        x0, x1 = (sx + sw * 0.12, sx + sw * 0.88) if arrow == "E" else (sx + sw * 0.88, sx + sw * 0.12)
+        ax.annotate("", xy=(x1, y_mid), xytext=(x0, y_mid),
+                    arrowprops=dict(arrowstyle="->", color=color, lw=1.2), zorder=6)
 
 
 def _draw_stair(ax, core_abs):

@@ -22,15 +22,17 @@ def test_generates_both_storeys_with_full_program():
 
 
 def test_staircase_core_identical_on_both_storeys():
+    """Approach B: rdzeń klatki należy do OSOBNEGO pokoju 'schody', przypiętego do
+    stair_core identycznie na parterze i piętrze (wyrównanie pionowe z konstrukcji)."""
     poly = Polygon([(0, 0), (11, 0), (11, 9), (0, 9)])
     layout = generate_house(poly, entry_point=(5.5, 0.0), num_storeys=2)
     assert layout.ok, layout.message
-    sc = layout.stair_core
+    sx, sy, sw, sh = layout.stair_core
     for rooms in (layout.parter_rooms, layout.pietro_rooms):
-        hub = next(r for r in rooms if "hub" in r.spec.id)
-        hb = hub.polygon.bounds
-        assert hb[0] <= sc[0] + 0.05 and hb[2] >= sc[0] + sc[2] - 0.05
-        assert hb[1] <= sc[1] + 0.05 and hb[3] >= sc[1] + sc[3] - 0.05
+        schody = next(r for r in rooms if r.spec.id == "schody")
+        b = schody.polygon.bounds
+        assert abs(b[0] - sx) < 0.05 and abs(b[1] - sy) < 0.05
+        assert abs((b[2] - b[0]) - sw) < 0.05 and abs((b[3] - b[1]) - sh) < 0.05
 
 
 def test_too_small_footprint_returns_clear_failure_not_crash():

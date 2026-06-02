@@ -21,6 +21,7 @@ from shapely.geometry import Polygon, box
 from core.models import (
     Boundary, Template, RoomSpec, Room, Strefa, WallType,
 )
+from core.house_program import HouseProgramConfig, compute_house_targets
 from rules._loader import get_default_pack as _get_default_pack
 
 _PACK = _get_default_pack()
@@ -244,6 +245,9 @@ def solve_cpsat(
     forced_facade: Optional[dict[str, str]] = None,
     blocked_arrangements: Optional[list[RoomArrangement]] = None,
     reserved_core: Optional[tuple[float, float, float, float]] = None,
+    program_config: Optional[HouseProgramConfig] = None,
+    stair_room_id: Optional[str] = None,
+    hub_at_entry: bool = True,
 ) -> CpsatResult:
     """Solver CP-SAT — umieszcza pokoje szablonu w obrysie.
 
@@ -258,6 +262,11 @@ def solve_cpsat(
         reserved_core: (x, y, w, h) in metres, bbox-relative, that the hub must
             fully contain (e.g. shared staircase rectangle in a 2-storey house).
             None = off — zero behaviour change for existing apartment flows M1–M5.
+        stair_room_id: id pokoju klatki schodowej (Approach B, dom). Gdy ustawione
+            RAZEM z reserved_core, ten pokój jest PRZYPIĘTY do prostokąta rdzenia
+            (4 równości x/y/w/h), z pominięciem reguły proporcji — a containment
+            rdzenia przechodzi z huba na ten pokój. None = stary fallback (hub
+            zawiera rdzeń); inert dla mieszkań M1–M5.
 
     Returns:
         CpsatResult z pokojami (Room z polygon w metrach).
@@ -271,6 +280,16 @@ def solve_cpsat(
 
     n = len(template.pokoje)
     specs = template.pokoje
+
+    # --- Klatka schodowa (Approach B): pokój przypięty do rdzenia ---
+    stair_idx = None
+    core_cm = None
+    if reserved_core is not None:
+        rc_x, rc_y, rc_w, rc_h = reserved_core
+        core_cm = (round(rc_x * SCALE), round(rc_y * SCALE),
+                   round(rc_w * SCALE), round(rc_h * SCALE))
+        if stair_room_id is not None:
+            stair_idx = next((i for i, s in enumerate(specs) if s.id == stair_room_id), None)
 
     # --- Facade info ---
     facade_sides = _detect_facade_sides(boundary)
@@ -315,12 +334,22 @@ def solve_cpsat(
         model.add(x_end <= BW)
         model.add(y_end <= BH)
 
-        # --- Aspect ratio <= 2:1 ---
-        # w <= 2*h AND h <= 2*w
-        max_ratio_num = round(spec.max_proporcja * 100)
-        # w * 100 <= max_ratio * h  =>  w*100 <= max_ratio_num * h
-        model.add(wi * 100 <= max_ratio_num * hi)
-        model.add(hi * 100 <= max_ratio_num * wi)
+        # --- Klatka schodowa (Approach B): przypnij do rdzenia, pomiń proporcję ---
+        # Pin = 4 równości na rdzeń (gwarancja wyrównania pionowego parter↔piętro).
+        # Bieg prosty (np. 4.0×1.1) ma proporcję > max_proporcja → MUSI pominąć aspect.
+        if i == stair_idx and core_cm is not None:
+            csx, csy, cw_cm, ch_cm = core_cm
+            model.add(xi == csx)
+            model.add(yi == csy)
+            model.add(wi == cw_cm)
+            model.add(hi == ch_cm)
+        else:
+            # --- Aspect ratio <= 2:1 ---
+            # w <= 2*h AND h <= 2*w
+            max_ratio_num = round(spec.max_proporcja * 100)
+            # w * 100 <= max_ratio * h  =>  w*100 <= max_ratio_num * h
+            model.add(wi * 100 <= max_ratio_num * hi)
+            model.add(hi * 100 <= max_ratio_num * wi)
 
         # --- Min area: w*h >= min_area ---
         # CP-SAT nie ma bezpośrednio produktu w ograniczeniu, używamy zmiennej pomocniczej
@@ -406,7 +435,12 @@ def solve_cpsat(
     # ====================================================================
     # Stage B+: Hub musi dotykać KAŻDEGO pokoju (nawet jeśli nie jest explicite w sasiedztwo)
     # ====================================================================
-    if hub_idx is not None:
+    # Mieszkania M1-M5 (program_config is None): zachowaj heurystykę auto-star
+    # (hub dotyka wszystkich). DOM (program_config != None): polegaj na jawnym grafie
+    # ARCHON z szablonu (hol-centryczny) — open-plan kuchnia idzie przez salon, nie hol,
+    # więc nie wymuszamy hol↔kuchnia/spiżarnia (to zawieszało pinned schody na ciasnym
+    # obrysie). F5 dalej spełnione: każdy pokój osiągalny przez graf sąsiedztwa.
+    if hub_idx is not None and program_config is None:
         for i in range(n):
             if i == hub_idx:
                 continue
@@ -432,31 +466,37 @@ def solve_cpsat(
         model.add(h[hub_idx] <= BH - 100).only_enforce_if(not_full_h)
         model.add_bool_or([not_full_w, not_full_h])
 
-        # Hub musi obejmować entry_point (drzwi wejściowe)
-        bx0 = boundary.bbox[0]
-        by0 = boundary.bbox[1]
-        entry_x_cm = round((boundary.entry_point[0] - bx0) * SCALE)
-        entry_y_cm = round((boundary.entry_point[1] - by0) * SCALE)
+        # Hub przy wejściu — TYLKO gdy ta kondygnacja MA drzwi zewnętrzne (parter,
+        # mieszkania). Piętro domu (hub_at_entry=False) NIE ma drzwi: podest łączy się
+        # ze schodami, nie z fasadą wejścia — wymuszanie hol↔ściana wejścia robiło
+        # piętro INFEASIBLE dla wejść W/E na 9×7/10×7 (3 sypialnie z oknami nie mieściły się).
+        if hub_at_entry:
+            bx0 = boundary.bbox[0]
+            by0 = boundary.bbox[1]
+            entry_x_cm = round((boundary.entry_point[0] - bx0) * SCALE)
+            entry_y_cm = round((boundary.entry_point[1] - by0) * SCALE)
 
-        # Hub zawiera punkt drzwi
-        model.add(x[hub_idx] <= entry_x_cm)
-        model.add(x_ends[hub_idx] >= entry_x_cm)
-        model.add(y[hub_idx] <= entry_y_cm)
-        model.add(y_ends[hub_idx] >= entry_y_cm)
+            # Hub zawiera punkt drzwi
+            model.add(x[hub_idx] <= entry_x_cm)
+            model.add(x_ends[hub_idx] >= entry_x_cm)
+            model.add(y[hub_idx] <= entry_y_cm)
+            model.add(y_ends[hub_idx] >= entry_y_cm)
 
-        # Hub dotyka ściany z drzwiami (jeśli drzwi nie są wewnątrz notch-a)
-        if notch is None:
-            if entry_side == "south":
-                model.add(y[hub_idx] == 0)
-            elif entry_side == "north":
-                model.add(y_ends[hub_idx] == BH)
-            elif entry_side == "west":
-                model.add(x[hub_idx] == 0)
-            elif entry_side == "east":
-                model.add(x_ends[hub_idx] == BW)
+            # Hub dotyka ściany z drzwiami (jeśli drzwi nie są wewnątrz notch-a)
+            if notch is None:
+                if entry_side == "south":
+                    model.add(y[hub_idx] == 0)
+                elif entry_side == "north":
+                    model.add(y_ends[hub_idx] == BH)
+                elif entry_side == "west":
+                    model.add(x[hub_idx] == 0)
+                elif entry_side == "east":
+                    model.add(x_ends[hub_idx] == BW)
 
-        # Reserved core (e.g. shared staircase): hub must fully contain it.
-        if reserved_core is not None:
+        # Reserved core: fallback (brak osobnego pokoju schodów) — hub zawiera rdzeń.
+        # Gdy stair_idx ustawione (Approach B), rdzeń przejmuje przypięty pokój
+        # "schody", więc tu NIE obciążamy huba — hol może być mały.
+        if reserved_core is not None and stair_idx is None:
             cx, cy, cw, ch = reserved_core
             csx = round(cx * SCALE)
             csy = round(cy * SCALE)
@@ -558,15 +598,28 @@ def solve_cpsat(
     # Q6 (DECIDED 2026-04-30): salon 80% nadmiaru, sypialnie 20% proporcjonalnie
     # do min, hub i pokoje usługowe stoją na opt z capem WT/F4.
     usable_area_m2 = usable_area / (SCALE * SCALE)
-    targets_m2 = _compute_target_areas(specs, usable_area_m2)
+    if program_config is not None:
+        # Dom: cap + %-podział (ARCHON), resztę do huba — NIE do salonu/mastera (Q6 było błędne dla domów)
+        targets_m2 = compute_house_targets(specs, usable_area_m2, program_config)
+    else:
+        targets_m2 = _compute_target_areas(specs, usable_area_m2)
     target_areas_cm2 = [round(targets_m2[s.id] * SCALE * SCALE) for s in specs]
+
+    # Schody (Approach B): target = DOKŁADNE pole rdzenia (pin), żeby objective nie
+    # walczył z przypięciem; resztę i tak przejmie hub w korekcie diff niżej.
+    if stair_idx is not None and core_cm is not None:
+        target_areas_cm2[stair_idx] = core_cm[2] * core_cm[3]
 
     # Korekta: upewnij się że suma targetów == usable_area
     diff = usable_area - sum(target_areas_cm2)
-    # Dodaj resztę do największego targetu
     if target_areas_cm2:
-        biggest_idx = max(range(n), key=lambda i: target_areas_cm2[i])
-        target_areas_cm2[biggest_idx] += diff
+        if program_config is not None and hub_idx is not None:
+            # Dom: resztę (po nasyceniu cap-ów) wchłania hub jako pokój elastyczny
+            target_areas_cm2[hub_idx] += diff
+        else:
+            # Mieszkania (Q6): reszta do największego targetu
+            biggest_idx = max(range(n), key=lambda i: target_areas_cm2[i])
+            target_areas_cm2[biggest_idx] += diff
 
     # Zmienne odchyleń
     obj_terms = []
@@ -593,8 +646,11 @@ def solve_cpsat(
         # Skaluj proporcjonalnie (mniejszy pokój = mniejsza kara absolutna)
         obj_terms.append(prop_dev)
 
-    # Hub: kara za nadmiar powierzchni (>12%)
-    if hub_idx is not None:
+    # Hub: kara za nadmiar powierzchni (>12%) — TYLKO mieszkania M1-M5 (F4 hub ≤15%).
+    # DOM (program_config != None): hub = elastyczny sink nadmiaru (hol/podest), więc
+    # NIE karzemy go za rozrost — inaczej kara 3× spychała hub i nadmiar przeciekał
+    # w sypialnie (master bloat). Na parterze nadmiar bierze salon, hol zostaje mały.
+    if hub_idx is not None and program_config is None:
         hub_target_12pct = round(0.12 * usable_area)
         hub_excess = model.new_int_var(0, B_AREA, f"hub_excess")
         hub_diff = model.new_int_var(-B_AREA, B_AREA, f"hub_diff")

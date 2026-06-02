@@ -3,11 +3,82 @@
 > Updated after every working session. If it doesn't reflect reality —
 > Claude updates immediately.
 >
-> **Last update:** 2026-06-01 (Session 16 — Plan 3 UI: single-family **house mode** added to the Stage 4 tab via a "Tryb" radio; apartment M1-M5 path unchanged; new GUI-free `viz/house_preview.py`. See the Session 16 block below.) Previous: 2026-05-31 (Session 15 — see `docs/ROADMAP_domy.md`, authoritative: Stages 1/2/3 FROZEN, all energy on Stage 4 driven by single-family-house plans. Merged `feat/sfh-2storey-mvp` → main (`ca92621`, no push); shipped Plan 2 furniture + 2-storey furnished renderer on `feat/sfh-furniture` (`dc77773`, not merged). 17 SFH/furniture tests green.)
+> **Last update:** 2026-06-02 (Session 18 — staircase **Approach B**: stairs are now a SEPARATE
+> pinned `schody` room (== reserved stair core) + a separate compact `hol` hub; stair-run orientation
+> fixed (landing at the hol, run into depth); house overflow re-routed (day-zone→hub sink) so bedrooms
+> stay capped; upper storey freed from the entry wall (`hub_at_entry=False`) — fixes W/E entries on
+> 9×7/10×7. M1-M5 byte-identical. Full non-GUI suite **346 passed / 30 skipped / 1 xpassed / 0 failed**.
+> See the Session 18 block below.) Previous: 2026-06-01 (Session 16 — house mode UI + Approach-A
+> staircase); 2026-05-31 (Session 15 — `docs/ROADMAP_domy.md`: Stages 1/2/3 FROZEN, all energy on
+> Stage 4 house plans).
 >
 > Earlier sessions documented in Polish are preserved at the bottom; from
 > 2026-05-05 onwards everything is in English so the project can be shared
 > with international collaborators.
+
+---
+
+## Session 18 (2026-06-02 — staircase Approach B: separate Schody room + compact Hol)
+
+Dawid (2026-06-01) accepted the GAP/cap fix visually but flagged the **staircase** as wrong
+(merged "Hol+schody" hub, bad run orientation). B1 REWRITE → **Approach B** (owner-approved
+2026-06-02: pinned schody, landing-at-hol orientation, schody adjacent to hol only). Designed via a
+design-panel workflow, implemented TDD, then an adversarial-review workflow caught a real W/E-entry
+blocker that the first feasibility test had masked — fixed and re-verified.
+
+**Shipped (all house-only; M1-M5 apartment path byte-identical — gated on `program_config is None` /
+`stair_idx is None` / `hub_at_entry` default):**
+- **Templates** `house_parter.json` + `house_pietro.json`: added a `schody` room (KOMUNIKACJA) AFTER
+  `hub` (ordering is load-bearing — first KOMUNIKACJA match stays = hol) + `hub↔schody` adjacency;
+  renamed/tightened `hub`→"Hol".
+- **`core/cpsat_solver.py`**: new params `stair_room_id` + `hub_at_entry`. When `reserved_core` +
+  `stair_room_id` set, the schody room is PINNED to the core (4 equalities x/y/w/h) with the aspect
+  rule skipped (straight 4.0×1.1 core would otherwise be INFEASIBLE); core containment reroutes from
+  hub→schody (fallback to hub when `stair_idx is None` → M3 test still green); schody target = exact
+  pinned area. For houses (`program_config is not None`) the **auto-star "hub touches every room" and
+  the hub-12%-excess penalty are SKIPPED** (apartments keep both) so the small hol + pinned mid-plan
+  stair are feasible and the hub can act as the elastic overflow sink. **`hub_at_entry=False`** for
+  the upper storey: the podest connects to the stairs, NOT an external door — pinning the pietro hol
+  to the entry wall made W/E entries on 9×7/10×7 INFEASIBLE (3 windowed bedrooms couldn't fit).
+- **`core/house_program.py`**: overflow (F1 leftover) now fills the DAY-ZONE (salon/kuchnia) up to
+  caps then dumps the remainder into the HUB (elastic hol/podest); bedrooms/services stay at %-target
+  (was: spread over all headroom → leaked into bedrooms → master bloat). Added `schody:5.0` cap; hub
+  intentionally uncapped (sink); no-hub fallback sink = largest room (keeps Σ==usable).
+- **`core/house_layout.py`**: `STAIR_FRONT_SETBACK=1.8`; `_reserve_core` rewritten — core against the
+  side wall opposite the entry, set back 1.8 m from the entry wall (hol takes the entry band);
+  `generate_house` passes `stair_room_id="schody"` + `hub_at_entry=True/False` per storey.
+- **`viz/plan_renderer.py`**: `stair_run_orientation()` (pure, tested) — run along the core's long
+  axis, arrow AWAY from the hol; near-square U-core decided by the hol's dominant side (deterministic,
+  not float noise). `_draw_stair_in_room()` draws treads+arrow inside the schody room; falls back to
+  the core overlay when no schody room (keeps `test_two_storey_render` green).
+- **`core/furniture.py`**: `_infer_door_zones` excludes `schody` as a door-zone source (rooms route to
+  the stairs via the hol, not directly).
+
+**Verification:**
+- New `tests/test_house_staircase_b.py` (10 tests): separate schody room, pinned-to-core on both
+  storeys, schody↔hol adjacency, hol doesn't contain the core, hol compact, **feasibility on
+  8×8/9×7/10×7/7×9 × all 4 entry sides**, run-orientation, no door-zone-from-schody. Rewrote 4
+  Approach-A tests (core placement + "hub contains core" → "schody is the core / hol compact").
+- **M1-M5 byte-identical:** `test_reserved_core_none_is_unchanged` green; `test_cpsat_solver` +
+  `test_e2e` 32 passed / 1 xpassed (known flake); empty adversarial m1-m5-safety review.
+- **Full non-GUI suite: 346 passed, 30 skipped, 1 xpassed, 0 failed** (`pytest --ignore=notebooks
+  --ignore=tests/test_gui.py`, ~15 min).
+- Renders (Dawid eyeballed): `notebooks/output/approach_b_stairs_{9x7,10x7,9x7_W,10x7_W}.png`
+  (`notebooks/approach_b_stairs_preview.py`).
+
+**Known / deferred (from the adversarial review — none on a live path):**
+- Soft caps overshoot mildly on bigger footprints (kuchnia ~15 on 10×7, garderoba ~8 on 9×7-W; the
+  hub/podest balloons on oversized ≥99 m²/storey). This is the **Faza-2 overflow-rooms GAP** (add
+  gabinet/4th bedroom), explicitly deferred. `unabsorbed_leftover` is inert while a hub exists
+  (uncapped sink zeroes it) — Faza 2 should derive the overflow signal from the hub exceeding a hall
+  ceiling instead.
+- `_reserve_core` is **notch-unaware** — a pinned core can land in an L-shape notch → INFEASIBLE
+  (pre-existing; legacy Approach A failed too; Stage-1 non-rectangular polygons are not wired into
+  `generate_house` yet). **Make `_reserve_core` read `boundary.notch` + add an L-polygon regression
+  test BEFORE wiring Stage-1 sub-plots into house mode.**
+- Renderer nit: stair arrow can overlap the centred "Schody" label (cosmetic).
+
+> ⚠️ Session 17 + 18 work is in the working tree, **NOT committed** (push/commit = Dawid's decision).
 
 ---
 

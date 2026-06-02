@@ -14,6 +14,7 @@ from shapely.geometry import Polygon
 
 from core.boundary_analyzer import analyze_boundary
 from core.cpsat_solver import solve_cpsat
+from core.house_program import default_house_config
 from core.models import Room
 from core.template_selector import load_all_templates
 
@@ -27,7 +28,10 @@ STAIR_RUN_LEN = 4.2         # docelowa długość biegu prostego (m)
 STAIR_U_SIDE = 2.4          # bok klatki U/zabiegowej (m)
 STAIR_MAX_AREA = 6.0        # sufit pola schodów (m²)
 STAIR_ASPECT_THRESHOLD = 1.4  # powyżej → bieg prosty, poniżej → U
-STAIR_SETBACK = 0.8         # cofnięcie rdzenia od ściany wejścia (m); 1.3 łamało feasibility na 9×7
+STAIR_SETBACK = 0.8         # (legacy Approach A) cofnięcie rdzenia od ściany wejścia
+STAIR_FRONT_SETBACK = 1.8   # (Approach B) głębokość HOLU przed schodami (m): pas między ścianą
+                            # wejścia a schodami. 1.8 daje feasible na 7×9..10×7 (1.5/1.6 zawieszał
+                            # 10×7 straight-core); schody przy ścianie bocznej przeciwnej wejściu.
 
 
 def _stair_core_dims(W: float, H: float) -> tuple[float, float, str]:
@@ -84,10 +88,13 @@ def _entry_side(bbox, entry_point) -> str:
 
 
 def _reserve_core(bbox, entry_point) -> tuple[float, float, float, float]:
-    """Rdzeń klatki schodowej (x, y, w, h), bbox-relative.
+    """Rdzeń klatki schodowej (x, y, w, h), bbox-relative — Approach B.
 
-    Geometria adaptacyjna (`_stair_core_dims`), pozycja: cofnięta od ściany wejścia
-    o STAIR_SETBACK (środkowy pas głębokości), wyśrodkowana w okolicy wejścia.
+    Geometria adaptacyjna (`_stair_core_dims`). Pozycja wg ARCHON: na ŚREDNIEJ
+    GŁĘBOKOŚCI (cofnięta od fasady wejścia) i OBOK osi wejścia (przy ścianie bocznej
+    po przeciwnej stronie niż drzwi). Dzięki temu HOL może zająć strefę wejścia
+    (zawiera drzwi, dotyka ściany wejścia) i dotknąć schodów od ich strony holowej —
+    schody NIE leżą na osi wejścia, więc nie blokują huba.
     """
     minx, miny, maxx, maxy = bbox
     W = maxx - minx
@@ -97,17 +104,19 @@ def _reserve_core(bbox, entry_point) -> tuple[float, float, float, float]:
     ey = entry_point[1] - miny
     side = _entry_side(bbox, entry_point)
     if side in ("south", "north"):
-        cx = min(max(ex - sw / 2, 0.0), W - sw)              # bias ku x wejścia
+        # offset w X: schody przy ścianie bocznej po przeciwnej stronie niż wejście;
+        # cofnięcie w Y o STAIR_FRONT_SETBACK od ściany wejścia (hol zajmuje pas frontu)
+        cx = (W - sw) if ex < W / 2 else 0.0
         if side == "south":
-            cy = min(STAIR_SETBACK, max(0.0, H - sh))        # cofnij od frontu
-        else:
-            cy = max(H - STAIR_SETBACK - sh, 0.0)
-    else:
-        cy = min(max(ey - sh / 2, 0.0), H - sh)              # bias ku y wejścia
+            cy = min(STAIR_FRONT_SETBACK, max(0.0, H - sh))
+        else:  # north
+            cy = max(H - sh - STAIR_FRONT_SETBACK, 0.0)
+    else:  # west / east — pionowa ściana wejścia
+        cy = (H - sh) if ey < H / 2 else 0.0
         if side == "west":
-            cx = min(STAIR_SETBACK, max(0.0, W - sw))
-        else:
-            cx = max(W - STAIR_SETBACK - sw, 0.0)
+            cx = min(STAIR_FRONT_SETBACK, max(0.0, W - sw))
+        else:  # east
+            cx = max(W - sw - STAIR_FRONT_SETBACK, 0.0)
     return (round(cx, 3), round(cy, 3), round(sw, 3), round(sh, 3))
 
 
@@ -122,8 +131,16 @@ def generate_house(polygon: Polygon, entry_point: tuple[float, float],
     pietro_tpl = _template("house_pietro")
     if parter_tpl is None or pietro_tpl is None:
         return TwoStoreyLayout(ok=False, message="Brak szablonow domu (house_parter/house_pietro).")
-    r_parter = solve_cpsat(parter_tpl, boundary, time_limit_s=time_limit_s, reserved_core=core)
-    r_pietro = solve_cpsat(pietro_tpl, boundary, time_limit_s=time_limit_s, reserved_core=core)
+    # Konfigurowalny program domu (cap-y ARCHON) — parter vs poddasze; master = sypialnia_1.
+    parter_cfg = default_house_config(storey="parter")
+    pietro_cfg = default_house_config(storey="poddasze", master_id="sypialnia_1")
+    r_parter = solve_cpsat(parter_tpl, boundary, time_limit_s=time_limit_s,
+                           reserved_core=core, program_config=parter_cfg,
+                           stair_room_id="schody", hub_at_entry=True)
+    # Piętro NIE ma drzwi zewnętrznych — podest łączy się ze schodami, nie z fasadą wejścia.
+    r_pietro = solve_cpsat(pietro_tpl, boundary, time_limit_s=time_limit_s,
+                           reserved_core=core, program_config=pietro_cfg,
+                           stair_room_id="schody", hub_at_entry=False)
     if r_parter.status not in ("OPTIMAL", "FEASIBLE") or r_pietro.status not in ("OPTIMAL", "FEASIBLE"):
         return TwoStoreyLayout(ok=False,
             message=f"Solver nie znalazl ukladu (parter={r_parter.status}, pietro={r_pietro.status}).",

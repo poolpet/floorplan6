@@ -1,4 +1,4 @@
-# Briefing — następna sesja FP6 (po 2026-06-01, sesja 16)
+# Briefing — następna sesja FP6 (po 2026-06-01, sesja 17)
 
 > **Jak zacząć:**
 >
@@ -8,6 +8,114 @@
 > ```
 >
 > Pierwsza wiadomość: **"Czytaj NEXT_SESSION.md i kontynuujemy."**
+
+---
+
+## ✅ STAN po sesji 18 (2026-06-02 — SCHODY Approach B: osobny pokój „Schody" + kompaktowy „Hol")
+
+**Zrobione (zatwierdzone przez Dawida 2026-06-02: pinned schody, podest przy Holu/bieg w głąb,
+sąsiedztwo tylko Hol). Zaprojektowane przez workflow-panel, TDD, potem adwersaryjny przegląd złapał
+realny bloker (W/E) → naprawiony.**
+
+- **Schody = OSOBNY pokój** przypięty do rdzenia klatki (4 równości x/y/w/h), pomijana reguła
+  proporcji (straight-core 4,0×1,1 inaczej INFEASIBLE); **Hol = osobny kompaktowy hub** (gwiazda F5),
+  już NIE zawiera rdzenia. Wyrównanie pionowe parter↔piętro z konstrukcji.
+- **Orientacja biegu naprawiona** (Twój flagowany błąd): bieg wzdłuż dłuższej osi, strzałka „w górę"
+  odchodzi OD holu. Zweryfikowane wizualnie na S i W: `notebooks/output/approach_b_stairs_*.png`.
+- **Routing nadmiaru** (`house_program`): nadmiar → strefa dzienna (salon/kuchnia) do cap-ów, RESZTA
+  → hub (elastyczny hol/podest); sypialnie/usługowe zostają capowane (koniec bloatu mastera).
+- **Piętro odpięte od ściany wejścia** (`hub_at_entry=False`) — podest łączy się ze schodami, nie z
+  drzwiami; naprawia wejścia W/E na 9×7/10×7 (3 sypialnie z oknami).
+- **M1-M5 byte-identical** (wszystko bramkowane). **Pełny non-GUI suite: 346 passed / 30 skip /
+  1 xpass / 0 failed.** Szczegóły: `docs/STATE.md` → Session 18.
+
+### 🔥 Następne kroki (sesja 19 — kolejność)
+1. **🔴 MEBLE — realna aranżacja (PRIORYTET, druga rzecz flagowana przez Dawida):** `core/furniture.py`
+   greedy „pod ścianę" → reguły z `memory/project_archon_house_adjacency.md` furniture_rules: łóżko
+   wezgłowiem do pełnej ściany bez okna (poddasze: nie pod skosem) + szafki nocne; sofa w rogu do
+   TV/kominka + stolik; stół jadalniany na granicy salon/kuchnia; blat L/liniowo, zlew pod oknem;
+   łazienka liniowo przy ścianie instalacyjnej; hol/schody bez mebli. Kształty pokoi są już stabilne
+   po Approach B. Plan → OK → TDD.
+2. **Overflow rooms (Faza 2):** capy są MIĘKKIE — na obrysach ≥~70 m²/kondygn. nadmiar puchnie w
+   hub/podest (i lekko w kuchnię/garderobę). Fix: gdy capowany zestaw nie wypełnia usable → dodaj
+   gabinet → 4. sypialnię → garaż, aż wypełni. Graf z `_adjacency.md` (room_set_by_size, overflow_rooms).
+   Sygnał overflow wyprowadź z hub_target > sufit holu (nie z `unabsorbed_leftover` — jest martwy przy
+   istniejącym hubie).
+3. **`_reserve_core` notch-aware (PRZED wpięciem Stage-1 do trybu Dom):** dziś rdzeń może wpaść w
+   wcięcie L-kształtu → INFEASIBLE (pre-existing; stary kod też). Czytaj `boundary.notch`, clamp/fallback;
+   dodaj test regresji L-polygon.
+4. **Tryb parterowy / małe domy (35-55 m²):** szablon `house_single_storey` (bez schodów/wiatrołapu/
+   osobnej kuchni), obniż `MIN_STOREY_AREA` ~32. Progi z `_adjacency.md` (low_end_thresholds).
+5. **Open-plan cap salonu:** kuchnia scalona → cap day-zone = łączny ~0,30-0,36·usable.
+6. **Suwaki UI** w Stage 4 (tryb Dom) podpięte do `HouseProgramConfig`.
+
+> ⚠️ Praca sesji 17 + 18 w working tree, **NIEzacommitowana** (commit/push = decyzja Dawida).
+
+---
+
+## ✅ STAN po sesji 17 (2026-06-01 — GAP fix: konfigurowalny program domu, cap-y + %-podział)
+
+**Problem flagowany:** przerost pokoi (master ~22,9 / salon ~47) — nadmiar powierzchni
+wpychany w jeden pokój (reguła Q6 z mieszkań, błędna dla domów).
+
+**Grounding (zrobiony w tej sesji):** przebadane wzorce ARCHON w `rzuty/domy/` (~25 czytelnych
+PDF + 8 screenshotów + serie 35/70/120 i piwnice — wiele to projekty Dawida PROJ-BUD/Łącko).
+Policzone cap-y (n=19–37 na typ) + graf sąsiedztwa (F5 hub-centryczny) + reguła open-plan + progi
+dolne. Szczegóły w pamięci: `memory/project_archon_house_conventions.md`, `_adjacency.md`,
+`_session17_gap_fix.md`. (4 PDF-y A.01/A.02 były wektorowe bez tabeli — skala odzyskiwalna z drzwi
+0,900/schodów 0,278, ale per-pokój NIEwiarygodne; Dawid re-eksportował 35/70/120 ze stemplami stref.)
+
+**Zrobione + zielone (TDD):**
+- NOWY `core/house_program.py` — `HouseProgramConfig` (EDYTOWALNE cap-y + %-udziały + łazienka
+  per kondygnacja parter≤5/poddasze≤8 + `master_id`) + `compute_house_targets` (clamp %-udział do
+  [min,cap] + water-fill reszty do cap-ów; salon/master nigdy ponad cap) + `default_house_config`
+  + `DEFAULT_HOUSE_CAPS` (z ARCHON). **7 testów** `tests/test_house_program.py`.
+- Wpięte w `cpsat_solver.solve_cpsat(program_config=...)`: ścieżka DOMU używa nowych targetów,
+  resztę F1 kieruje do HUBA (nie największego = salon/master). **M1-M5 NIETKNIĘTE** (program_config=None → Q6).
+- `generate_house` przekazuje config per kondygnacja (master=sypialnia_1).
+- **Weryfikacja: dom 23 ✓, apartamenty M1-M5 48 ✓ (zero regresji). Render 63/64 m²: master
+  22,9→16,6, salon capowany. `notebooks/output/reality_realny_*.png` + `notebooks/reality_check_gap.py`.**
+
+**Decyzje Dawida (sesja 17):** cap-y ARCHON; pomieszczenia gospodarcze/techniczne capowane jak
+łazienka (edytowalne); przy przeroście dodaj gabinet/sypialnię; konfigurowalny %-udział + max
+metraży; łazienka parter≤5/poddasze≤8; **Faza 1+2 razem**; **config od razu pod UI (suwaki)**;
+generator MA też robić **małe/parterowe domy 35-55 m²**.
+
+**Trade-off (świadomy):** cap-y są MIĘKKIE (przez targety), żeby nie zawiesić dużych obrysów
+(twardy cap zawieszał solver na 99/208 m²). Trzymają w realnym zakresie (≤~70 m²/kondygn.); na
+90+ nadmiar wraca w pokoje (master ~25), bo capowany STAŁY zestaw nie wypełnia usable → to
+naprawiają overflow rooms (krok 1 niżej).
+
+> ✅ **Dawid zweryfikował rendery (2026-06-01):** „układ i rozmieszczenie pomieszczeń wygląda
+> dobrze" — **fix GAP/cap-y ZAAKCEPTOWANY**. Źle: (1) **schody** i (2) **meble**.
+
+### 🔥 Następne kroki (sesja 18 — kolejność)
+1. **🔴 SCHODY → Approach B (PRIORYTET, feedback Dawida):** schody mają być **osobnym pokojem**
+   (osobna „Schody" klatka ~4-5 m² + osobny „Hol" hub), NIE scalony „Hol+schody"; oraz **zła
+   orientacja/kierunek biegu** do poprawienia. Per B1 (setback już dłubany 1,3→0,8) = REWRITE na
+   Approach B, nie kolejne dłubanie. Grunt: ARCHON (`memory/project_archon_house_adjacency.md`
+   staircase: mid-depth, przy ścianie wewnętrznej, wychodzi na Hol, nigdy przy fasadzie).
+   Dotyka: `house_parter/pietro.json` (rozdziel hub na schody+hol), `_reserve_core`/`generate_house`,
+   renderer (orientacja symbolu schodów). Plan w prostym języku → OK → TDD.
+2. **🔴 MEBLE — realna aranżacja (PO schodach, bo Approach B zmienia kształty pokoi):**
+   `core/furniture.py` z greedy „pod ścianę" → reguły z `_adjacency.md` furniture_rules: łóżko
+   wezgłowiem do pełnej ściany bez okna (poddasze: nie pod skosem) + szafki nocne; sofa w rogu
+   zwrócona do TV/kominka + stolik na środku; stół jadalniany na granicy salon/kuchnia; blat
+   liniowo/L, zlew pod oknem; łazienka liniowo przy ścianie instalacyjnej, drzwi na zewnątrz;
+   hol bez mebli. To druga rzecz, którą Dawid wskazał jako złą — robić zaraz po schodach.
+3. **Overflow rooms (Faza 2):** gdy obrys duży → dodaj gabinet → 4. sypialnię → garaż, aż
+   capowany zestaw wypełni usable. Wtedy cap-y trzymają TWARDO na każdym rozmiarze. Graf z
+   `_adjacency.md` (room_set_by_size, overflow_rooms).
+4. **Tryb parterowy / małe domy (35-55 m²):** nowy szablon `house_single_storey` (bez schodów/
+   wiatrołapu/osobnej kuchni; hol+salon+1-2 sypialnie+łazienka), obniż `MIN_STOREY_AREA` do ~32.
+   Progi z `_adjacency.md` (low_end_thresholds). A.01 35/70/120 = kalibracja.
+5. **Open-plan cap salonu:** gdy kuchnia scalona → cap day-zone = łączny ~0,30-0,36·usable
+   (~30-43), nie salon-only. Patrz `_adjacency.md` open_plan_rule.
+6. **Suwaki UI** w Stage 4 (tryb Dom) podpięte do `HouseProgramConfig` (cap-y + %).
+
+> ⚠️ FAKTY (korekta nieaktualnych docs niżej): praca SFH (sesje 14-16, gałęzie feat/sfh-*) JEST
+> zmergowana do `main`. `main` ~27 commitów przed `origin/main`, NIEpushnięte (push = decyzja Dawida).
+> Praca sesji 17 w working tree, **NIEzacommitowana**.
 
 ---
 

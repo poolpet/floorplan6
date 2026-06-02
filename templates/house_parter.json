@@ -7,15 +7,27 @@
   "pokoje": [
     {
       "id": "hub",
-      "nazwa": "Hol + schody",
+      "nazwa": "Hol",
       "strefa": "KOMUNIKACJA",
       "wymaga_okna": false,
       "priorytet_fasady": null,
-      "min_powierzchnia": 6.0,
-      "opt_powierzchnia": 9.0,
+      "min_powierzchnia": 4.0,
+      "opt_powierzchnia": 6.0,
       "min_szerokosc": 1.5,
       "max_proporcja": 2.0,
-      "procent_powierzchni": [0.06, 0.14]
+      "procent_powierzchni": [0.04, 0.10]
+    },
+    {
+      "id": "schody",
+      "nazwa": "Schody",
+      "strefa": "KOMUNIKACJA",
+      "wymaga_okna": false,
+      "priorytet_fasady": null,
+      "min_powierzchnia": 3.5,
+      "opt_powierzchnia": 5.0,
+      "min_szerokosc": 1.0,
+      "max_proporcja": 2.5,
+      "procent_powierzchni": [0.03, 0.07]
     },
     {
       "id": "wiatrolap",
@@ -101,6 +113,11 @@
     {
       "room_a": "hub",
       "room_b": "wiatrolap",
+      "connection_type": "door"
+    },
+    {
+      "room_a": "hub",
+      "room_b": "schody",
       "connection_type": "door"
     },
     {

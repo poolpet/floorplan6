@@ -191,7 +191,9 @@ def _infer_door_zones(rooms: list[Room]) -> dict[str, list[Polygon]]:
     for a in valid:
         ax0, ay0, ax1, ay1 = a.polygon.bounds
         for b in valid:
-            if b is a or b.spec.strefa != Strefa.KOMUNIKACJA:
+            # tylko HOL/wiatrołap są źródłem drzwi; SCHODY (Approach B, też KOMUNIKACJA)
+            # są pominięte — pokój dotykający klatki nie dostaje drzwi do schodów (F5: routing przez hol)
+            if b is a or b.spec.strefa != Strefa.KOMUNIKACJA or b.spec.id == "schody":
                 continue
             bx0, by0, bx1, by1 = b.polygon.bounds
             # krawędź pionowa wspólna (prawa A = lewa B, lub lewa A = prawa B)
