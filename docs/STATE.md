@@ -27,8 +27,13 @@
 > `test_house_service_placement` 2/2. The oversized F2 stress footprint reduced 16×13→14×11 (208 m² was
 > beyond CP-SAT reliable-solve; 154 m² caps bind the same, 3/3 reliable).
 > Tests: `test_house_przedsionek_entry` 4/4, `test_house_single_storey` 24/24, regression green.
-> NEXT = **phase 4 (furniture: Neufert+plans, window-aware)**; then phase 2c (scaled 2-storey room-set),
-> micro-35 single-storey, un-xfail M3, GUI 2-tab. Previous: 2026-06-02 (Session 19 — branch `feat/sfh-open-plan-day-zone`:
+> NEXT = **execute the phase-4 furniture plan** (brainstorm+spec+plan DONE this session, committed):
+> spec `docs/superpowers/specs/2026-06-03-furniture-realism-design.md` + plan
+> `docs/superpowers/plans/2026-06-03-furniture-realism.md` (9 tasks, RED-first, window-aware semantic
+> placement — bedroom/day-zone/bathroom + Neufert clearances + best-effort warnings; extends
+> `core/furniture.py`, back-compat `boundary=None`). Dawid chose a FRESH session to implement it. Then:
+> phase 2c (scaled 2-storey room-set), micro-35 single-storey, un-xfail M3, GUI 2-tab.
+> Previous: 2026-06-02 (Session 19 — branch `feat/sfh-open-plan-day-zone`:
 > **open-plan day zone**
 > (Approach B — salon+kuchnia render as one un-walled L-shaped DZIENNA space, combined cap, garden
 > facade) + **minimal corridor** (re-enforced hub-minimal F4, overflow→bedrooms; reverses session-18's
