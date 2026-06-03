@@ -157,8 +157,40 @@ def _reserve_core(bbox, entry_point) -> tuple[float, float, float, float]:
     return (round(cx, 3), round(cy, 3), round(sw, 3), round(sh, 3))
 
 
+def suggest_storeys(area_m2: float) -> int:
+    """Podpowiedź liczby kondygnacji wg powierzchni obrysu (architekt nadpisuje)."""
+    return 1 if area_m2 < 60.0 else 2
+
+
+def _generate_single_storey(polygon: Polygon, entry_point: tuple[float, float],
+                            time_limit_s: float) -> TwoStoreyLayout:
+    """Parterowiec: jedna kondygnacja, BEZ schodów/rdzenia/piętra. Zestaw pokoi wg
+    powierzchni; wiatrołap wg progu D2 (gdy jest — drzwi w nim, hol za nim)."""
+    if polygon.area < MIN_SINGLE_STOREY_AREA:
+        return TwoStoreyLayout(ok=False,
+            message=f"Obrys {polygon.area:.0f} m2 za maly na parterowiec (min ~{MIN_SINGLE_STOREY_AREA:.0f} m2).")
+    boundary = analyze_boundary(polygon, entry_point=entry_point)
+    tpl = _template("house_single_storey")
+    if tpl is None:
+        return TwoStoreyLayout(ok=False, message="Brak szablonu house_single_storey.")
+    keep = set(single_storey_room_ids(tpl.pokoje, polygon.area))
+    tpl_f = _filter_template(tpl, keep)
+    cfg = default_house_config(storey="single", master_id="sypialnia_1")
+    has_wiatrolap = "wiatrolap" in keep
+    r = solve_cpsat(tpl_f, boundary, time_limit_s=time_limit_s,
+                    program_config=cfg, hub_at_entry=True,
+                    entry_room_id="wiatrolap" if has_wiatrolap else None,
+                    l_capable_ids={"hub"})
+    if r.status not in ("OPTIMAL", "FEASIBLE"):
+        return TwoStoreyLayout(ok=False,
+            message=f"Solver nie znalazl ukladu parterowca (status={r.status}).", boundary=boundary)
+    return TwoStoreyLayout(ok=True, parter_rooms=r.rooms, pietro_rooms=[], boundary=boundary)
+
+
 def generate_house(polygon: Polygon, entry_point: tuple[float, float],
                    num_storeys: int = 2, time_limit_s: float = 30.0) -> TwoStoreyLayout:
+    if num_storeys == 1:
+        return _generate_single_storey(polygon, entry_point, time_limit_s)
     if polygon.area < MIN_STOREY_AREA:
         return TwoStoreyLayout(ok=False,
             message=f"Obrys {polygon.area:.0f} m2 za maly na program domu (min ~{MIN_STOREY_AREA:.0f} m2/kondygnacje).")
