@@ -21,8 +21,12 @@
 > cm) — float-add `rx+rw` made adjacent rooms measure 0 shared edge on the L-hub; lossless, also fixes the
 > M3 hub-adjacency xfail (now xpasses). F4 kept SOFT for single-storey (option A: hol touches ~9 rooms on
 > one star → usually ~10-12%, rarely ~17%; test asserts ≤20% anti-spine, hardening deferred to furniture).
-> Tests: `test_house_przedsionek_entry` 4/4, `test_house_single_storey` 24/24, regression green (16×13 +
-> 11×9 staircase tests bumped to 45 s — przedsionek+L constraints push those parter solves past 20/30 s).
+> (4) **room-placement preference (`7018ef2`)** — kotłownia + garderoba SOFT-prefer an external wall
+> (kotłownia fresh-air, garderoba window; reward `-0.03·B_AREA·at_ext`, house-only); yields on tight
+> footprints (Dawid: not obligatory). The hol stays central as a side effect (no explicit centering term).
+> `test_house_service_placement` 2/2. The oversized F2 stress footprint reduced 16×13→14×11 (208 m² was
+> beyond CP-SAT reliable-solve; 154 m² caps bind the same, 3/3 reliable).
+> Tests: `test_house_przedsionek_entry` 4/4, `test_house_single_storey` 24/24, regression green.
 > NEXT = **phase 4 (furniture: Neufert+plans, window-aware)**; then phase 2c (scaled 2-storey room-set),
 > micro-35 single-storey, un-xfail M3, GUI 2-tab. Previous: 2026-06-02 (Session 19 — branch `feat/sfh-open-plan-day-zone`:
 > **open-plan day zone**
