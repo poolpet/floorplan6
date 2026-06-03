@@ -550,9 +550,10 @@ def solve_cpsat(
             model.add(y[hub_idx] <= csy)
             model.add(y_ends[hub_idx] >= cey)
 
-    # WC domu dotyka ≥1 ściany ZEWNĘTRZNEJ (nie landlocked); wiatrołap dotyka ściany
-    # WEJŚCIA (przez niego się wchodzi). Reguły Dawida — feasible bez rozdęcia korytarza
-    # dzięki L-capable hub (faza 2b), który owija te pokoje ramieniem o minimalnym polu.
+    # WC domu dotyka ≥1 ściany ZEWNĘTRZNEJ (nie landlocked). Reguła Dawida — feasible bez
+    # rozdęcia korytarza dzięki L-capable hub (faza 2b), który owija WC ramieniem o min. polu.
+    # (Wiatrołap-przy-ścianie-wejścia obsługuje teraz blok entry_idx: gdy entry_room_id="wiatrolap"
+    # to wiatrołap zawiera punkt drzwi I dotyka ściany wejścia — drzwi SĄ w przedsionku, hol za nim.)
     if program_config is not None and notch is None:
         wc_idx = next((i for i, s in enumerate(specs) if s.id == "wc"), None)
         if wc_idx is not None:
@@ -561,16 +562,6 @@ def solve_cpsat(
             bS = model.new_bool_var("wc_S"); model.add(y[wc_idx] == 0).only_enforce_if(bS)
             bN = model.new_bool_var("wc_N"); model.add(y_ends[wc_idx] == BH).only_enforce_if(bN)
             model.add_bool_or([bW, bE, bS, bN])
-        wiat_idx = next((i for i, s in enumerate(specs) if s.id == "wiatrolap"), None)
-        if wiat_idx is not None:
-            if entry_side == "south":
-                model.add(y[wiat_idx] == 0)
-            elif entry_side == "north":
-                model.add(y_ends[wiat_idx] == BH)
-            elif entry_side == "west":
-                model.add(x[wiat_idx] == 0)
-            elif entry_side == "east":
-                model.add(x_ends[wiat_idx] == BW)
 
     # ====================================================================
     # Stage C: Facade constraints — pokoje z oknami na fasadzie

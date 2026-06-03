@@ -139,7 +139,7 @@ def generate_house(polygon: Polygon, entry_point: tuple[float, float],
     r_parter = solve_cpsat(parter_tpl, boundary, time_limit_s=time_limit_s,
                            reserved_core=core, program_config=parter_cfg,
                            stair_room_id="schody", hub_at_entry=True,
-                           l_capable_ids={"hub"})
+                           l_capable_ids={"hub"}, entry_room_id="wiatrolap")
     # Piętro NIE ma drzwi zewnętrznych — podest łączy się ze schodami, nie z fasadą wejścia.
     r_pietro = solve_cpsat(pietro_tpl, boundary, time_limit_s=time_limit_s,
                            reserved_core=core, program_config=pietro_cfg,
