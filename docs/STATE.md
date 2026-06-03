@@ -3,7 +3,19 @@
 > Updated after every working session. If it doesn't reflect reality —
 > Claude updates immediately.
 >
-> **Last update:** 2026-06-02 (Session 19 — branch `feat/sfh-open-plan-day-zone`: **open-plan day zone**
+> **Last update:** 2026-06-03 (Session 20 — branch `feat/sfh-open-plan-day-zone`: **phase 2b DONE** —
+> native L-capable hol committed (`e0bcb23`). Recovered the interrupted phase-2b WIP, retrofitted the
+> RED test net the plan demanded (`tests/test_house_lroom_phase2b.py`, 19/19), confirmed it GREEN, then
+> committed. L-hol wraps WC (external wall) + wiatrołap (entry wall) with a minimal arm → both Dawid bugs
+> fixed WITHOUT corridor bloat (9×7 rectangular hol = 18% > F4; L = 12%). M1–M5 proven model-no-op
+> (deterministic proto compare). Probe: feasible + both fixes + ≤F4 + cov== across 24 footprint×entry
+> combos. Deferred per Dawid (option A): "L only when it minimizes corridor" — on 8×8 the hol goes L (7.0)
+> where a rectangle (6.5) would suffice; tune the objective in the furniture phase. Also noted: the entry
+> POINT lands in the hub (hub_at_entry), wiatrołap sits beside it on the entry wall — "enter THROUGH the
+> wiatrołap into the hol behind" is a door-phase refinement (changing entry_idx→wiatrołap would disturb the
+> tuned feasibility matrix). NEXT = phase 2c (scaled room-set 10×12) / phase 3 (single-storey 35) /
+> phase 4 (furniture). Previous: 2026-06-02 (Session 19 — branch `feat/sfh-open-plan-day-zone`:
+> **open-plan day zone**
 > (Approach B — salon+kuchnia render as one un-walled L-shaped DZIENNA space, combined cap, garden
 > facade) + **minimal corridor** (re-enforced hub-minimal F4, overflow→bedrooms; reverses session-18's
 > overflow→hub; podest 15.6→6.3). Grounded in all 49 Dawid PROJ-BUD plans + Neufert. NEXT = **phase 2b
@@ -43,23 +55,30 @@ Bloat test reframed to `test_corridor_minimal_excess_to_bedrooms`; `test_house_p
 updated to the new model (bedrooms absorb; day-zone combined cap; F2 hard). See
 [[feedback_corridor_minimal_lshaped_rooms]].
 
-**Bugs Dawid flagged on the render (NOT yet fixed — fix WITH phase 2b):**
-1. **WC landlocked** in the center — must touch an external wall.
-2. **Wiatrołap not at the entry door** — you enter through it, so it must be the airlock at the entry
-   wall (small), with the hol behind.
-Both were ATTEMPTED and **reverted**: on the rectangular model, forcing the correct WC/wiatrołap
-placement bloats the hol 7→11 (>F4) — a genuine conflict with corridor-minimal. The clean resolution is
-phase 2b L-rooms.
+**Bugs Dawid flagged on the render (FIXED in phase 2b — `e0bcb23`):**
+1. **WC landlocked** in the center — now touches an external wall (24/24 probe + 4-side test). ✅
+2. **Wiatrołap not at the entry door** — now sits on the entry wall (4-side test). ✅ (Refinement deferred to
+   the door phase: the entry POINT is in the hub, not the wiatrołap, so "enter THROUGH the wiatrołap" is
+   only partially literal.)
+Both had been ATTEMPTED and **reverted** on the rectangular model (forcing placement bloated the hol 7→11
+>F4 — a genuine conflict with corridor-minimal). Phase 2b L-rooms resolved it cleanly (L hol = 12% on 9×7).
 
-**NEXT — Phase 2b: scoped NATIVE L-rooms (Dawid chose native over post-process).** L-capable = **hol
-(both storeys) + bedrooms (poddasze, exceptional)**; each may be a union of 2 rects (L) or stay
-rectangular; solver picks L only when it MINIMIZES the corridor. Mechanism: an OPTIONAL 2nd rectangle
-per L-capable room (CP-SAT `new_optional_interval_var` + presence literal); NoOverlap2D over
-primary+optional; coverage sums present areas; adjacency = either rect; the 2 rects contiguous → L.
-Fixes the WC/wiatrołap bugs without bloating the corridor (an L-hol wraps them). **RISK:** substantial,
-feasibility-delicate CP-SAT change (session-18 lesson) — TDD with RED feasibility tests FIRST across the
-footprint/entry matrix. Then 2c (scaled room-set: 10×12 day-zone 83 / bedrooms 27–38 needs it), phase 3
-(single-storey 35), phase 4 (furniture: Neufert+plans, window-aware).
+**Phase 2b — scoped NATIVE L-rooms (DONE, `e0bcb23`).** L-capable = **hol parteru** only so far
+(`l_capable_ids={"hub"}`); each L-capable room may be a union of 2 rects (L) or stay rectangular.
+Mechanism shipped: OPTIONAL 2nd rectangle per L-capable room (`new_optional_interval_var` + presence
+literal); NoOverlap2D over primary+optional; coverage sums present areas (`sum(areas)+sum(eff2)==usable`);
+adjacency via either rect (`_apply_adjacency`); the 2 rects contiguous (`_touches_bool`) → L; WC forced to
+an external wall + wiatrołap to the entry wall (gated `program_config is not None and notch is None`).
+Test net retrofitted AFTER the (interrupted) implementation: `tests/test_house_lroom_phase2b.py` 19/19,
+mirroring the REAL model contract (no invented aspect≤1.5 / 60% caps — model uses
+`max(0.6·B, 0.8·min(BW,BH))`). M1–M5 guarded by a deterministic proto-size no-op test (not flaky
+solve-equality). **Deferred (Dawid, option A):** "L only when it minimizes the corridor" — currently the
+objective pulls the hol toward 12% so it goes L even on 8×8 where a rectangle is smaller; refine in the
+furniture phase. bedrooms-as-L (poddasze, exceptional) not yet wired.
+
+**NEXT:** phase 2c (scaled room-set: 10×12 day-zone 83 / bedrooms 27–38 needs L), phase 3 (single-storey
+35), phase 4 (furniture: Neufert+plans, window-aware). Also pending: GUI 2-tab restructure
+([[project_gui_product_structure]]); door-phase refinement of wiatrołap-contains-entry.
 
 > ⚠️ Session 19 work on branch `feat/sfh-open-plan-day-zone` (off `feat/sfh-staircase-approach-b`).
 > Phase 1+2a committed as a clean checkpoint; phases 2b+ are a fresh start. NOT pushed (Dawid's call).
