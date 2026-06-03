@@ -756,7 +756,11 @@ def solve_cpsat(
         rw = solver.value(w[i]) / SCALE
         rh = solver.value(h[i]) / SCALE
 
-        poly = box(rx, ry, rx + rw, ry + rh)
+        # Snap do siatki cm (round 2) — model jest integer-cm, więc wszystkie współrzędne
+        # są wielokrotnościami 0.01 m; bez snapu float-dodawanie rx+rw daje krawędzie
+        # epsilon-różne od sąsiadów (np. 2.38+0.9=3.2800000000000002 vs 3.28), przez co
+        # Shapely nie widzi wspólnej krawędzi (adjacency mierzona jako 0). Bezstratne tu.
+        poly = box(round(rx, 2), round(ry, 2), round(rx + rw, 2), round(ry + rh, 2))
         # L-capable: dołącz 2. prostokąt gdy has_L (unia 2 stykających się prostokątów → L)
         if has_L[i] is not None and solver.value(has_L[i]):
             r2w = solver.value(w2[i]) / SCALE
@@ -764,7 +768,8 @@ def solve_cpsat(
             if r2w > 1e-6 and r2h > 1e-6:
                 r2x = solver.value(x2[i]) / SCALE + bx0
                 r2y = solver.value(y2[i]) / SCALE + by0
-                poly = poly.union(box(r2x, r2y, r2x + r2w, r2y + r2h))
+                poly = poly.union(box(round(r2x, 2), round(r2y, 2),
+                                      round(r2x + r2w, 2), round(r2y + r2h, 2)))
         room = Room(spec=spec, polygon=poly)
         room.update_metrics()
         rooms.append(room)

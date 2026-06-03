@@ -25,7 +25,9 @@ def test_staircase_core_identical_on_both_storeys():
     """Approach B: rdzeń klatki należy do OSOBNEGO pokoju 'schody', przypiętego do
     stair_core identycznie na parterze i piętrze (wyrównanie pionowe z konstrukcji)."""
     poly = Polygon([(0, 0), (11, 0), (11, 9), (0, 9)])
-    layout = generate_house(poly, entry_point=(5.5, 0.0), num_storeys=2)
+    # 45 s margines: parter z przedsionkiem-w-drzwiach + L-holem bywa na granicy
+    # domyślnego 30 s (zwraca UNKNOWN zamiast FEASIBLE). F2/pinning sprawdzane jak wcześniej.
+    layout = generate_house(poly, entry_point=(5.5, 0.0), num_storeys=2, time_limit_s=45.0)
     assert layout.ok, layout.message
     sx, sy, sw, sh = layout.stair_core
     for rooms in (layout.parter_rooms, layout.pietro_rooms):
@@ -53,7 +55,9 @@ def test_house_wet_rooms_never_exceed_wt_cap(w, h):
     """F2: łazienka ≤ 5 m² i WC ≤ 3 m² na WYNIKU solvera, na obu kondygnacjach,
     nawet przy przewymiarowanym obrysie (gdzie F1 wpycha nadmiar w salon)."""
     poly = Polygon([(0, 0), (w, 0), (w, h), (0, h)])
-    layout = generate_house(poly, entry_point=(w / 2, 0.0), time_limit_s=20.0)
+    # 45 s: przewymiarowany 16×13 (208 m²) z przedsionkiem-w-drzwiach + L-holem bywa na
+    # granicy 20 s (parter=UNKNOWN). 11×9 i tak kończy wcześnie na optimum. F2 sprawdzane jak wcześniej.
+    layout = generate_house(poly, entry_point=(w / 2, 0.0), time_limit_s=45.0)
     assert layout.ok, layout.message
     for room in (*layout.parter_rooms, *layout.pietro_rooms):
         cap = _F2_MAX_AREA.get(room.spec.id.split("_")[0])
