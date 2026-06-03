@@ -249,6 +249,7 @@ def solve_cpsat(
     stair_room_id: Optional[str] = None,
     hub_at_entry: bool = True,
     entry_room_id: Optional[str] = None,
+    l_capable_ids: Optional[set] = None,
 ) -> CpsatResult:
     """Solver CP-SAT — umieszcza pokoje szablonu w obrysie.
 
@@ -397,16 +398,47 @@ def solve_cpsat(
         x_intervals.append(notch_x_iv)
         y_intervals.append(notch_y_iv)
 
+    # === Approach 2b: opcjonalny 2. prostokąt dla pokoi L-capable (hol/sypialnie) ===
+    # Każdy L-capable pokój może być unią 2 prostokątów (L) lub zostać prostokątem.
+    # Bramkowane l_capable_ids — None/pusty ⇒ brak L, zachowanie IDENTYCZNE (mieszkania też).
+    x2 = [None] * n; y2 = [None] * n; w2 = [None] * n; h2 = [None] * n
+    x2e = [None] * n; y2e = [None] * n; has_L = [None] * n; eff2 = [None] * n
+    if l_capable_ids:
+        for i, spec in enumerate(specs):
+            if spec.id not in l_capable_ids:
+                continue
+            p = model.new_bool_var(f"hasL_{i}"); has_L[i] = p
+            xi2 = model.new_int_var(0, BW, f"x2_{i}"); yi2 = model.new_int_var(0, BH, f"y2_{i}")
+            wi2 = model.new_int_var(0, BW, f"w2_{i}"); hi2 = model.new_int_var(0, BH, f"h2_{i}")
+            xe2 = model.new_int_var(0, BW, f"x2e_{i}"); ye2 = model.new_int_var(0, BH, f"y2e_{i}")
+            model.add(xe2 == xi2 + wi2); model.add(ye2 == yi2 + hi2)
+            x2[i], y2[i], w2[i], h2[i], x2e[i], y2e[i] = xi2, yi2, wi2, hi2, xe2, ye2
+            xiv2 = model.new_optional_interval_var(xi2, wi2, xe2, p, f"xiv2_{i}")
+            yiv2 = model.new_optional_interval_var(yi2, hi2, ye2, p, f"yiv2_{i}")
+            x_intervals.append(xiv2); y_intervals.append(yiv2)
+            model.add(wi2 == 0).only_enforce_if(p.Not())     # brak L ⇒ rect2 = nic
+            model.add(hi2 == 0).only_enforce_if(p.Not())
+            model.add(wi2 >= 80).only_enforce_if(p)           # L ⇒ ramię ≥ 0.8 m
+            model.add(hi2 >= 80).only_enforce_if(p)
+            t_contig = _touches_bool(model, x[i], y[i], x_ends[i], y_ends[i],
+                                     xi2, yi2, xe2, ye2, MIN_SHARED_EDGE_CM, BW, BH, f"contig_{i}")
+            model.add(t_contig == 1).only_enforce_if(p)       # L ⇒ 2 prostokąty ciągłe
+            a2 = model.new_int_var(0, BW * BH, f"area2_{i}")
+            model.add_multiplication_equality(a2, [wi2, hi2])
+            ea2 = model.new_int_var(0, BW * BH, f"effarea2_{i}")
+            model.add(ea2 == a2).only_enforce_if(p)
+            model.add(ea2 == 0).only_enforce_if(p.Not())
+            eff2[i] = ea2
+
     model.add_no_overlap_2d(x_intervals, y_intervals)
 
-    # --- Coverage: suma area == usable area (boundary - notch) ---
-    # WAŻNE: oblicz notch area z integer cm (spójne z obstacle w NoOverlap2D)
+    # --- Coverage: suma area (+ obecne 2. prostokąty L) == usable area (boundary - notch) ---
     if notch is not None:
         notch_area_cm2 = nw * nh  # integer cm, bez błędów zaokrąglenia
     else:
         notch_area_cm2 = 0
     usable_area = B_AREA - notch_area_cm2
-    model.add(sum(areas) == usable_area)
+    model.add(sum(areas) + sum(e for e in eff2 if e is not None) == usable_area)
 
     # ====================================================================
     # Stage B: Adjacency constraints
@@ -433,11 +465,15 @@ def solve_cpsat(
         if idx_a is not None and idx_b is not None:
             required_adj.append((idx_a, idx_b))
 
-    # Adjacency constraint: dwa pokoje muszą współdzielić krawędź o długości >= MIN_SHARED_EDGE
-    # 4 przypadki: a jest na lewo/prawo/poniżej/powyżej b
+    # Adjacency constraint: dwa pokoje muszą współdzielić krawędź o długości >= MIN_SHARED_EDGE.
+    # Pokoje L-capable (2 prostokąty) → sąsiedztwo przez którykolwiek prostokąt; reszta bez zmian.
     for (a, b) in required_adj:
-        _add_adjacency_constraint(model, a, b, x, y, w, h, x_ends, y_ends,
-                                  BW, BH, MIN_SHARED_EDGE_CM)
+        if l_capable_ids and (has_L[a] is not None or has_L[b] is not None):
+            _apply_adjacency(model, a, b, x, y, x_ends, y_ends,
+                             x2, y2, x2e, y2e, has_L, BW, BH, MIN_SHARED_EDGE_CM)
+        else:
+            _add_adjacency_constraint(model, a, b, x, y, w, h, x_ends, y_ends,
+                                      BW, BH, MIN_SHARED_EDGE_CM)
 
     # ====================================================================
     # Stage B+: Hub musi dotykać KAŻDEGO pokoju (nawet jeśli nie jest explicite w sasiedztwo)
@@ -513,6 +549,28 @@ def solve_cpsat(
             model.add(x_ends[hub_idx] >= cex)
             model.add(y[hub_idx] <= csy)
             model.add(y_ends[hub_idx] >= cey)
+
+    # WC domu dotyka ≥1 ściany ZEWNĘTRZNEJ (nie landlocked); wiatrołap dotyka ściany
+    # WEJŚCIA (przez niego się wchodzi). Reguły Dawida — feasible bez rozdęcia korytarza
+    # dzięki L-capable hub (faza 2b), który owija te pokoje ramieniem o minimalnym polu.
+    if program_config is not None and notch is None:
+        wc_idx = next((i for i, s in enumerate(specs) if s.id == "wc"), None)
+        if wc_idx is not None:
+            bW = model.new_bool_var("wc_W"); model.add(x[wc_idx] == 0).only_enforce_if(bW)
+            bE = model.new_bool_var("wc_E"); model.add(x_ends[wc_idx] == BW).only_enforce_if(bE)
+            bS = model.new_bool_var("wc_S"); model.add(y[wc_idx] == 0).only_enforce_if(bS)
+            bN = model.new_bool_var("wc_N"); model.add(y_ends[wc_idx] == BH).only_enforce_if(bN)
+            model.add_bool_or([bW, bE, bS, bN])
+        wiat_idx = next((i for i, s in enumerate(specs) if s.id == "wiatrolap"), None)
+        if wiat_idx is not None:
+            if entry_side == "south":
+                model.add(y[wiat_idx] == 0)
+            elif entry_side == "north":
+                model.add(y_ends[wiat_idx] == BH)
+            elif entry_side == "west":
+                model.add(x[wiat_idx] == 0)
+            elif entry_side == "east":
+                model.add(x_ends[wiat_idx] == BW)
 
     # ====================================================================
     # Stage C: Facade constraints — pokoje z oknami na fasadzie
@@ -636,10 +694,11 @@ def solve_cpsat(
     for i, spec in enumerate(specs):
         target = target_areas_cm2[i]
 
-        # |area_i - target| = area_dev_plus + area_dev_minus
+        # |area_i - target| = area_dev_plus + area_dev_minus (pokoje L: CAŁKOWITE pole)
         dev_plus = model.new_int_var(0, B_AREA, f"dev_plus_{i}")
         dev_minus = model.new_int_var(0, B_AREA, f"dev_minus_{i}")
-        model.add(areas[i] - target == dev_plus - dev_minus)
+        tot_area_i = areas[i] if eff2[i] is None else (areas[i] + eff2[i])
+        model.add(tot_area_i - target == dev_plus - dev_minus)
 
         # Waga: łazienki/WC ważone 2x
         weight = 2 if spec.strefa == Strefa.USLUGOWA else 1
@@ -663,7 +722,8 @@ def solve_cpsat(
         hub_target_12pct = round(0.12 * usable_area)
         hub_excess = model.new_int_var(0, B_AREA, f"hub_excess")
         hub_diff = model.new_int_var(-B_AREA, B_AREA, f"hub_diff")
-        model.add(hub_diff == areas[hub_idx] - hub_target_12pct)
+        hub_tot = areas[hub_idx] if eff2[hub_idx] is None else (areas[hub_idx] + eff2[hub_idx])
+        model.add(hub_diff == hub_tot - hub_target_12pct)
         # Kara tylko za nadmiar (>12%), nie za niedostatek
         model.add_max_equality(hub_excess, [hub_diff, model.new_constant(0)])
         obj_terms.append(3 * hub_excess)
@@ -706,6 +766,14 @@ def solve_cpsat(
         rh = solver.value(h[i]) / SCALE
 
         poly = box(rx, ry, rx + rw, ry + rh)
+        # L-capable: dołącz 2. prostokąt gdy has_L (unia 2 stykających się prostokątów → L)
+        if has_L[i] is not None and solver.value(has_L[i]):
+            r2w = solver.value(w2[i]) / SCALE
+            r2h = solver.value(h2[i]) / SCALE
+            if r2w > 1e-6 and r2h > 1e-6:
+                r2x = solver.value(x2[i]) / SCALE + bx0
+                r2y = solver.value(y2[i]) / SCALE + by0
+                poly = poly.union(box(r2x, r2y, r2x + r2w, r2y + r2h))
         room = Room(spec=spec, polygon=poly)
         room.update_metrics()
         rooms.append(room)
@@ -821,6 +889,29 @@ def _touches_bool(model, ax, ay, axe, aye, bx, by, bxe, bye,
     model.add(bye == ay).only_enforce_if(ct)        # A powyżej B
     _add_overlap_constraint(model, ax, axe, bx, bxe, min_shared, BW, ct, f"touch_{name}_t")
     return touches
+
+
+def _apply_adjacency(model, a, b, x, y, x_ends, y_ends,
+                     x2, y2, x2e, y2e, has_L, BW, BH, min_shared):
+    """Sąsiedztwo a↔b z obsługą pokoi L (2 prostokąty): a dotyka b PRZEZ KTÓRYKOLWIEK
+    prostokąt którejkolwiek strony (rect1/rect2). Dla rect2 nieobecnego (¬has_L) opcja=0."""
+    la, lb = has_L[a] is not None, has_L[b] is not None
+    opts = [_touches_bool(model, x[a], y[a], x_ends[a], y_ends[a],
+                          x[b], y[b], x_ends[b], y_ends[b], min_shared, BW, BH, f"adj{a}_{b}_11")]
+    if lb:
+        t = _touches_bool(model, x[a], y[a], x_ends[a], y_ends[a],
+                          x2[b], y2[b], x2e[b], y2e[b], min_shared, BW, BH, f"adj{a}_{b}_12")
+        model.add(t == 0).only_enforce_if(has_L[b].Not()); opts.append(t)
+    if la:
+        t = _touches_bool(model, x2[a], y2[a], x2e[a], y2e[a],
+                          x[b], y[b], x_ends[b], y_ends[b], min_shared, BW, BH, f"adj{a}_{b}_21")
+        model.add(t == 0).only_enforce_if(has_L[a].Not()); opts.append(t)
+    if la and lb:
+        t = _touches_bool(model, x2[a], y2[a], x2e[a], y2e[a],
+                          x2[b], y2[b], x2e[b], y2e[b], min_shared, BW, BH, f"adj{a}_{b}_22")
+        model.add(t == 0).only_enforce_if(has_L[a].Not())
+        model.add(t == 0).only_enforce_if(has_L[b].Not()); opts.append(t)
+    model.add_bool_or(opts)
 
 
 def _add_facade_constraint(

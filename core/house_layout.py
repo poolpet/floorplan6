@@ -134,9 +134,12 @@ def generate_house(polygon: Polygon, entry_point: tuple[float, float],
     # Konfigurowalny program domu (cap-y ARCHON) — parter vs poddasze; master = sypialnia_1.
     parter_cfg = default_house_config(storey="parter")
     pietro_cfg = default_house_config(storey="poddasze", master_id="sypialnia_1")
+    # Faza 2b: hol parteru L-capable — owija wiatrołap (przy wejściu) + WC (przy ścianie)
+    # ramieniem o minimalnym polu, więc korytarz zostaje mały mimo poprawnego ich położenia.
     r_parter = solve_cpsat(parter_tpl, boundary, time_limit_s=time_limit_s,
                            reserved_core=core, program_config=parter_cfg,
-                           stair_room_id="schody", hub_at_entry=True)
+                           stair_room_id="schody", hub_at_entry=True,
+                           l_capable_ids={"hub"})
     # Piętro NIE ma drzwi zewnętrznych — podest łączy się ze schodami, nie z fasadą wejścia.
     r_pietro = solve_cpsat(pietro_tpl, boundary, time_limit_s=time_limit_s,
                            reserved_core=core, program_config=pietro_cfg,
