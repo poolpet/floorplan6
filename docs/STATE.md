@@ -10,11 +10,21 @@
 > fixed WITHOUT corridor bloat (9×7 rectangular hol = 18% > F4; L = 12%). M1–M5 proven model-no-op
 > (deterministic proto compare). Probe: feasible + both fixes + ≤F4 + cov== across 24 footprint×entry
 > combos. Deferred per Dawid (option A): "L only when it minimizes corridor" — on 8×8 the hol goes L (7.0)
-> where a rectangle (6.5) would suffice; tune the objective in the furniture phase. Also noted: the entry
-> POINT lands in the hub (hub_at_entry), wiatrołap sits beside it on the entry wall — "enter THROUGH the
-> wiatrołap into the hol behind" is a door-phase refinement (changing entry_idx→wiatrołap would disturb the
-> tuned feasibility matrix). NEXT = phase 2c (scaled room-set 10×12) / phase 3 (single-storey 35) /
-> phase 4 (furniture). Previous: 2026-06-02 (Session 19 — branch `feat/sfh-open-plan-day-zone`:
+> where a rectangle (6.5) would suffice; tune the objective in the furniture phase.
+> **ALSO Session 20 (committed `17eee67`..`13b04a4`, 5-task plan):** (1) **przedsionek-entry fix** —
+> `entry_room_id="wiatrolap"` so the front door is INSIDE the wiatrołap and the hol is behind it (Dawid's
+> correction; applies to 1- and 2-storey); removed the redundant phase-2b wiatrołap-wall block. (2)
+> **single-storey houses (parterowce)** — new `house_single_storey` template (no stairs), area-driven
+> room-set selector (`single_storey_room_ids`, bedrooms scale greedy + przedsionek by ~50 m² threshold D2),
+> `generate_house(num_storeys=1)` branch, `suggest_storeys`, `MIN_SINGLE_STOREY_AREA=45` (micro-35 deferred,
+> needs reduced mins — spec D5). (3) **cm-snap geometry fix** in `solve_cpsat` extraction (round coords to
+> cm) — float-add `rx+rw` made adjacent rooms measure 0 shared edge on the L-hub; lossless, also fixes the
+> M3 hub-adjacency xfail (now xpasses). F4 kept SOFT for single-storey (option A: hol touches ~9 rooms on
+> one star → usually ~10-12%, rarely ~17%; test asserts ≤20% anti-spine, hardening deferred to furniture).
+> Tests: `test_house_przedsionek_entry` 4/4, `test_house_single_storey` 24/24, regression green (16×13 +
+> 11×9 staircase tests bumped to 45 s — przedsionek+L constraints push those parter solves past 20/30 s).
+> NEXT = **phase 4 (furniture: Neufert+plans, window-aware)**; then phase 2c (scaled 2-storey room-set),
+> micro-35 single-storey, un-xfail M3, GUI 2-tab. Previous: 2026-06-02 (Session 19 — branch `feat/sfh-open-plan-day-zone`:
 > **open-plan day zone**
 > (Approach B — salon+kuchnia render as one un-walled L-shaped DZIENNA space, combined cap, garden
 > facade) + **minimal corridor** (re-enforced hub-minimal F4, overflow→bedrooms; reverses session-18's
