@@ -28,6 +28,17 @@ def test_house_pietro_loads_with_three_bedrooms_and_bathroom():
     assert laz.opt_powierzchnia <= 5.0
 
 
+def test_single_storey_template_loads():
+    t = _by_id("house_single_storey")
+    assert t is not None, "brak szablonu house_single_storey"
+    ids = {s.id for s in t.pokoje}
+    assert {"hub", "wiatrolap", "salon", "kuchnia", "lazienka", "sypialnia_1"} <= ids
+    assert "schody" not in ids, "parterowiec nie ma schodów"
+    adj = {(r.room_a, r.room_b) for r in t.sasiedztwo}
+    assert ("hub", "wiatrolap") in adj and ("wiatrolap", "_outside") in adj
+    assert ("salon", "kuchnia") in adj  # otwarta strefa dzienna
+
+
 def test_house_templates_not_selected_for_apartments():
     from core.boundary_analyzer import analyze_boundary
     from core.template_selector import select_templates
