@@ -66,7 +66,11 @@ DEFAULT_HOUSE_CAPS: dict[str, float] = {
 
 
 def default_house_config(storey: str = "parter", master_id: str | None = None) -> HouseProgramConfig:
-    """Domyślny program domu (cap-y ARCHON, łazienka parter ≤5 / poddasze ≤8)."""
+    """Domyślny program domu (cap-y ARCHON, łazienka ≤5 dla parter/single / ≤8 dla poddasze).
+
+    storey: "parter" | "poddasze" | "single" (parterowiec). cap_for mapuje każde
+    ≠"poddasze" na bathroom_parter_max, więc "single" daje łazienkę ≤5 bez dodatkowej logiki.
+    """
     return HouseProgramConfig(
         caps=dict(DEFAULT_HOUSE_CAPS),
         bathroom_parter_max=5.0,

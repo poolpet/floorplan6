@@ -7,7 +7,7 @@ docs/superpowers/specs/2026-05-29-sfh-2storey-stage4-furniture-design.md.
 """
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import Optional
 
 from shapely.geometry import Polygon
@@ -21,6 +21,43 @@ from core.template_selector import load_all_templates
 STAIR_W = 2.5
 STAIR_H = 3.0
 MIN_STOREY_AREA = 60.0
+
+# --- Parterowiec (single-storey) ---
+MIN_SINGLE_STOREY_AREA = 45.0   # prowizoryczny; dostrajany przez feasibility-matrix (test_house_single_storey)
+PRZEDSIONEK_MIN_AREA = 50.0     # D2: poniżej tego progu drzwi wprost do holu (bez wiatrołapu)
+
+# Dobór pokoi parterowca wg powierzchni obrysu. Rdzeń zawsze; reszta greedy wg sumy
+# minów z marginesem na upakowanie ((suma_min+m)·margin ≤ area). Wiatrołap wg progu D2.
+_SINGLE_CORE = ["hub", "salon", "kuchnia", "lazienka", "sypialnia_1"]
+_SINGLE_OPTIONAL = ["wc", "sypialnia_2", "spizarnia", "kotlownia", "sypialnia_3", "garderoba"]
+_PACK_MARGIN = 1.12   # prowizoryczny; podnieś jeśli wybrany zestaw okaże się INFEASIBLE w macierzy
+
+
+def single_storey_room_ids(specs: list, area_m2: float) -> list[str]:
+    """Zwraca id pokoi parterowca dla danej powierzchni (kolejność = priorytet dodawania)."""
+    by_id = {s.id: s for s in specs}
+    chosen = [r for r in _SINGLE_CORE if r in by_id]
+    cum = sum(by_id[r].min_powierzchnia for r in chosen)
+    if area_m2 >= PRZEDSIONEK_MIN_AREA and "wiatrolap" in by_id:          # D2 — próg przedsionka
+        chosen.append("wiatrolap")
+        cum += by_id["wiatrolap"].min_powierzchnia
+    for rid in _SINGLE_OPTIONAL:                                         # greedy wg sumy minów
+        if rid not in by_id:
+            continue
+        m = by_id[rid].min_powierzchnia
+        if (cum + m) * _PACK_MARGIN <= area_m2:
+            chosen.append(rid)
+            cum += m
+    return chosen
+
+
+def _filter_template(tpl, keep_ids: set):
+    """Kopia szablonu z podzbiorem pokoi + sąsiedztwem dotyczącym tylko zachowanych pokoi."""
+    pokoje = [p for p in tpl.pokoje if p.id in keep_ids]
+    sasiedztwo = [r for r in tpl.sasiedztwo
+                  if (r.room_a in keep_ids or r.room_a == "_outside")
+                  and (r.room_b in keep_ids or r.room_b == "_outside")]
+    return replace(tpl, pokoje=pokoje, sasiedztwo=sasiedztwo)
 
 # Adaptive staircase core (Approach A — spec 2026-06-01)
 STAIR_RUN_W = 1.1            # szerokość biegu prostego (m)
