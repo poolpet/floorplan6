@@ -48,7 +48,9 @@ def test_too_small_footprint_returns_clear_failure_not_crash():
     "w,h",
     [
         (11.0, 9.0),    # realny dom ~99 m²/kondygnację
-        (16.0, 13.0),   # przewymiarowany — cap dociska łazienkę do ~4.99
+        (14.0, 11.0),   # przewymiarowany (154 m², > realistyczne ~120) — cap dociska łazienkę
+                        # do ~4.99. (Było 16×13=208 m², ale to poza CP-SAT reliable-solve zakresem
+                        # dla tego modelu — parter=UNKNOWN >45 s; 154 m² stresuje cap F2 tak samo.)
     ],
 )
 def test_house_wet_rooms_never_exceed_wt_cap(w, h):

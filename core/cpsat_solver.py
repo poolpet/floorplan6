@@ -719,6 +719,25 @@ def solve_cpsat(
         model.add_max_equality(hub_excess, [hub_diff, model.new_constant(0)])
         obj_terms.append(3 * hub_excess)
 
+    # Miękka preferencja (Dawid 2026-06-03): kotłownia + garderoba przy ścianie ZEWNĘTRZNEJ
+    # (kotłownia — dopływ świeżego powietrza; garderoba — okno). NAGRODA w objective, NIE
+    # twarde — solver woli ścianę, ale ustąpi gdy obrys każe inaczej ("w miarę możliwości").
+    # Dom only (program_config) + brak notcha. Pozycja nie wpływa na area_dev, więc nagroda
+    # konkuruje głównie z proporcjami/upakowaniem — nie zniekształca metraży. Hol BEZ wymogu.
+    if program_config is not None and notch is None:
+        w_ext = max(1, round(0.03 * B_AREA))
+        for rid in ("kotlownia", "garderoba"):
+            idx = next((i for i, s in enumerate(specs) if s.id == rid), None)
+            if idx is None:
+                continue
+            bW = model.new_bool_var(f"{rid}_extW"); model.add(x[idx] == 0).only_enforce_if(bW)
+            bE = model.new_bool_var(f"{rid}_extE"); model.add(x_ends[idx] == BW).only_enforce_if(bE)
+            bS = model.new_bool_var(f"{rid}_extS"); model.add(y[idx] == 0).only_enforce_if(bS)
+            bN = model.new_bool_var(f"{rid}_extN"); model.add(y_ends[idx] == BH).only_enforce_if(bN)
+            at_ext = model.new_bool_var(f"{rid}_at_ext")
+            model.add(at_ext <= bW + bE + bS + bN)   # =1 tylko gdy faktycznie przy ścianie
+            obj_terms.append(-w_ext * at_ext)        # nagroda za ścianę zewnętrzną
+
     model.minimize(sum(obj_terms))
 
     # ====================================================================
