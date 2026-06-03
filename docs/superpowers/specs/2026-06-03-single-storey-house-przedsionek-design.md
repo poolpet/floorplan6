@@ -27,7 +27,12 @@ parter + pietro). Dawid's priority is **parterowce first, then furniture**. Two 
 - **D4 — przedsionek-entry fix is foundational and in-scope here**, applied to BOTH single- and two-storey
   for consistency (it also corrects the shipped 2-storey path).
 - **Thresholds are start values, easy to tune:** przedsionek ~50 m², storey-default ~60 m² footprint,
-  `MIN_SINGLE_STOREY_AREA` ~32 m².
+  `MIN_SINGLE_STOREY_AREA` **~45 m²** (revised 2026-06-03 from ~32 — see D5).
+- **D5 — v1 floor is ~45 m², micro-35 deferred (Dawid 2026-06-03):** the standard template
+  `min_powierzchnia` (salon 20, kuchnia 7, sypialnia_1 11, lazienka 2.5, hub 4 → ~44.5 m² for the minimal
+  day-zone + 1 bed + bath + hol) make a 35 m² single-storey INFEASIBLE (F3 mins can't be lowered). v1
+  targets single-storey **≥ ~45 m²** with standard mins (bedrooms scale 1→2→3→+master). The micro-35 tier
+  (reduced mins: salon ~15, open kitchenette, no hol/wc) is a separate small follow-up.
 
 ## Design
 
@@ -63,7 +68,7 @@ parter + pietro). Dawid's priority is **parterowce first, then furniture**. Two 
 - No `_reserve_core`, no `schody`, no pietro. One `solve_cpsat` on the single-storey template with
   `program_config` + `entry_room_id` per the D2 przedsionek rule + (likely) `l_capable_ids={"hub"}` so the
   hol can wrap several rooms while staying ≤F4 (see Risk).
-- Separate `MIN_SINGLE_STOREY_AREA ≈ 32` (vs `MIN_STOREY_AREA=60` for 2-storey). Return a layout carrying
+- Separate `MIN_SINGLE_STOREY_AREA ≈ 45` (vs `MIN_STOREY_AREA=60` for 2-storey; see D5). Return a layout carrying
   one room set (reuse `TwoStoreyLayout` with empty `pietro_rooms`, or a clearer single-room-set return —
   decide in the plan; keep callers working).
 - `suggest_storeys(area_m2) -> int`: 1 if footprint < ~60 m² else 2 (architect overrides). Pure helper,
@@ -88,6 +93,8 @@ If it still conflicts on the largest single-storey footprints, that is a finding
 to relax F4 (B3).
 
 ## Deferred (not in scope)
+- **Micro single-storey (~35 m²)** — needs reduced room mins (salon ~15, open kitchenette, no hol/wc); a
+  small follow-up after v1 (D5).
 - Non-rectangular footprints (L/U/trapezoid) — still gated `notch is None`.
 - Furniture (phase 4, next after this).
 - Phase 2c scaled 2-storey room-set; bedrooms-as-L; "separate kitchen" toggle.
