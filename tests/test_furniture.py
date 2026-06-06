@@ -293,6 +293,53 @@ def test_bedroom_two_nightstands_when_centered():
     assert len(ns) == 2, f"oczekiwano 2 szafek nocnych (łóżko wyśrodkowane), jest {len(ns)}"
 
 
+def test_furniture_stays_within_l_shaped_room():
+    # review #11: meble nie wpadają we wnękę L-pokoju (poza polygon, mimo bbox)
+    from core.furniture import furnish_rooms
+    from shapely.geometry import Polygon as P
+    lpoly = P([(0, 0), (4, 0), (4, 2), (2, 2), (2, 4), (0, 4)])  # 4x4 bez rogu 2x2 (prawy-górny)
+    sp = RoomSpec(id="sypialnia_1", nazwa="Sypialnia", strefa=Strefa.NOCNA, wymaga_okna=False, priorytet_fasady=None)
+    r = Room(spec=sp, polygon=lpoly); r.update_metrics()
+    res = furnish_rooms([r])
+    assert res.furniture, "L-pokój nic nie dostał"
+    for f in res.furniture:
+        assert lpoly.buffer(1e-6).contains(f.polygon), f"{f.piece_type} we wnęce L-pokoju: {f.polygon.bounds}"
+
+
+def test_shared_wall_requires_real_overlap():
+    # review #13: styk salon↔kuchnia tylko gdy krawędzie REALNIE się nakładają
+    from core.furniture import _shared_wall
+
+    def mk(rid, x0, y0, x1, y1):
+        return Room(spec=RoomSpec(id=rid, nazwa=rid, strefa=Strefa.DZIENNA, wymaga_okna=True, priorytet_fasady=1),
+                    polygon=box(x0, y0, x1, y1))
+    # ta sama linia x=3, ale y rozłączne ([0,3] vs [5,8]) → brak realnego styku
+    assert _shared_wall(mk("salon", 0, 0, 3, 3), mk("kuchnia", 3, 5, 6, 8)) is None
+    # realny styk: x=3 wspólne, y nakłada się [0,3]
+    assert _shared_wall(mk("salon", 0, 0, 3, 3), mk("kuchnia", 3, 0, 6, 3)) == "E"
+
+
+def test_room_window_walls_degrades_without_facade_helper(monkeypatch):
+    # review #15: brak ortools/_detect_facade_sides → degraduj do set() (jak boundary=None), nie crash
+    import core.cpsat_solver as cps
+    monkeypatch.delattr(cps, "_detect_facade_sides", raising=False)
+    from core.furniture import _room_window_walls
+    from core.boundary_analyzer import analyze_boundary
+    b = analyze_boundary(Polygon([(0, 0), (10, 0), (10, 8), (0, 8)]), entry_point=(0, 4))
+    sp = RoomSpec(id="sypialnia_1", nazwa="S", strefa=Strefa.NOCNA, wymaga_okna=True, priorytet_fasady=1)
+    r = Room(spec=sp, polygon=box(3.0, 0.0, 7.0, 4.0)); r.update_metrics()
+    assert _room_window_walls(r, b) == set()
+
+
+def test_wardrobe_shrinks_to_fit():
+    # review #23: szafa skraca się (2.0→1.6→1.2) zanim zostanie pominięta
+    from core.furniture import furnish_rooms
+    sp = RoomSpec(id="sypialnia_1", nazwa="Sypialnia", strefa=Strefa.NOCNA, wymaga_okna=False, priorytet_fasady=None)
+    r = Room(spec=sp, polygon=box(0.0, 0.0, 3.5, 1.9)); r.update_metrics()  # niska — ściany 1.7m: 2.0 szafa nie wejdzie, 1.6 tak
+    res = furnish_rooms([r])
+    assert any(f.piece_type == "wardrobe" for f in res.furniture), "szafa nie zmniejszyła się by się zmieścić"
+
+
 def test_dining_table_with_salon_suffix_id():
     # review #5/#14: salon dopasowany prefiksem (salon_1), nie exact id — inaczej stół znika
     from core.furniture import furnish_rooms

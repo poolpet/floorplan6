@@ -101,6 +101,13 @@ def furnish_rooms(rooms: list[Room], boundary=None) -> FurnishResult:
         if key in CIRCULATION_KEYS or key not in FURNITURE_SETS:
             continue
         windows = _room_window_walls(room, boundary)
+        # L/U-pokój: wnęka (bbox − polygon) jako keep-clear → meble nie wpadają poza
+        # rzeczywisty obrys pokoju (placery liczą region z bbox). review #11.
+        bx0, by0, bx1, by1 = room.polygon.bounds
+        if room.polygon.area < (bx1 - bx0) * (by1 - by0) - 1e-6:
+            cavity = box(bx0, by0, bx1, by1).difference(room.polygon)
+            if not cavity.is_empty:
+                door_zones.setdefault(room.spec.id, []).append(cavity)
         rzones = door_zones.get(room.spec.id, [])
         if key == "sypialnia":
             f, w = _furnish_bedroom(room, windows, rzones)
@@ -131,8 +138,13 @@ def _room_window_walls(room: Room, boundary) -> set:
     """
     if boundary is None or getattr(boundary, "notch", None) is not None:
         return set()
-    # lazy import: nie ciągnij ortools (cpsat_solver) do importu furniture
-    from core.cpsat_solver import _detect_facade_sides
+    # lazy import: nie ciągnij ortools (cpsat_solver) do importu furniture.
+    # Gdy ortools/helper niedostępny (np. lekki bundle bez solvera) → degraduj do
+    # "brak okien" zamiast crashować (review #15).
+    try:
+        from core.cpsat_solver import _detect_facade_sides
+    except ImportError:
+        return set()
     fac = _detect_facade_sides(boundary)
     bx0, by0, bx2, by2 = boundary.bbox
     rx0, ry0, rx1, ry1 = room.polygon.bounds
@@ -249,15 +261,20 @@ def _furnish_bedroom(room: Room, windows: set, zones):
         placed.append(cz)
     # szafki nocne po bokach łóżka
     out += _flank_nightstands(bed_rect, bed_wall, region, placed, zones, room.spec.id)
-    # szafa na innej ścianie bez okna
+    # szafa na innej ścianie bez okna; skróć (2.0→1.6→1.2 — drzwi przesuwne) zanim
+    # zrezygnujesz, by nie ginęła w ciasnych/przy-drzwiowych sypialniach (review #23)
     ward = next(p for p in FURNITURE_SETS["sypialnia"] if p.type == "wardrobe")
-    for wall in cand:
-        if wall == bed_wall:
-            continue
-        wr = _place_on_wall(region, ward.b, ward.a, wall, placed, zones)
-        if wr is not None:
-            placed.append(wr)
-            out.append(Furniture("wardrobe", wr, room.spec.id, ward.label))
+    walls_for_ward = [w for w in cand if w != bed_wall]
+    done_ward = False
+    for length in (ward.b, 1.6, 1.2):
+        for wall in walls_for_ward:
+            wr = _place_on_wall(region, length, ward.a, wall, placed, zones)
+            if wr is not None:
+                placed.append(wr)
+                out.append(Furniture("wardrobe", wr, room.spec.id, ward.label))
+                done_ward = True
+                break
+        if done_ward:
             break
     return out, warn
 
@@ -354,18 +371,18 @@ def _furnish_living(room: Room, windows: set, zones):
 
 
 def _shared_wall(host: Room, other: Room) -> str | None:
-    """Ściana host (S/N/W/E) leżąca na wspólnej krawędzi z other (styk), albo None."""
+    """Ściana host (S/N/W/E) na wspólnej krawędzi z other — tylko gdy krawędzie REALNIE
+    się nakładają (≥ MIN_JUNCTION); styk narożny/pozorny → None (review #13)."""
     hx0, hy0, hx1, hy1 = host.polygon.bounds
     ox0, oy0, ox1, oy1 = other.polygon.bounds
     t = 0.02
-    if abs(hx1 - ox0) < t:
-        return "E"
-    if abs(hx0 - ox1) < t:
-        return "W"
-    if abs(hy1 - oy0) < t:
-        return "N"
-    if abs(hy0 - oy1) < t:
-        return "S"
+    MIN_JUNCTION = 0.9   # użyteczny otwór ≥ ~90 cm
+    if abs(hx1 - ox0) < t or abs(hx0 - ox1) < t:        # styk pionowy (E/W) → nakładanie w y
+        if min(hy1, oy1) - max(hy0, oy0) >= MIN_JUNCTION:
+            return "E" if abs(hx1 - ox0) < t else "W"
+    if abs(hy1 - oy0) < t or abs(hy0 - oy1) < t:        # styk poziomy (N/S) → nakładanie w x
+        if min(hx1, ox1) - max(hx0, ox0) >= MIN_JUNCTION:
+            return "N" if abs(hy1 - oy0) < t else "S"
     return None
 
 
