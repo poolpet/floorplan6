@@ -96,7 +96,14 @@ def furnish_rooms(rooms: list[Room], boundary=None) -> FurnishResult:
         key = room.spec.id.split("_")[0]
         if key in CIRCULATION_KEYS or key not in FURNITURE_SETS:
             continue
-        furniture.extend(_furnish_room(room, key, door_zones.get(room.spec.id, [])))
+        windows = _room_window_walls(room, boundary)
+        rzones = door_zones.get(room.spec.id, [])
+        if key == "sypialnia":
+            f, w = _furnish_bedroom(room, windows, rzones)
+        else:
+            f, w = _furnish_room(room, key, rzones), []
+        furniture.extend(f)
+        warnings.extend(w)
     return FurnishResult(furniture=furniture, warnings=warnings)
 
 
@@ -144,6 +151,80 @@ def _furnish_room(room: Room, key: str, zones: list[Polygon]) -> list[Furniture]
             placed.append(rect)
             out.append(Furniture(piece.type, rect, room.spec.id, piece.label))
     return out
+
+
+# ---- semantyczne placery (spec phase 4 §2) ----
+# Zwracają (list[Furniture], list[str]) — meble + ostrzeżenia (kluczowy mebel się nie zmieścił).
+
+_WALL_OPP = {"S": "N", "N": "S", "W": "E", "E": "W"}
+
+
+def _inset(poly):
+    minx, miny, maxx, maxy = poly.bounds
+    return (minx + INSET, miny + INSET, maxx - INSET, maxy - INSET)
+
+
+def _wall_len(region, wall):
+    rx0, ry0, rx1, ry1 = region
+    return (rx1 - rx0) if wall in ("S", "N") else (ry1 - ry0)
+
+
+def _flank_nightstands(bed_rect, bed_wall, region, placed, zones, room_id):
+    """Szafki nocne po bokach łóżka (wzdłuż ściany wezgłowia). Best-effort: pomija bok poza regionem/zajęty."""
+    ns = next(p for p in FURNITURE_SETS["sypialnia"] if p.type == "nightstand")
+    bx0, by0, bx1, by1 = bed_rect.bounds
+    region_box = box(*region).buffer(1e-6)
+    out = []
+    if bed_wall in ("S", "N"):                      # łóżko wzdłuż x → szafki po lewej/prawej (x)
+        y0 = by0 if bed_wall == "S" else by1 - ns.b
+        for x0 in (bx0 - ns.a, bx1):
+            rect = box(x0, y0, x0 + ns.a, y0 + ns.b)
+            if _valid(rect, placed, zones) and rect.within(region_box):
+                placed.append(rect)
+                out.append(Furniture("nightstand", rect, room_id, ns.label))
+    else:                                           # łóżko wzdłuż y → szafki góra/dół (y)
+        x0 = bx0 if bed_wall == "W" else bx1 - ns.b
+        for y0 in (by0 - ns.a, by1):
+            rect = box(x0, y0, x0 + ns.b, y0 + ns.a)
+            if _valid(rect, placed, zones) and rect.within(region_box):
+                placed.append(rect)
+                out.append(Furniture("nightstand", rect, room_id, ns.label))
+    return out
+
+
+def _furnish_bedroom(room: Room, windows: set, zones):
+    """Łóżko na najdłuższej ścianie bez okna (wezgłowie do ściany) + szafki nocne + szafa."""
+    region = _inset(room.polygon)
+    placed, out, warn = [], [], []
+    bed = next(p for p in FURNITURE_SETS["sypialnia"] if p.type == "bed")
+    # ściany bez okna, najdłuższa najpierw; gdy wszystkie z oknem → którakolwiek (best-effort)
+    cand = [w for w in ("S", "N", "W", "E") if w not in windows] or ["S", "N", "W", "E"]
+    cand.sort(key=lambda w: _wall_len(region, w), reverse=True)
+    bed_rect = None
+    bed_wall = None
+    for wall in cand:
+        bed_rect = _place_on_wall(region, bed.a, bed.b, wall, placed, zones)
+        if bed_rect is not None:
+            bed_wall = wall
+            break
+    if bed_rect is None:
+        warn.append(f"{room.spec.id} ({room.polygon.area:.1f} m²): brak miejsca na łóżko + dojście")
+        return out, warn
+    placed.append(bed_rect)
+    out.append(Furniture("bed", bed_rect, room.spec.id, bed.label))
+    # szafki nocne po bokach łóżka
+    out += _flank_nightstands(bed_rect, bed_wall, region, placed, zones, room.spec.id)
+    # szafa na innej ścianie bez okna
+    ward = next(p for p in FURNITURE_SETS["sypialnia"] if p.type == "wardrobe")
+    for wall in cand:
+        if wall == bed_wall:
+            continue
+        wr = _place_on_wall(region, ward.b, ward.a, wall, placed, zones)
+        if wr is not None:
+            placed.append(wr)
+            out.append(Furniture("wardrobe", wr, room.spec.id, ward.label))
+            break
+    return out, warn
 
 
 def _valid(rect: Polygon, placed: list[Polygon], zones: list[Polygon]) -> bool:

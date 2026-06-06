@@ -114,3 +114,25 @@ def test_place_on_wall_targets_wall():
     assert abs(b[1] - 0.0) < 1e-9            # przy ścianie S (y=0)
     assert abs((b[2] - b[0]) - 1.6) < 1e-9   # szerokość wzdłuż ściany
     assert abs((b[3] - b[1]) - 2.0) < 1e-9   # głębokość
+
+
+def test_bedroom_bed_on_windowless_wall():
+    from core.furniture import furnish_rooms
+    from core.boundary_analyzer import analyze_boundary
+    # 10x8; sypialnia dotyka TYLKO ściany S (okno na dole); N/W/E wewnętrzne.
+    # Wejście na W (entry_point) — bo krawędź wejścia jest klasyfikowana jako INTERNAL
+    # (nie-okno), więc okno na S wymaga wejścia po innej stronie.
+    # Dyskryminuje: generic _place_fixed próbuje S jako PIERWSZĄ → łóżko pod oknem;
+    # semantyczny placer musi je przenieść na ścianę bez okna.
+    b = analyze_boundary(Polygon([(0, 0), (10, 0), (10, 8), (0, 8)]), entry_point=(0, 4))
+    sp = RoomSpec(id="sypialnia_1", nazwa="Sypialnia", strefa=Strefa.NOCNA, wymaga_okna=True, priorytet_fasady=1)
+    r = Room(spec=sp, polygon=box(3.0, 0.0, 7.0, 4.0)); r.update_metrics()  # okno: tylko S (y=0)
+    res = furnish_rooms([r], boundary=b)
+    bed = next(f for f in res.furniture if f.piece_type == "bed")
+    bb = bed.polygon.bounds
+    # wezgłowie NIE przy oknie S: łóżko nie dosunięte do dołu (y=0)
+    assert not (abs(bb[1] - 0.0) < 0.2), f"łóżko pod oknem S: {bb}"
+    assert any(f.piece_type == "nightstand" for f in res.furniture), "brak szafki nocnej"
+    # kontrola: bez boundary (brak wiedzy o oknach) łóżko ląduje przy S (generic) — degradacja OK
+    res0 = furnish_rooms([r])
+    assert any(f.piece_type == "bed" for f in res0.furniture)
