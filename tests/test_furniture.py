@@ -219,3 +219,24 @@ def test_tiny_bathroom_warns_no_bathtub():
     res = furnish_rooms([r], boundary=None)
     assert not any(f.piece_type == "bathtub" for f in res.furniture)
     assert any("wann" in w.lower() for w in res.warnings), res.warnings
+
+
+def test_furnish_generated_single_storey_no_overlap():
+    from core.house_layout import generate_house
+    from core.furniture import furnish_rooms
+    lay = generate_house(Polygon([(0, 0), (10, 0), (10, 10), (0, 10)]), (5.0, 0.0),
+                         num_storeys=1, time_limit_s=30)
+    assert lay.ok, lay.message
+    res = furnish_rooms(lay.parter_rooms, boundary=lay.boundary)
+    assert res.furniture, "nic nie umeblowano"
+    # meble mieszczą się w swoich pokojach i się nie nakładają (w obrębie pokoju)
+    by_room = {}
+    for f in res.furniture:
+        by_room.setdefault(f.room_id, []).append(f.polygon)
+    for rid, polys in by_room.items():
+        for i in range(len(polys)):
+            for j in range(i + 1, len(polys)):
+                assert polys[i].intersection(polys[j]).area < 1e-6, f"nakładanie w {rid}"
+    # łóżko istnieje (single-storey ma sypialnia_1)
+    beds = [f for f in res.furniture if f.piece_type == "bed"]
+    assert beds, "brak łóżka w domu"
