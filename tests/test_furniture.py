@@ -255,6 +255,16 @@ def test_kitchen_counter_falls_back_off_blocked_window_wall():
     assert warn == [], f"fałszywe ostrzeżenie mimo wolnej ściany: {warn}"
 
 
+def test_bathroom_keeps_washbasin_when_tight():
+    # review #22: ciasna łazienka — umywalka (kluczowa) MUSI być, nawet kosztem wanny
+    from core.furniture import furnish_rooms
+    sp = RoomSpec(id="lazienka", nazwa="Łazienka", strefa=Strefa.USLUGOWA, wymaga_okna=False, priorytet_fasady=None)
+    r = Room(spec=sp, polygon=box(0.0, 0.0, 1.0, 1.9)); r.update_metrics()  # wanna wypełnia region → konflikt
+    res = furnish_rooms([r], boundary=None)
+    types = {f.piece_type for f in res.furniture}
+    assert "washbasin" in types, f"umywalka pominięta na rzecz wanny: {types}"
+
+
 def test_coffee_table_between_sofa_and_tv():
     # review #20: stolik MIĘDZY sofą a TV, nie dosunięty obok sofy
     from core.furniture import furnish_rooms

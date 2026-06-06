@@ -294,7 +294,10 @@ def _furnish_bathroom(room: Room, windows: set, zones):
     region = _inset(room.polygon)
     placed, out, warn = [], [], []
     key = room.spec.id.split("_")[0]
-    for piece in FURNITURE_SETS[key]:            # lazienka: bathtub, washbasin, toilet
+    # Kolejność: umywalka + WC (małe, każda łazienka ich potrzebuje) PRZED wanną (duża,
+    # w ciasnej ≤5 m² potrafi je wypchnąć). review #22 — umywalki nie poświęcamy dla wanny.
+    _PRIO = {"washbasin": 0, "basin": 0, "toilet": 1, "shower": 2, "bathtub": 2}
+    for piece in sorted(FURNITURE_SETS[key], key=lambda p: _PRIO.get(p.type, 1)):
         rect = _place_fixed(region, piece.a, piece.b, placed, zones)
         if rect is None:
             if piece.type in ("bathtub", "washbasin"):
