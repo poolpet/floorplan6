@@ -186,3 +186,36 @@ def test_dining_table_at_junction():
     assert dt is not None, "brak stołu jadalnego"
     # stół blisko wspólnej krawędzi x=7
     assert abs(dt.polygon.centroid.x - 7.0) < 2.5, f"stół daleko od styku: {dt.polygon.bounds}"
+
+
+def test_bathroom_fixtures_on_one_wall_and_clear():
+    from core.furniture import furnish_rooms
+    sp = RoomSpec(id="lazienka", nazwa="Łazienka", strefa=Strefa.USLUGOWA, wymaga_okna=False, priorytet_fasady=None)
+    r = Room(spec=sp, polygon=box(0.0, 0.0, 2.2, 2.3)); r.update_metrics()  # ~5 m²
+    res = furnish_rooms([r], boundary=None)
+    types = {f.piece_type for f in res.furniture}
+    assert {"bathtub", "washbasin", "toilet"} <= types, f"brak armatury: {types}"
+    # brak nakładania między meblami
+    fs = res.furniture
+    for i in range(len(fs)):
+        for j in range(i + 1, len(fs)):
+            assert fs[i].polygon.intersection(fs[j].polygon).area < 1e-6
+
+
+def test_tiny_bedroom_warns_no_bed():
+    from core.furniture import furnish_rooms
+    sp = RoomSpec(id="sypialnia_2", nazwa="Sypialnia", strefa=Strefa.NOCNA, wymaga_okna=True, priorytet_fasady=2)
+    r = Room(spec=sp, polygon=box(0.0, 0.0, 1.5, 1.6)); r.update_metrics()  # 2.4 m² — łóżko się nie zmieści
+    res = furnish_rooms([r], boundary=None)
+    assert not any(f.piece_type == "bed" for f in res.furniture)
+    assert any("łóżko" in w for w in res.warnings), res.warnings
+
+
+def test_tiny_bathroom_warns_no_bathtub():
+    # Dyskryminuje placer łazienki vs generic: generic milczy, semantyczny ostrzega o kluczowym meblu.
+    from core.furniture import furnish_rooms
+    sp = RoomSpec(id="lazienka", nazwa="Łazienka", strefa=Strefa.USLUGOWA, wymaga_okna=False, priorytet_fasady=None)
+    r = Room(spec=sp, polygon=box(0.0, 0.0, 1.2, 1.2)); r.update_metrics()  # 1.44 m² — wanna się nie mieści
+    res = furnish_rooms([r], boundary=None)
+    assert not any(f.piece_type == "bathtub" for f in res.furniture)
+    assert any("wann" in w.lower() for w in res.warnings), res.warnings

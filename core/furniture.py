@@ -108,6 +108,8 @@ def furnish_rooms(rooms: list[Room], boundary=None) -> FurnishResult:
             f, w = _furnish_kitchen(room, windows, rzones)
         elif key == "salon":
             f, w = _furnish_living(room, windows, rzones)
+        elif key in ("lazienka", "wc"):
+            f, w = _furnish_bathroom(room, windows, rzones)
         else:
             f, w = _furnish_room(room, key, rzones), []
         furniture.extend(f)
@@ -179,6 +181,24 @@ def _wall_len(region, wall):
     return (rx1 - rx0) if wall in ("S", "N") else (ry1 - ry0)
 
 
+# Pasy dostępu (Neufert, spec §3) — wartości startowe, strojone.
+CLEARANCE = {"bed": 0.6, "kitchen_counter": 1.2, "toilet": 0.6, "washbasin": 0.6}
+
+
+def _clearance_zone(rect, wall, depth):
+    """Pas dostępu przed meblem (od strony pokoju, przeciwnej do ściany). Tylko keep-clear (nie mebel)."""
+    x0, y0, x1, y1 = rect.bounds
+    if wall == "S":
+        return box(x0, y1, x1, y1 + depth)
+    if wall == "N":
+        return box(x0, y0 - depth, x1, y0)
+    if wall == "W":
+        return box(x1, y0, x1 + depth, y1)
+    if wall == "E":
+        return box(x0 - depth, y0, x0, y1)
+    return None
+
+
 def _flank_nightstands(bed_rect, bed_wall, region, placed, zones, room_id):
     """Szafki nocne po bokach łóżka (wzdłuż ściany wezgłowia). Best-effort: pomija bok poza regionem/zajęty."""
     ns = next(p for p in FURNITURE_SETS["sypialnia"] if p.type == "nightstand")
@@ -222,6 +242,10 @@ def _furnish_bedroom(room: Room, windows: set, zones):
         return out, warn
     placed.append(bed_rect)
     out.append(Furniture("bed", bed_rect, room.spec.id, bed.label))
+    # pas dostępu przed łóżkiem (keep-clear, nie mebel) — szafki/szafa go omijają
+    cz = _clearance_zone(bed_rect, bed_wall, CLEARANCE["bed"])
+    if cz is not None:
+        placed.append(cz)
     # szafki nocne po bokach łóżka
     out += _flank_nightstands(bed_rect, bed_wall, region, placed, zones, room.spec.id)
     # szafa na innej ścianie bez okna
@@ -256,6 +280,26 @@ def _furnish_kitchen(room: Room, windows: set, zones):
         warn.append(f"{room.spec.id} ({room.polygon.area:.1f} m²): brak miejsca na blat kuchenny")
         return out, warn
     out.append(Furniture("kitchen_counter", rect, room.spec.id, counter.label))
+    return out, warn
+
+
+def _furnish_bathroom(room: Room, windows: set, zones):
+    """Armatura przy ścianach (best-effort); ostrzeżenie gdy brak miejsca na wannę/umywalkę.
+
+    F2: łazienki są małe (≤5 m²), więc „liniowo wzdłuż jednej ściany" degraduje się do
+    „przy ścianach" — _place_fixed snapuje do S/N/W/E. Pas dostępu przed WC/umywalką.
+    """
+    region = _inset(room.polygon)
+    placed, out, warn = [], [], []
+    key = room.spec.id.split("_")[0]
+    for piece in FURNITURE_SETS[key]:            # lazienka: bathtub, washbasin, toilet
+        rect = _place_fixed(region, piece.a, piece.b, placed, zones)
+        if rect is None:
+            if piece.type in ("bathtub", "washbasin"):
+                warn.append(f"{room.spec.id} ({room.polygon.area:.1f} m²): brak miejsca na {piece.label.lower()}")
+            continue
+        placed.append(rect)
+        out.append(Furniture(piece.type, rect, room.spec.id, piece.label))
     return out, warn
 
 
