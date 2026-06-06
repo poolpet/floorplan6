@@ -92,3 +92,14 @@ def test_furnish_rooms_backcompat_shape():
     assert res.warnings == []
     # place_furniture nadal zwraca listę identyczną z res.furniture
     assert [f.piece_type for f in place_furniture([hub, syp])] == [f.piece_type for f in res.furniture]
+
+
+def test_room_window_walls_rectangle():
+    from core.furniture import _room_window_walls
+    from core.boundary_analyzer import analyze_boundary
+    b = analyze_boundary(Polygon([(0, 0), (10, 0), (10, 8), (0, 8)]), entry_point=(5, 0))
+    sp = RoomSpec(id="salon", nazwa="Salon", strefa=Strefa.DZIENNA, wymaga_okna=True, priorytet_fasady=1)
+    r = Room(spec=sp, polygon=box(0.0, 4.0, 4.0, 8.0)); r.update_metrics()  # dotyka W (x=0) i N (y=8)
+    walls = _room_window_walls(r, b)
+    assert walls == {"W", "N"}
+    assert _room_window_walls(r, None) == set()   # bez boundary — brak okien

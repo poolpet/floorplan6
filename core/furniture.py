@@ -105,6 +105,31 @@ def place_furniture(rooms: list[Room], boundary=None) -> list[Furniture]:
     return furnish_rooms(rooms, boundary).furniture
 
 
+def _room_window_walls(room: Room, boundary) -> set:
+    """Ściany pokoju (S/N/W/E) leżące na krawędzi-fasadzie obrysu (= potencjalne okna).
+
+    boundary=None lub notch → set() (notch deferred — tylko prostokąty w v1). Tol 5 cm.
+    """
+    if boundary is None or getattr(boundary, "notch", None) is not None:
+        return set()
+    # lazy import: nie ciągnij ortools (cpsat_solver) do importu furniture
+    from core.cpsat_solver import _detect_facade_sides
+    fac = _detect_facade_sides(boundary)
+    bx0, by0, bx2, by2 = boundary.bbox
+    rx0, ry0, rx1, ry1 = room.polygon.bounds
+    t = 0.05
+    walls = set()
+    if fac["south"] and abs(ry0 - by0) < t:
+        walls.add("S")
+    if fac["north"] and abs(ry1 - by2) < t:
+        walls.add("N")
+    if fac["west"] and abs(rx0 - bx0) < t:
+        walls.add("W")
+    if fac["east"] and abs(rx1 - bx2) < t:
+        walls.add("E")
+    return walls
+
+
 def _furnish_room(room: Room, key: str, zones: list[Polygon]) -> list[Furniture]:
     minx, miny, maxx, maxy = room.polygon.bounds
     region = (minx + INSET, miny + INSET, maxx - INSET, maxy - INSET)
