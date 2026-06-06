@@ -38,8 +38,15 @@
 > just needs furniture serialization + a pure aggregator (FloorPlan vs TwoStoreyLayout adapter is the one
 > open question). Regression note: a batch of `test_house_single_storey`/`test_open_plan_dayzone` failures is
 > pre-existing CP-SAT non-determinism (11×11 @25 s times out; CPU contention), NOT furniture — see memory.
-> NEXT = **JSON contract bundle-prep** (furniture payload + `core` aggregator) and/or the furniture realism
-> punch-list (Dawid prioritizes); then phase 2c, micro-35, un-xfail M3, GUI 2-tab.
+> **JSON contract bundle-prep — DONE (`23483ab`):** `core/plan_contract.py` `plan_to_contract(...)` +
+> `house_to_contract(layout)` → AC-agnostic `{meta, rooms, walls, doors, furniture, warnings}` (fully
+> JSON-serializable), reusing `extract_internal_walls` + `extract_doors` (made `wall_to_guid` OPTIONAL =
+> GUID-free contract mode; AC export unchanged, 22 door/wall tests green) + `FurnishResult`. RED-first, 4
+> tests incl. real-house integration (12 rooms/26 walls/11 doors/21 furniture, ~10 KB JSON). Rooms/walls/
+> doors reference rooms by NAME (rooms[] carries id+name). NEXT (bundle): package `core/` as a wheel + pin
+> Python; wire GUI/bridge to call the contract. NEXT (algo): phase 2c (scaled 2-storey room-set), micro-35
+> single-storey, un-xfail M3, GUI 2-tab; furniture realism punch-list leftovers (clearances, sink, bathroom-
+> linear) in `docs/FURNITURE_REVIEW_PUNCHLIST.md`.
 >
 > **Previous (Session 20, 2026-06-03):** branch `feat/sfh-open-plan-day-zone`: **phase 2b DONE** —
 > native L-capable hol committed (`e0bcb23`). Recovered the interrupted phase-2b WIP, retrofitted the
