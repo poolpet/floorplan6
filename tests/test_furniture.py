@@ -136,3 +136,20 @@ def test_bedroom_bed_on_windowless_wall():
     # kontrola: bez boundary (brak wiedzy o oknach) łóżko ląduje przy S (generic) — degradacja OK
     res0 = furnish_rooms([r])
     assert any(f.piece_type == "bed" for f in res0.furniture)
+
+
+def test_kitchen_counter_under_window():
+    from core.furniture import furnish_rooms
+    from core.boundary_analyzer import analyze_boundary
+    # 10x8, wejście na S (entry edge = INTERNAL, nie-okno). Kuchnia box(0,0,3,4) dotyka
+    # S (wejście) i W (okno). Generic _place_linear próbuje S jako PIERWSZĄ → blat poziomy
+    # przy wejściu; semantyczny musi puścić blat PIONOWO wzdłuż okna W.
+    b = analyze_boundary(Polygon([(0, 0), (10, 0), (10, 8), (0, 8)]), entry_point=(5, 0))
+    sp = RoomSpec(id="kuchnia", nazwa="Kuchnia", strefa=Strefa.DZIENNA, wymaga_okna=True, priorytet_fasady=2)
+    r = Room(spec=sp, polygon=box(0.0, 0.0, 3.0, 4.0)); r.update_metrics()  # okno: tylko W (x=0)
+    res = furnish_rooms([r], boundary=b)
+    counter = next(f for f in res.furniture if f.piece_type == "kitchen_counter")
+    cb = counter.polygon.bounds
+    width_x, depth_y = cb[2] - cb[0], cb[3] - cb[1]
+    on_W = abs(cb[0] - 0.0) < 0.2
+    assert on_W and depth_y > width_x, f"blat nie biegnie wzdłuż okna W: {cb}"

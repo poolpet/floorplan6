@@ -100,6 +100,8 @@ def furnish_rooms(rooms: list[Room], boundary=None) -> FurnishResult:
         rzones = door_zones.get(room.spec.id, [])
         if key == "sypialnia":
             f, w = _furnish_bedroom(room, windows, rzones)
+        elif key == "kuchnia":
+            f, w = _furnish_kitchen(room, windows, rzones)
         else:
             f, w = _furnish_room(room, key, rzones), []
         furniture.extend(f)
@@ -224,6 +226,28 @@ def _furnish_bedroom(room: Room, windows: set, zones):
             placed.append(wr)
             out.append(Furniture("wardrobe", wr, room.spec.id, ward.label))
             break
+    return out, warn
+
+
+def _furnish_kitchen(room: Room, windows: set, zones):
+    """Liniowy blat kuchenny wzdłuż ściany z oknem (zlew pod oknem). Preferuj najdłuższe okno."""
+    region = _inset(room.polygon)
+    placed, out, warn = [], [], []
+    counter = next(p for p in FURNITURE_SETS["kuchnia"] if p.type == "kitchen_counter")
+    walls = list(windows) or ["S", "N", "W", "E"]            # preferuj ścianę z oknem
+    walls.sort(key=lambda w: _wall_len(region, w), reverse=True)
+    rect = None
+    for wall in walls:
+        length = min(counter.b, _wall_len(region, wall))
+        if length < 0.5:
+            continue
+        rect = _place_on_wall(region, length, counter.a, wall, placed, zones)
+        if rect is not None:
+            break
+    if rect is None:
+        warn.append(f"{room.spec.id} ({room.polygon.area:.1f} m²): brak miejsca na blat kuchenny")
+        return out, warn
+    out.append(Furniture("kitchen_counter", rect, room.spec.id, counter.label))
     return out, warn
 
 
