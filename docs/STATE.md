@@ -19,9 +19,12 @@
 > window-awareness was BYPASSED in the real product render — now forwarded (+regression test, +2 notebooks);
 > (#2) kitchen counter was window-walls-only → spurious "brak blatu" when window blocked, now window-first
 > across all walls; (#5/#14) `_place_dining` matched salon by exact id but kuchnia by prefix → `salon_1`
-> dropped the table, now both prefix. **Deferred realism punch-list → `docs/FURNITURE_REVIEW_PUNCHLIST.md`**
-> (center-bed→2 nightstands, coffee between sofa/TV, bathroom washbasin-drop in ≤5 m², counter/bathroom
-> clearances, TV-windowless tradeoff, L-room containment guard, sink piece, ortools-import guard).
+> dropped the table, now both prefix. **Realism punch-list → `docs/FURNITURE_REVIEW_PUNCHLIST.md`** — Dawid
+> chose realism next; top 3 DONE RED-first: center-bed→2 nightstands (`e2a4ae2`), coffee between sofa/TV
+> (`c25ac6c`), bathroom washbasin-before-bathtub so ≤5 m² keeps the washbasin (`1400c7d`); 21 furniture tests
+> green, re-render OK. STILL DEFERRED: counter/bathroom clearances (tuning-risky), TV-windowless (glare-vs-
+> facing TRADEOFF — needs Dawid), L-room containment guard, _shared_wall overlap-extent, ortools-import guard,
+> wardrobe-shrink, sink piece, bathroom-linear-one-wall, notch info-warning.
 > **ALSO Session 21 — ArchiCAD distribution decision** (web-grounded 8-agent research, all claims verified;
 > memory `project_archicad_bundle_distribution`): native copy-folder add-on = C++ only (`.apx`/`.bundle`,
 > recompile per AC version × OS, mac notarize); pure Python can't be native; official AC Python API can't
