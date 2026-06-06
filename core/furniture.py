@@ -65,6 +65,10 @@ FURNITURE_SETS: dict[str, list[Piece]] = {
     ],
 }
 
+# Stół jadalny — należy do otwartej strefy dziennej (styk salon↔kuchnia),
+# nie do pojedynczego pokoju; rozstawiany osobnym przebiegiem w furnish_rooms.
+DINING_TABLE = Piece("dining_table", "Stół jadalny", 0.9, 1.4, False)
+
 
 @dataclass
 class Furniture:
@@ -108,6 +112,8 @@ def furnish_rooms(rooms: list[Room], boundary=None) -> FurnishResult:
             f, w = _furnish_room(room, key, rzones), []
         furniture.extend(f)
         warnings.extend(w)
+    # stół jadalny w otwartej strefie dziennej (styk salon↔kuchnia) — po pokojach
+    furniture += _place_dining(rooms, furniture, door_zones)
     return FurnishResult(furniture=furniture, warnings=warnings)
 
 
@@ -285,6 +291,50 @@ def _furnish_living(room: Room, windows: set, zones):
         placed.append(cr)
         out.append(Furniture("coffee_table", cr, room.spec.id, coffee.label))
     return out, warn
+
+
+def _shared_wall(host: Room, other: Room) -> str | None:
+    """Ściana host (S/N/W/E) leżąca na wspólnej krawędzi z other (styk), albo None."""
+    hx0, hy0, hx1, hy1 = host.polygon.bounds
+    ox0, oy0, ox1, oy1 = other.polygon.bounds
+    t = 0.02
+    if abs(hx1 - ox0) < t:
+        return "E"
+    if abs(hx0 - ox1) < t:
+        return "W"
+    if abs(hy1 - oy0) < t:
+        return "N"
+    if abs(hy0 - oy1) < t:
+        return "S"
+    return None
+
+
+def _place_dining(rooms, existing, door_zones):
+    """Stół jadalny przy wspólnej krawędzi salon↔kuchnia (otwarta strefa dzienna).
+
+    Próbuje stronę salonu, potem kuchni; preferuje ścianę styku (spec §2). Gdy przy
+    styku brak miejsca — gdziekolwiek w pokoju (best-effort). Brak salonu lub kuchni → []
+    (mała/zamknięta strefa dzienna nie dostaje stołu).
+    """
+    salon = next((r for r in rooms if r.spec.id == "salon" and r.polygon is not None), None)
+    kuch = next((r for r in rooms if r.spec.id.split("_")[0] == "kuchnia" and r.polygon is not None), None)
+    if salon is None or kuch is None:
+        return []
+    placed_by_room: dict[str, list[Polygon]] = {}
+    for f in existing:
+        placed_by_room.setdefault(f.room_id, []).append(f.polygon)
+    for host, other in ((salon, kuch), (kuch, salon)):
+        region = _inset(host.polygon)
+        zones = door_zones.get(host.spec.id, []) + placed_by_room.get(host.spec.id, [])
+        wall = _shared_wall(host, other)
+        rect = None
+        if wall is not None:   # wzdłuż krawędzi styku: bok stołu równolegle do ściany, głębokość w głąb
+            rect = _place_on_wall(region, DINING_TABLE.b, DINING_TABLE.a, wall, [], zones)
+        if rect is None:       # przy styku brak miejsca → gdziekolwiek (best-effort)
+            rect = _place_fixed(region, DINING_TABLE.a, DINING_TABLE.b, [], zones)
+        if rect is not None:
+            return [Furniture("dining_table", rect, host.spec.id, DINING_TABLE.label)]
+    return []
 
 
 def _valid(rect: Polygon, placed: list[Polygon], zones: list[Polygon]) -> bool:

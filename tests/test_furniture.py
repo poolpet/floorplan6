@@ -171,3 +171,18 @@ def test_living_sofa_tv_opposite():
     assert sofa.polygon.bounds[1] < 1.5, f"sofa nie przy ścianie S: {sofa.polygon.bounds}"
     assert tv.polygon.bounds[3] > 4.5, f"TV nie przy przeciwległej ścianie N: {tv.polygon.bounds}"
     assert any(f.piece_type == "coffee_table" for f in res.furniture)
+
+
+def test_dining_table_at_junction():
+    from core.furniture import furnish_rooms
+    from core.boundary_analyzer import analyze_boundary
+    b = analyze_boundary(Polygon([(0, 0), (12, 0), (12, 8), (0, 8)]), entry_point=(6, 0))
+    salon = Room(spec=RoomSpec(id="salon", nazwa="Salon", strefa=Strefa.DZIENNA, wymaga_okna=True, priorytet_fasady=1),
+                 polygon=box(0.0, 0.0, 7.0, 8.0)); salon.update_metrics()
+    kuch = Room(spec=RoomSpec(id="kuchnia", nazwa="Kuchnia", strefa=Strefa.DZIENNA, wymaga_okna=True, priorytet_fasady=2),
+                polygon=box(7.0, 0.0, 12.0, 8.0)); kuch.update_metrics()
+    res = furnish_rooms([salon, kuch], boundary=b)
+    dt = next((f for f in res.furniture if f.piece_type == "dining_table"), None)
+    assert dt is not None, "brak stołu jadalnego"
+    # stół blisko wspólnej krawędzi x=7
+    assert abs(dt.polygon.centroid.x - 7.0) < 2.5, f"stół daleko od styku: {dt.polygon.bounds}"
