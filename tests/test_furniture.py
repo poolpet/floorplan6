@@ -153,3 +153,21 @@ def test_kitchen_counter_under_window():
     width_x, depth_y = cb[2] - cb[0], cb[3] - cb[1]
     on_W = abs(cb[0] - 0.0) < 0.2
     assert on_W and depth_y > width_x, f"blat nie biegnie wzdłuż okna W: {cb}"
+
+
+def test_living_sofa_tv_opposite():
+    from core.furniture import furnish_rooms
+    from core.boundary_analyzer import analyze_boundary
+    # 10x8, wejście na S. Salon box(4,0,10,6): okno tylko na E (x=10); S/N/W wewnętrzne.
+    # Semantyczny: sofa na ścianie wewnętrznej (S, najdłuższa), TV na PRZECIWLEGŁEJ (N).
+    # Generic packuje meble przy S → TV ląduje OBOK sofy (nie naprzeciw).
+    b = analyze_boundary(Polygon([(0, 0), (10, 0), (10, 8), (0, 8)]), entry_point=(5, 0))
+    sp = RoomSpec(id="salon", nazwa="Salon", strefa=Strefa.DZIENNA, wymaga_okna=True, priorytet_fasady=1)
+    r = Room(spec=sp, polygon=box(4.0, 0.0, 10.0, 6.0)); r.update_metrics()
+    res = furnish_rooms([r], boundary=b)
+    sofa = next(f for f in res.furniture if f.piece_type == "sofa")
+    tv = next(f for f in res.furniture if f.piece_type == "tv_unit")
+    # sofa przy S (dół), TV przy PRZECIWLEGŁEJ N (góra) — naprzeciw, nie obok
+    assert sofa.polygon.bounds[1] < 1.5, f"sofa nie przy ścianie S: {sofa.polygon.bounds}"
+    assert tv.polygon.bounds[3] > 4.5, f"TV nie przy przeciwległej ścianie N: {tv.polygon.bounds}"
+    assert any(f.piece_type == "coffee_table" for f in res.furniture)

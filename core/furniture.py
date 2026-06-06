@@ -102,6 +102,8 @@ def furnish_rooms(rooms: list[Room], boundary=None) -> FurnishResult:
             f, w = _furnish_bedroom(room, windows, rzones)
         elif key == "kuchnia":
             f, w = _furnish_kitchen(room, windows, rzones)
+        elif key == "salon":
+            f, w = _furnish_living(room, windows, rzones)
         else:
             f, w = _furnish_room(room, key, rzones), []
         furniture.extend(f)
@@ -248,6 +250,40 @@ def _furnish_kitchen(room: Room, windows: set, zones):
         warn.append(f"{room.spec.id} ({room.polygon.area:.1f} m²): brak miejsca na blat kuchenny")
         return out, warn
     out.append(Furniture("kitchen_counter", rect, room.spec.id, counter.label))
+    return out, warn
+
+
+def _furnish_living(room: Room, windows: set, zones):
+    """Sofa pod ścianą wewnętrzną (nie okno), TV naprzeciw (preferuj bez okna), stolik między nimi."""
+    region = _inset(room.polygon)
+    placed, out, warn = [], [], []
+    sofa = next(p for p in FURNITURE_SETS["salon"] if p.type == "sofa")
+    tv = next(p for p in FURNITURE_SETS["salon"] if p.type == "tv_unit")
+    coffee = next(p for p in FURNITURE_SETS["salon"] if p.type == "coffee_table")
+    # sofa pod ścianą wewnętrzną (nie okno), najdłuższą
+    cand = [w for w in ("S", "N", "W", "E") if w not in windows] or ["S", "N", "W", "E"]
+    cand.sort(key=lambda w: _wall_len(region, w), reverse=True)
+    sofa_rect = sofa_wall = None
+    for wall in cand:
+        sofa_rect = _place_on_wall(region, sofa.b, sofa.a, wall, placed, zones)
+        if sofa_rect is not None:
+            sofa_wall = wall
+            break
+    if sofa_rect is None:
+        return out, warn   # salon składa się rzadko; brak sofy nie jest "kluczowy" warning
+    placed.append(sofa_rect)
+    out.append(Furniture("sofa", sofa_rect, room.spec.id, sofa.label))
+    # TV na ścianie naprzeciw sofy (preferuj bez okna)
+    opp = _WALL_OPP[sofa_wall]
+    tv_rect = _place_on_wall(region, tv.b, tv.a, opp, placed, zones)
+    if tv_rect is not None:
+        placed.append(tv_rect)
+        out.append(Furniture("tv_unit", tv_rect, room.spec.id, tv.label))
+    # stolik kawowy w środku między nimi
+    cr = _place_fixed(region, coffee.a, coffee.b, placed, zones)
+    if cr is not None:
+        placed.append(cr)
+        out.append(Furniture("coffee_table", cr, room.spec.id, coffee.label))
     return out, warn
 
 
