@@ -255,6 +255,18 @@ def test_kitchen_counter_falls_back_off_blocked_window_wall():
     assert warn == [], f"fałszywe ostrzeżenie mimo wolnej ściany: {warn}"
 
 
+def test_bedroom_two_nightstands_when_centered():
+    # review #21: łóżko wyśrodkowane na ścianie → szafki nocne z OBU stron (nie 1 przez róg)
+    from core.furniture import furnish_rooms
+    from core.boundary_analyzer import analyze_boundary
+    b = analyze_boundary(Polygon([(0, 0), (10, 0), (10, 8), (0, 8)]), entry_point=(0, 4))
+    sp = RoomSpec(id="sypialnia_1", nazwa="Sypialnia", strefa=Strefa.NOCNA, wymaga_okna=True, priorytet_fasady=1)
+    r = Room(spec=sp, polygon=box(3.0, 0.0, 7.0, 4.0)); r.update_metrics()  # 4x4, okno tylko S
+    res = furnish_rooms([r], boundary=b)
+    ns = [f for f in res.furniture if f.piece_type == "nightstand"]
+    assert len(ns) == 2, f"oczekiwano 2 szafek nocnych (łóżko wyśrodkowane), jest {len(ns)}"
+
+
 def test_dining_table_with_salon_suffix_id():
     # review #5/#14: salon dopasowany prefiksem (salon_1), nie exact id — inaczej stół znika
     from core.furniture import furnish_rooms

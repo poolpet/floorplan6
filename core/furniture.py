@@ -233,7 +233,8 @@ def _furnish_bedroom(room: Room, windows: set, zones):
     bed_rect = None
     bed_wall = None
     for wall in cand:
-        bed_rect = _place_on_wall(region, bed.a, bed.b, wall, placed, zones)
+        # wyśrodkuj łóżko na ścianie → miejsce na szafkę nocną z OBU stron (review #21)
+        bed_rect = _place_on_wall(region, bed.a, bed.b, wall, placed, zones, prefer_center=True)
         if bed_rect is not None:
             bed_wall = wall
             break
@@ -453,17 +454,22 @@ def _place_linear(region, depth: float, cap: float, placed, zones) -> Polygon | 
     return None
 
 
-def _place_on_wall(region, along: float, depth: float, wall: str, placed, zones) -> Polygon | None:
+def _place_on_wall(region, along: float, depth: float, wall: str, placed, zones,
+                   prefer_center: bool = False) -> Polygon | None:
     """Połóż prostokąt (along × depth) przy danej ścianie (S/N/W/E) regionu.
 
     Przesuwa wzdłuż ściany (_sweep) szukając wolnego miejsca. None gdy się nie mieści.
+    prefer_center=True → najpierw próbuje pozycji wyśrodkowanej (np. łóżko z szafkami z obu stron).
     """
     rx0, ry0, rx1, ry1 = region
     if wall in ("S", "N"):
         if depth > (ry1 - ry0) + 1e-9 or along > (rx1 - rx0) + 1e-9:
             return None
         y0 = ry0 if wall == "S" else ry1 - depth
-        for x0 in _sweep(rx0, rx1, along):
+        offsets = list(_sweep(rx0, rx1, along))
+        if prefer_center and offsets:
+            offsets = [rx0 + (rx1 - rx0 - along) / 2] + offsets
+        for x0 in offsets:
             rect = box(x0, y0, x0 + along, y0 + depth)
             if _valid(rect, placed, zones):
                 return rect
@@ -471,7 +477,10 @@ def _place_on_wall(region, along: float, depth: float, wall: str, placed, zones)
         if depth > (rx1 - rx0) + 1e-9 or along > (ry1 - ry0) + 1e-9:
             return None
         x0 = rx0 if wall == "W" else rx1 - depth
-        for y0 in _sweep(ry0, ry1, along):
+        offsets = list(_sweep(ry0, ry1, along))
+        if prefer_center and offsets:
+            offsets = [ry0 + (ry1 - ry0 - along) / 2] + offsets
+        for y0 in offsets:
             rect = box(x0, y0, x0 + depth, y0 + along)
             if _valid(rect, placed, zones):
                 return rect
