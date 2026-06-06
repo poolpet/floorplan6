@@ -22,9 +22,12 @@
 > dropped the table, now both prefix. **Realism punch-list → `docs/FURNITURE_REVIEW_PUNCHLIST.md`** — Dawid
 > chose realism next; top 3 DONE RED-first: center-bed→2 nightstands (`e2a4ae2`), coffee between sofa/TV
 > (`c25ac6c`), bathroom washbasin-before-bathtub so ≤5 m² keeps the washbasin (`1400c7d`); 21 furniture tests
-> green, re-render OK. STILL DEFERRED: counter/bathroom clearances (tuning-risky), TV-windowless (glare-vs-
-> facing TRADEOFF — needs Dawid), L-room containment guard, _shared_wall overlap-extent, ortools-import guard,
-> wardrobe-shrink, sink piece, bathroom-linear-one-wall, notch info-warning.
+> green, re-render OK. **ALSO safe-robustness batch DONE (`5e2bdfb`):** L/U-room cavity-as-keep-clear (#11),
+> `_shared_wall` overlap-extent ≥0.9 m (#13), ortools-import guard in `_room_window_walls` (#15), wardrobe
+> shrink 2.0→1.6→1.2 (#23) — 25 furniture tests + integration green. **TV: RESOLVED (Dawid) — stays opposite
+> the sofa even on a window** (curtains solve glare; #19 won't-change). STILL DEFERRED: counter/bathroom Neufert
+> clearances (tuning-risky — over-tightens small rooms), sink piece (`zlew` is docstring-only), bathroom-linear-
+> one-wall, notch info-warning. See `docs/FURNITURE_REVIEW_PUNCHLIST.md`.
 > **ALSO Session 21 — ArchiCAD distribution decision** (web-grounded 8-agent research, all claims verified;
 > memory `project_archicad_bundle_distribution`): native copy-folder add-on = C++ only (`.apx`/`.bundle`,
 > recompile per AC version × OS, mac notarize); pure Python can't be native; official AC Python API can't
