@@ -96,8 +96,8 @@ class DoorSegment:
 
 def extract_doors(
     plan: FloorPlan,
-    wall_to_guid: dict[frozenset, str],
-    walls: list[WallSegment],
+    wall_to_guid: dict[frozenset, str] | None = None,
+    walls: list[WallSegment] | None = None,
     width: float = DEFAULT_DOOR_WIDTH,
     height: float = DEFAULT_DOOR_HEIGHT,
     sill_height: float = DEFAULT_DOOR_SILL,
@@ -118,7 +118,7 @@ def extract_doors(
         Lista DoorSegment (mix "door" + "opening").
     """
     pair_to_wall: dict[frozenset, WallSegment] = {}
-    for w in walls:
+    for w in (walls or []):
         if w.room_a and w.room_b:
             pair_to_wall[frozenset({w.room_a, w.room_b})] = w
 
@@ -138,10 +138,15 @@ def extract_doors(
         name_b = id_to_name.get(adj.room_b, adj.room_b)
         key = frozenset({name_a, name_b})
 
-        wall_guid = wall_to_guid.get(key)
         wall_seg = pair_to_wall.get(key)
-        if wall_guid is None or wall_seg is None:
+        if wall_seg is None:
             continue
+        if wall_to_guid is None:           # tryb kontraktu (plan_contract) — bez GUID-ów AC
+            wall_guid = ""
+        else:
+            wall_guid = wall_to_guid.get(key)
+            if wall_guid is None:
+                continue
 
         room_a = name_to_room.get(name_a)
         room_b = name_to_room.get(name_b)
