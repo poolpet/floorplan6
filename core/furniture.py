@@ -331,8 +331,19 @@ def _furnish_living(room: Room, windows: set, zones):
     if tv_rect is not None:
         placed.append(tv_rect)
         out.append(Furniture("tv_unit", tv_rect, room.spec.id, tv.label))
-    # stolik kawowy w środku między nimi
-    cr = _place_fixed(region, coffee.a, coffee.b, placed, zones)
+    # stolik kawowy MIĘDZY sofą a TV (review #20): cel = środek odcinka sofa↔TV,
+    # długi bok równolegle do sofy; fallback _place_fixed gdy środek zajęty.
+    cr = None
+    if tv_rect is not None:
+        sc, tc = sofa_rect.centroid, tv_rect.centroid
+        mx, my = (sc.x + tc.x) / 2, (sc.y + tc.y) / 2
+        long_side, short_side = max(coffee.a, coffee.b), min(coffee.a, coffee.b)
+        cw, cd = (long_side, short_side) if sofa_wall in ("S", "N") else (short_side, long_side)
+        target = box(mx - cw / 2, my - cd / 2, mx + cw / 2, my + cd / 2)
+        if _valid(target, placed, zones) and target.within(box(*region).buffer(1e-6)):
+            cr = target
+    if cr is None:
+        cr = _place_fixed(region, coffee.a, coffee.b, placed, zones)
     if cr is not None:
         placed.append(cr)
         out.append(Furniture("coffee_table", cr, room.spec.id, coffee.label))

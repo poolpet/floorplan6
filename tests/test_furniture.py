@@ -255,6 +255,22 @@ def test_kitchen_counter_falls_back_off_blocked_window_wall():
     assert warn == [], f"fałszywe ostrzeżenie mimo wolnej ściany: {warn}"
 
 
+def test_coffee_table_between_sofa_and_tv():
+    # review #20: stolik MIĘDZY sofą a TV, nie dosunięty obok sofy
+    from core.furniture import furnish_rooms
+    from core.boundary_analyzer import analyze_boundary
+    b = analyze_boundary(Polygon([(0, 0), (10, 0), (10, 8), (0, 8)]), entry_point=(5, 0))
+    sp = RoomSpec(id="salon", nazwa="Salon", strefa=Strefa.DZIENNA, wymaga_okna=True, priorytet_fasady=1)
+    r = Room(spec=sp, polygon=box(4.0, 0.0, 10.0, 6.0)); r.update_metrics()
+    res = furnish_rooms([r], boundary=b)
+    sofa = next(f for f in res.furniture if f.piece_type == "sofa")
+    tv = next(f for f in res.furniture if f.piece_type == "tv_unit")
+    coffee = next(f for f in res.furniture if f.piece_type == "coffee_table")
+    sc, tc, cc = sofa.polygon.centroid, tv.polygon.centroid, coffee.polygon.centroid
+    mid_y = (sc.y + tc.y) / 2     # sofa S / TV N → oś naprzeciw to y
+    assert abs(cc.y - mid_y) < 0.8, f"stolik nie między sofą a TV: sofa.y={sc.y:.2f} tv.y={tc.y:.2f} coffee.y={cc.y:.2f}"
+
+
 def test_bedroom_two_nightstands_when_centered():
     # review #21: łóżko wyśrodkowane na ścianie → szafki nocne z OBU stron (nie 1 przez róg)
     from core.furniture import furnish_rooms
