@@ -103,3 +103,14 @@ def test_room_window_walls_rectangle():
     walls = _room_window_walls(r, b)
     assert walls == {"W", "N"}
     assert _room_window_walls(r, None) == set()   # bez boundary — brak okien
+
+
+def test_place_on_wall_targets_wall():
+    from core.furniture import _place_on_wall
+    region = (0.0, 0.0, 4.0, 4.0)
+    rect = _place_on_wall(region, 1.6, 2.0, "S", [], [])   # wzdłuż S (dół): szer 1.6 w x, głęb 2.0 w y
+    assert rect is not None
+    b = rect.bounds
+    assert abs(b[1] - 0.0) < 1e-9            # przy ścianie S (y=0)
+    assert abs((b[2] - b[0]) - 1.6) < 1e-9   # szerokość wzdłuż ściany
+    assert abs((b[3] - b[1]) - 2.0) < 1e-9   # głębokość

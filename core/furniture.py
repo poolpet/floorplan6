@@ -217,6 +217,31 @@ def _place_linear(region, depth: float, cap: float, placed, zones) -> Polygon | 
     return None
 
 
+def _place_on_wall(region, along: float, depth: float, wall: str, placed, zones) -> Polygon | None:
+    """Połóż prostokąt (along × depth) przy danej ścianie (S/N/W/E) regionu.
+
+    Przesuwa wzdłuż ściany (_sweep) szukając wolnego miejsca. None gdy się nie mieści.
+    """
+    rx0, ry0, rx1, ry1 = region
+    if wall in ("S", "N"):
+        if depth > (ry1 - ry0) + 1e-9 or along > (rx1 - rx0) + 1e-9:
+            return None
+        y0 = ry0 if wall == "S" else ry1 - depth
+        for x0 in _sweep(rx0, rx1, along):
+            rect = box(x0, y0, x0 + along, y0 + depth)
+            if _valid(rect, placed, zones):
+                return rect
+    else:  # W / E
+        if depth > (rx1 - rx0) + 1e-9 or along > (ry1 - ry0) + 1e-9:
+            return None
+        x0 = rx0 if wall == "W" else rx1 - depth
+        for y0 in _sweep(ry0, ry1, along):
+            rect = box(x0, y0, x0 + depth, y0 + along)
+            if _valid(rect, placed, zones):
+                return rect
+    return None
+
+
 def _infer_door_zones(rooms: list[Room]) -> dict[str, list[Polygon]]:
     """Strefy drzwi per pokój: środek krawędzi wspólnej z pokojem KOMUNIKACJA.
 
