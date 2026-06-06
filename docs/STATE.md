@@ -3,7 +3,39 @@
 > Updated after every working session. If it doesn't reflect reality —
 > Claude updates immediately.
 >
-> **Last update:** 2026-06-03 (Session 20 — branch `feat/sfh-open-plan-day-zone`: **phase 2b DONE** —
+> **Last update:** 2026-06-06 (Session 21 — branch `feat/sfh-open-plan-day-zone`: **phase-4 furniture DONE**).
+> Executed the 9-task window-aware furniture plan RED-first (commits `bc0a18a`..`bb865df`): `FurnishResult` +
+> `furnish_rooms(rooms, boundary=None)` (back-compat `place_furniture` wrapper); `_room_window_walls`
+> (facade-edge→window, lazy-imports `_detect_facade_sides`, notch-gated); `_place_on_wall`; semantic placers
+> `_furnish_bedroom` (bed→longest window-less wall + nightstands + wardrobe + 0.6 m front clearance),
+> `_furnish_kitchen` (counter on window wall), `_furnish_living` (sofa internal / TV opposite / coffee),
+> `_furnish_bathroom` (fixtures + key-piece warnings), `_place_dining` (table at salon↔kuchnia shared edge —
+> junction-biased `_place_on_wall`, plan's `_place_fixed` would've failed the test). Tests strengthened to be
+> genuinely discriminating (the plan's bedroom/kitchen/living/bathroom tests passed pre-impl on the greedy
+> placer; rewrote with window-on-entry-edge geometry etc.). 17 furniture tests green; control renders OK
+> (beds off windows, counter under window, sofa/TV opposite, dining at junction, hol empty).
+> **Then an adversarial review (31-agent workflow) found 24 confirmed issues; fixed the critical+correctness
+> set (`32c2490`):** (#18 CRITICAL) `viz/house_preview.furnish_layout` never passed `layout.boundary` → phase-4
+> window-awareness was BYPASSED in the real product render — now forwarded (+regression test, +2 notebooks);
+> (#2) kitchen counter was window-walls-only → spurious "brak blatu" when window blocked, now window-first
+> across all walls; (#5/#14) `_place_dining` matched salon by exact id but kuchnia by prefix → `salon_1`
+> dropped the table, now both prefix. **Deferred realism punch-list → `docs/FURNITURE_REVIEW_PUNCHLIST.md`**
+> (center-bed→2 nightstands, coffee between sofa/TV, bathroom washbasin-drop in ≤5 m², counter/bathroom
+> clearances, TV-windowless tradeoff, L-room containment guard, sink piece, ortools-import guard).
+> **ALSO Session 21 — ArchiCAD distribution decision** (web-grounded 8-agent research, all claims verified;
+> memory `project_archicad_bundle_distribution`): native copy-folder add-on = C++ only (`.apx`/`.bundle`,
+> recompile per AC version × OS, mac notarize); pure Python can't be native; official AC Python API can't
+> create geometry (only Tapir/C++ can); repo already on the Tapir-sidecar MVP path (`bridge/`). **Dawid chose:
+> continue the algorithm + ONE cheap bundle-prep step (lock a JSON contract `core → {rooms,walls,doors,
+> furniture,warnings}`); the native C++ shell is a separate "produktyzacja" milestone.** Key find: wall/door/
+> window/label derivation already lives in `core/*_extractor.py` (with `*_to_tapir_payload`); the contract
+> just needs furniture serialization + a pure aggregator (FloorPlan vs TwoStoreyLayout adapter is the one
+> open question). Regression note: a batch of `test_house_single_storey`/`test_open_plan_dayzone` failures is
+> pre-existing CP-SAT non-determinism (11×11 @25 s times out; CPU contention), NOT furniture — see memory.
+> NEXT = **JSON contract bundle-prep** (furniture payload + `core` aggregator) and/or the furniture realism
+> punch-list (Dawid prioritizes); then phase 2c, micro-35, un-xfail M3, GUI 2-tab.
+>
+> **Previous (Session 20, 2026-06-03):** branch `feat/sfh-open-plan-day-zone`: **phase 2b DONE** —
 > native L-capable hol committed (`e0bcb23`). Recovered the interrupted phase-2b WIP, retrofitted the
 > RED test net the plan demanded (`tests/test_house_lroom_phase2b.py`, 19/19), confirmed it GREEN, then
 > committed. L-hol wraps WC (external wall) + wiatrołap (entry wall) with a minimal arm → both Dawid bugs
