@@ -40,6 +40,24 @@ def test_furnish_layout_toggle():
     assert pf_off == [] and pif_off == []
 
 
+def test_furnish_layout_forwards_boundary(monkeypatch):
+    # regresja #18: furnish_layout MUSI przekazać layout.boundary do place_furniture,
+    # inaczej meble nie są window-aware w realnym produkcie (phase 4 omijane).
+    import viz.house_preview as hp
+    captured = []
+
+    def fake_place(rooms, boundary=None):
+        captured.append(boundary)
+        return []
+
+    monkeypatch.setattr(hp, "place_furniture", fake_place)
+    layout = _layout()
+    sentinel = object()
+    layout.boundary = sentinel
+    hp.furnish_layout(layout, with_furniture=True)
+    assert captured == [sentinel, sentinel], "boundary nie przekazany do place_furniture (window-blind)"
+
+
 def test_house_details_text_has_both_storeys():
     text = house_details_text(_layout())
     assert "PARTER" in text and "PIĘTRO" in text

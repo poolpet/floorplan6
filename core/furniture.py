@@ -266,8 +266,9 @@ def _furnish_kitchen(room: Room, windows: set, zones):
     region = _inset(room.polygon)
     placed, out, warn = [], [], []
     counter = next(p for p in FURNITURE_SETS["kuchnia"] if p.type == "kitchen_counter")
-    walls = list(windows) or ["S", "N", "W", "E"]            # preferuj ścianę z oknem
-    walls.sort(key=lambda w: _wall_len(region, w), reverse=True)
+    # preferuj ścianę z oknem (zlew pod oknem), ale NIE porzucaj reszty: gdy okno
+    # zablokowane/za krótkie, blat ma trafić na wolną ścianę wewnętrzną (best-effort D2).
+    walls = sorted(("S", "N", "W", "E"), key=lambda w: (w not in windows, -_wall_len(region, w)))
     rect = None
     for wall in walls:
         length = min(counter.b, _wall_len(region, wall))
@@ -360,7 +361,7 @@ def _place_dining(rooms, existing, door_zones):
     styku brak miejsca — gdziekolwiek w pokoju (best-effort). Brak salonu lub kuchni → []
     (mała/zamknięta strefa dzienna nie dostaje stołu).
     """
-    salon = next((r for r in rooms if r.spec.id == "salon" and r.polygon is not None), None)
+    salon = next((r for r in rooms if r.spec.id.split("_")[0] == "salon" and r.polygon is not None), None)
     kuch = next((r for r in rooms if r.spec.id.split("_")[0] == "kuchnia" and r.polygon is not None), None)
     if salon is None or kuch is None:
         return []

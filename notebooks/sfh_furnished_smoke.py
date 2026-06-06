@@ -23,8 +23,8 @@ def main(w=9.0, h=7.5):
     print(f"ok={layout.ok} | msg: {layout.message} | stair_core={layout.stair_core}")
     if not layout.ok:
         return
-    pf = place_furniture(layout.parter_rooms)
-    gf = place_furniture(layout.pietro_rooms)
+    pf = place_furniture(layout.parter_rooms, layout.boundary)
+    gf = place_furniture(layout.pietro_rooms, layout.boundary)
     print("parter meble:", [(f.piece_type, f.room_id) for f in pf])
     print("pietro meble:", [(f.piece_type, f.room_id) for f in gf])
     out = OUT / "sfh_furnished.png"

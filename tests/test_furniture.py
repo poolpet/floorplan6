@@ -240,3 +240,29 @@ def test_furnish_generated_single_storey_no_overlap():
     # łóżko istnieje (single-storey ma sypialnia_1)
     beds = [f for f in res.furniture if f.piece_type == "bed"]
     assert beds, "brak łóżka w domu"
+
+
+# ---- poprawki z adwersaryjnego review (phase 4) ----
+
+def test_kitchen_counter_falls_back_off_blocked_window_wall():
+    # review #2: okno zablokowane → blat MUSI trafić na wolną ścianę (nie fałszywe ostrzeżenie)
+    from core.furniture import _furnish_kitchen
+    sp = RoomSpec(id="kuchnia", nazwa="Kuchnia", strefa=Strefa.DZIENNA, wymaga_okna=True, priorytet_fasady=2)
+    r = Room(spec=sp, polygon=box(0.0, 0.0, 3.0, 3.0)); r.update_metrics()
+    block_w = box(0.0, 0.0, 0.8, 3.0)   # strefa drzwi zasłania całą ścianę-okno W
+    out, warn = _furnish_kitchen(r, {"W"}, [block_w])
+    assert any(f.piece_type == "kitchen_counter" for f in out), "blat nie postawiony mimo wolnych ścian"
+    assert warn == [], f"fałszywe ostrzeżenie mimo wolnej ściany: {warn}"
+
+
+def test_dining_table_with_salon_suffix_id():
+    # review #5/#14: salon dopasowany prefiksem (salon_1), nie exact id — inaczej stół znika
+    from core.furniture import furnish_rooms
+    from core.boundary_analyzer import analyze_boundary
+    b = analyze_boundary(Polygon([(0, 0), (12, 0), (12, 8), (0, 8)]), entry_point=(6, 0))
+    salon = Room(spec=RoomSpec(id="salon_1", nazwa="Salon", strefa=Strefa.DZIENNA, wymaga_okna=True, priorytet_fasady=1),
+                 polygon=box(0.0, 0.0, 7.0, 8.0)); salon.update_metrics()
+    kuch = Room(spec=RoomSpec(id="kuchnia", nazwa="Kuchnia", strefa=Strefa.DZIENNA, wymaga_okna=True, priorytet_fasady=2),
+                polygon=box(7.0, 0.0, 12.0, 8.0)); kuch.update_metrics()
+    res = furnish_rooms([salon, kuch], boundary=b)
+    assert any(f.piece_type == "dining_table" for f in res.furniture), "salon_1 nie dostał stołu (id-drift)"

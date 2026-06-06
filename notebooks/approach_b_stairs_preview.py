@@ -23,8 +23,8 @@ for (W, H, e, tag) in [(9.0, 7.0, (4.5, 0.0), "9x7"), (8.0, 8.0, (4.0, 0.0), "8x
     print(f"{tag}: ok={layout.ok} stair_core={layout.stair_core}")
     if not layout.ok:
         continue
-    pf = place_furniture(layout.parter_rooms)
-    gf = place_furniture(layout.pietro_rooms)
+    pf = place_furniture(layout.parter_rooms, layout.boundary)
+    gf = place_furniture(layout.pietro_rooms, layout.boundary)
     render_two_storey(layout, parter_furniture=pf, pietro_furniture=gf,
                       title=f"Approach B — schody osobny pokój ({tag})",
                       save_path=OUT / f"approach_b_stairs_{tag}.png", show=False)

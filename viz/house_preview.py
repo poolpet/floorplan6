@@ -15,10 +15,16 @@ from viz.plan_renderer import render_two_storey
 
 
 def furnish_layout(layout: TwoStoreyLayout, with_furniture: bool) -> tuple[list, list]:
-    """(parter_furniture, pietro_furniture). Puste listy gdy with_furniture=False."""
+    """(parter_furniture, pietro_furniture). Puste listy gdy with_furniture=False.
+
+    Przekazuje layout.boundary → meble są window-aware (phase 4). Bez tego cała
+    świadomość okien byłaby pominięta w realnym produkcie (regresja #18).
+    """
     if not with_furniture:
         return [], []
-    return place_furniture(layout.parter_rooms), place_furniture(layout.pietro_rooms)
+    b = getattr(layout, "boundary", None)
+    return (place_furniture(layout.parter_rooms, b),
+            place_furniture(layout.pietro_rooms, b))
 
 
 def house_details_text(layout: TwoStoreyLayout) -> str:
