@@ -77,3 +77,18 @@ def test_furniture_avoids_inferred_door_zone():
     door_zone = box(3.5 - 0.6, 1.5 - 0.55, 3.5, 1.5 + 0.55)
     for f in furniture:
         assert f.polygon.intersection(door_zone).area < 1e-6, f"{f.piece_type} blokuje drzwi"
+
+
+# ====================================================================
+# Phase 4 — realistic, window-aware furniture (spec 2026-06-03)
+# ====================================================================
+
+def test_furnish_rooms_backcompat_shape():
+    from core.furniture import furnish_rooms, place_furniture, FurnishResult
+    hub = _room("hub", Strefa.KOMUNIKACJA, 1.5, 3.0, x=0.0)
+    syp = _room("sypialnia_1", Strefa.NOCNA, 3.0, 4.0, x=3.0)
+    res = furnish_rooms([hub, syp])               # bez boundary
+    assert isinstance(res, FurnishResult)
+    assert res.warnings == []
+    # place_furniture nadal zwraca listę identyczną z res.furniture
+    assert [f.piece_type for f in place_furniture([hub, syp])] == [f.piece_type for f in res.furniture]

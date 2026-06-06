@@ -75,21 +75,34 @@ class Furniture:
     label: str
 
 
-def place_furniture(rooms: list[Room]) -> list[Furniture]:
-    """Rozstaw meble we wszystkich pokojach (spec §5). Zwraca płaską listę.
+@dataclass
+class FurnishResult:
+    """Wynik umeblowania: meble + ostrzeżenia (np. pokój za mały na kluczowy mebel)."""
+    furniture: list  # list[Furniture]
+    warnings: list   # list[str]
+
+
+def furnish_rooms(rooms: list[Room], boundary=None) -> FurnishResult:
+    """Rozstaw meble (spec phase 4). boundary=None → bez świadomości okien (back-compat).
 
     Pokoje komunikacyjne i pokoje bez zdefiniowanego zestawu nie dostają mebli.
     """
     door_zones = _infer_door_zones(rooms)
-    result: list[Furniture] = []
+    furniture: list[Furniture] = []
+    warnings: list[str] = []
     for room in rooms:
         if room.polygon is None:
             continue
         key = room.spec.id.split("_")[0]
         if key in CIRCULATION_KEYS or key not in FURNITURE_SETS:
             continue
-        result.extend(_furnish_room(room, key, door_zones.get(room.spec.id, [])))
-    return result
+        furniture.extend(_furnish_room(room, key, door_zones.get(room.spec.id, [])))
+    return FurnishResult(furniture=furniture, warnings=warnings)
+
+
+def place_furniture(rooms: list[Room], boundary=None) -> list[Furniture]:
+    """Back-compat: płaska lista mebli (bez ostrzeżeń). Patrz furnish_rooms."""
+    return furnish_rooms(rooms, boundary).furniture
 
 
 def _furnish_room(room: Room, key: str, zones: list[Polygon]) -> list[Furniture]:
