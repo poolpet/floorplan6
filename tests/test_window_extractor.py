@@ -245,3 +245,54 @@ def test_wt_18_small_room_uses_default():
     w = windows[0]
     # Powinno zostać blisko default (małe odchyłki OK)
     assert w.height == pytest.approx(WINDOW_DIMENSIONS[Strefa.NOCNA]["height"], abs=0.01)
+
+
+# ====================================================================
+# MVP — geometryczne okna fasadowe (bez AC walls): render + JSON contract
+# ====================================================================
+
+def test_extract_facade_windows_geometric():
+    from core.window_extractor import extract_facade_windows
+    from core.boundary_analyzer import analyze_boundary
+    b = analyze_boundary(Polygon([(0, 0), (10, 0), (10, 8), (0, 8)]), entry_point=(5, 0))
+    salon = Room(spec=RoomSpec(id="salon", nazwa="Salon", strefa=Strefa.DZIENNA,
+                               wymaga_okna=True, priorytet_fasady=1),
+                 polygon=box(0.0, 4.0, 4.0, 8.0)); salon.update_metrics()  # dotyka W (x=0) i N (y=8)
+    wins = extract_facade_windows([salon], b)
+    assert len(wins) == 1, f"oczekiwano 1 okna, jest {len(wins)}"
+    w = wins[0]
+    assert w.room_id == "salon"
+    assert w.width > 0 and w.height > 0
+    assert w.wall in ("W", "N")
+    # segment okna leży na fasadzie pokoju (na obrysie)
+    assert b.polygon.exterior.distance(__import__("shapely.geometry", fromlist=["Point"]).Point(*w.center)) < 0.2
+
+
+def test_extract_facade_windows_skips_windowless_and_internal():
+    from core.window_extractor import extract_facade_windows
+    from core.boundary_analyzer import analyze_boundary
+    b = analyze_boundary(Polygon([(0, 0), (10, 0), (10, 8), (0, 8)]), entry_point=(5, 0))
+    # hol bez wymaga_okna na fasadzie → brak okna
+    hol = Room(spec=RoomSpec(id="hub", nazwa="Hol", strefa=Strefa.KOMUNIKACJA,
+                             wymaga_okna=False, priorytet_fasady=None),
+               polygon=box(0.0, 0.0, 4.0, 4.0)); hol.update_metrics()
+    # pokój wewnętrzny (nie dotyka fasady) z wymaga_okna → brak okna (brak krawędzi na fasadzie)
+    inner = Room(spec=RoomSpec(id="sypialnia_1", nazwa="Sypialnia", strefa=Strefa.NOCNA,
+                               wymaga_okna=True, priorytet_fasady=1),
+                 polygon=box(4.0, 3.0, 6.0, 5.0)); inner.update_metrics()
+    assert extract_facade_windows([hol, inner], b) == []
+
+
+def test_facade_window_keeps_edge_margin_on_short_edge():
+    # review: okno wyśrodkowane na krótkiej krawędzi nie może podchodzić < EDGE_MARGIN do narożnika
+    from core.window_extractor import extract_facade_windows, EDGE_MARGIN
+    from core.boundary_analyzer import analyze_boundary
+    b = analyze_boundary(Polygon([(0, 0), (10, 0), (10, 8), (0, 8)]), entry_point=(5, 0))
+    sp = RoomSpec(id="sypialnia_1", nazwa="S", strefa=Strefa.NOCNA, wymaga_okna=True, priorytet_fasady=1)
+    r = Room(spec=sp, polygon=box(4.0, 7.0, 5.2, 8.0)); r.update_metrics()  # tylko N na fasadzie, len 1.2
+    wins = extract_facade_windows([r], b)
+    assert len(wins) == 1, wins
+    w = wins[0]
+    xs = sorted([w.p1[0], w.p2[0]])
+    assert xs[0] - 4.0 >= EDGE_MARGIN - 1e-6, f"okno za blisko lewego narożnika: {xs}"
+    assert 5.2 - xs[1] >= EDGE_MARGIN - 1e-6, f"okno za blisko prawego narożnika: {xs}"

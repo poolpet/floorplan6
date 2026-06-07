@@ -92,6 +92,10 @@ def furnish_rooms(rooms: list[Room], boundary=None) -> FurnishResult:
     Pokoje komunikacyjne i pokoje bez zdefiniowanego zestawu nie dostają mebli.
     """
     door_zones = _infer_door_zones(rooms)
+    # ściany wspólne w obrębie strefy: salon vs inne DZIENNA (otwarty styk), sypialnia vs
+    # inne NOCNA (ściana działowa) → sofa/szafa ich unikają (MVP — meble do ścian "twardych").
+    day_rooms = [r for r in rooms if r.polygon is not None and r.spec.strefa == Strefa.DZIENNA]
+    night_rooms = [r for r in rooms if r.polygon is not None and r.spec.strefa == Strefa.NOCNA]
     furniture: list[Furniture] = []
     warnings: list[str] = []
     for room in rooms:
@@ -110,11 +114,11 @@ def furnish_rooms(rooms: list[Room], boundary=None) -> FurnishResult:
                 door_zones.setdefault(room.spec.id, []).append(cavity)
         rzones = door_zones.get(room.spec.id, [])
         if key == "sypialnia":
-            f, w = _furnish_bedroom(room, windows, rzones)
+            f, w = _furnish_bedroom(room, windows, rzones, _room_shared_walls(room, night_rooms))
         elif key == "kuchnia":
             f, w = _furnish_kitchen(room, windows, rzones)
         elif key == "salon":
-            f, w = _furnish_living(room, windows, rzones)
+            f, w = _furnish_living(room, windows, rzones, _room_shared_walls(room, day_rooms))
         elif key in ("lazienka", "wc"):
             f, w = _furnish_bathroom(room, windows, rzones)
         else:
@@ -234,8 +238,12 @@ def _flank_nightstands(bed_rect, bed_wall, region, placed, zones, room_id):
     return out
 
 
-def _furnish_bedroom(room: Room, windows: set, zones):
-    """Łóżko na najdłuższej ścianie bez okna (wezgłowie do ściany) + szafki nocne + szafa."""
+def _furnish_bedroom(room: Room, windows: set, zones, shared: set = frozenset()):
+    """Łóżko na najdłuższej ścianie bez okna (wezgłowie do ściany) + szafki nocne + szafa.
+
+    `shared` = ściany działowe z inną sypialnią — szafa ich unika (nie chowa się na
+    ścianie między pokojami; preferuje zewnętrzną/hol), z fallbackiem gdy brak alternatywy.
+    """
     region = _inset(room.polygon)
     placed, out, warn = [], [], []
     bed = next(p for p in FURNITURE_SETS["sypialnia"] if p.type == "bed")
@@ -264,7 +272,9 @@ def _furnish_bedroom(room: Room, windows: set, zones):
     # szafa na innej ścianie bez okna; skróć (2.0→1.6→1.2 — drzwi przesuwne) zanim
     # zrezygnujesz, by nie ginęła w ciasnych/przy-drzwiowych sypialniach (review #23)
     ward = next(p for p in FURNITURE_SETS["sypialnia"] if p.type == "wardrobe")
-    walls_for_ward = [w for w in cand if w != bed_wall]
+    # najpierw ściany nie-wspólne, POTEM wspólne (nie porzucaj szafy gdy nie-wspólna nie mieści się)
+    walls_for_ward = ([w for w in cand if w != bed_wall and w not in shared]
+                      + [w for w in cand if w != bed_wall and w in shared])
     done_ward = False
     for length in (ward.b, 1.6, 1.2):
         for wall in walls_for_ward:
@@ -325,15 +335,22 @@ def _furnish_bathroom(room: Room, windows: set, zones):
     return out, warn
 
 
-def _furnish_living(room: Room, windows: set, zones):
-    """Sofa pod ścianą wewnętrzną (nie okno), TV naprzeciw (preferuj bez okna), stolik między nimi."""
+def _furnish_living(room: Room, windows: set, zones, shared: set = frozenset()):
+    """Sofa pod ścianą wewnętrzną (nie okno, nie otwarty styk), TV naprzeciw, stolik między nimi.
+
+    `shared` = ściany na otwartym styku z kuchnią (strefa dzienna) — sofa ich unika, bo brak
+    tam realnej ściany (inaczej "pływa" w środku). Fallback zachowuje feasibility.
+    """
     region = _inset(room.polygon)
     placed, out, warn = [], [], []
     sofa = next(p for p in FURNITURE_SETS["salon"] if p.type == "sofa")
     tv = next(p for p in FURNITURE_SETS["salon"] if p.type == "tv_unit")
     coffee = next(p for p in FURNITURE_SETS["salon"] if p.type == "coffee_table")
-    # sofa pod ścianą wewnętrzną (nie okno), najdłuższą
-    cand = [w for w in ("S", "N", "W", "E") if w not in windows] or ["S", "N", "W", "E"]
+    # sofa: ściana bez okna I bez otwartego styku, najdłuższa; fallbacki zachowują feasibility
+    cand = ([w for w in ("S", "N", "W", "E") if w not in windows and w not in shared]
+            or [w for w in ("S", "N", "W", "E") if w not in windows]
+            or [w for w in ("S", "N", "W", "E") if w not in shared]
+            or ["S", "N", "W", "E"])
     cand.sort(key=lambda w: _wall_len(region, w), reverse=True)
     sofa_rect = sofa_wall = None
     for wall in cand:
@@ -368,6 +385,22 @@ def _furnish_living(room: Room, windows: set, zones):
         placed.append(cr)
         out.append(Furniture("coffee_table", cr, room.spec.id, coffee.label))
     return out, warn
+
+
+def _room_shared_walls(room: Room, others: list) -> set:
+    """Ściany pokoju (S/N/W/E) na realnym styku (≥ MIN_JUNCTION) z którymkolwiek z `others`.
+
+    Używane, by sofa/szafa nie lądowały na otwartym styku strefy dziennej (salon↔kuchnia)
+    ani na ścianie działowej między sypialniami — meble kotwiczą do ścian zewnętrznych/holu.
+    """
+    walls = set()
+    for o in others:
+        if o is room or o.polygon is None:
+            continue
+        w = _shared_wall(room, o)
+        if w is not None:
+            walls.add(w)
+    return walls
 
 
 def _shared_wall(host: Room, other: Room) -> str | None:

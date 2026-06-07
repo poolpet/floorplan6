@@ -45,6 +45,22 @@ def test_plan_contract_shape_and_json():
     assert isinstance(s, str) and len(s) > 100
 
 
+def test_plan_contract_includes_windows():
+    # MVP: kontrakt niesie okna fasadowe (z geometrii) — pokoje z wymaga_okna, nie hol.
+    from core.plan_contract import plan_to_contract
+    rooms, boundary, template = _scenario()
+    fr = furnish_rooms(rooms, boundary)
+    c = plan_to_contract(rooms, boundary, fr, storey="parter", template=template)
+    assert "windows" in c, "kontrakt bez okien"
+    win_rooms = {w["room_id"] for w in c["windows"]}
+    assert "salon" in win_rooms and "sypialnia_1" in win_rooms, win_rooms
+    assert "hub" not in win_rooms
+    for w in c["windows"]:
+        assert {"room_id", "center", "width", "height", "wall"} <= set(w)
+        assert w["width"] > 0 and len(w["center"]) == 2
+    json.dumps(c)
+
+
 def test_plan_contract_walls_and_doors():
     from core.plan_contract import plan_to_contract
     rooms, boundary, template = _scenario()

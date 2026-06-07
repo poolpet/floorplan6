@@ -26,6 +26,7 @@ from core.door_extractor import (
     DEFAULT_DOOR_WIDTH,
     extract_doors,
 )
+from core.window_extractor import extract_facade_windows
 
 CONTRACT_VERSION = 1
 
@@ -87,6 +88,8 @@ def plan_to_contract(
         return [round(x1 + dx / length * d.center_offset, 3),
                 round(y1 + dy / length * d.center_offset, 3)]
 
+    windows = extract_facade_windows(valid_rooms, boundary)
+
     bx0, by0, bx1, by1 = boundary.bbox
     furniture = furnish_result.furniture if furnish_result is not None else []
     warnings = list(furnish_result.warnings) if furnish_result is not None else []
@@ -122,6 +125,17 @@ def plan_to_contract(
             "width": round(d.width, 3),
             "height": round(d.height, 3),
         } for d in doors_seg],
+        "windows": [{
+            "room_id": w.room_id,
+            "room_name": w.room_name,
+            "wall": w.wall,
+            "center": [round(w.center[0], 3), round(w.center[1], 3)],
+            "width": round(w.width, 3),
+            "height": round(w.height, 3),
+            "sill_height": round(w.sill_height, 3),
+            "segment": [[round(w.p1[0], 3), round(w.p1[1], 3)],
+                        [round(w.p2[0], 3), round(w.p2[1], 3)]],
+        } for w in windows],
         "furniture": [{
             "type": f.piece_type,
             "label": f.label,

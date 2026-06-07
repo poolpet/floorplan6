@@ -94,6 +94,87 @@ class DoorSegment:
     target_room: str = ""
 
 
+# Min wspólna krawędź uznawana za przejście (drzwi) — spójne z furniture._infer_door_zones.
+DOOR_OPENING_MIN_OVERLAP = 0.90
+
+
+@dataclass
+class DoorOpening:
+    """Otwór drzwiowy do RENDERU — wyprowadzony z samej geometrii (sąsiedztwo z komunikacją).
+
+    `axis` = 'v' (pionowa ściana wspólna, otwór wzdłuż y) lub 'h' (pozioma, wzdłuż x).
+    `into` = centroid pokoju, do którego drzwi się otwierają (skrzydło/łuk w tę stronę).
+    `is_opening` = True → otwarcie bez skrzydła (strefa dzienna↔hol; rysowane jako sam otwór)."""
+    room_a: str
+    room_b: str
+    center: tuple[float, float]
+    axis: str
+    width: float
+    into: tuple[float, float]
+    is_opening: bool = False
+
+
+def _shared_edge_door(a: Room, b: Room) -> Optional[tuple[tuple[float, float], str, float]]:
+    """(center, axis, width) REALNEJ wspólnej krawędzi a↔b (boundary∩boundary) ≥ MIN; inaczej None.
+
+    Liczone z rzeczywistych krawędzi (nie z bbox) → poprawne dla L-pokoi (nie stawia drzwi
+    na nieistniejącej ścianie we wnęce). Bierze najdłuższy osiowy segment styku."""
+    inter = a.polygon.boundary.intersection(b.polygon.boundary)
+    if inter.is_empty:
+        return None
+    if inter.geom_type == "LineString":
+        segs = [inter]
+    elif inter.geom_type == "MultiLineString":
+        segs = list(inter.geoms)
+    elif inter.geom_type == "GeometryCollection":
+        segs = [g for g in inter.geoms if g.geom_type == "LineString"]
+    else:
+        return None
+    best = None   # (center, axis, width, length)
+    for s in segs:
+        sx0, sy0, sx1, sy1 = s.bounds
+        if abs(sx1 - sx0) < 1e-6:                       # styk pionowy → otwór wzdłuż y
+            length = sy1 - sy0
+            if length >= DOOR_OPENING_MIN_OVERLAP and (best is None or length > best[3]):
+                best = ((sx0, (sy0 + sy1) / 2.0), "v", min(DEFAULT_DOOR_WIDTH, length), length)
+        elif abs(sy1 - sy0) < 1e-6:                     # styk poziomy → otwór wzdłuż x
+            length = sx1 - sx0
+            if length >= DOOR_OPENING_MIN_OVERLAP and (best is None or length > best[3]):
+                best = (((sx0 + sx1) / 2.0, sy0), "h", min(DEFAULT_DOOR_WIDTH, length), length)
+    if best is None:
+        return None
+    return (best[0], best[1], best[2])
+
+
+def infer_door_openings(rooms) -> list[DoorOpening]:
+    """Otwory drzwiowe do renderu: REALNA krawędź wspólna pokój↔KOMUNIKACJA (hol/wiatrołap).
+
+    F5: pokoje łączą się przez hol → drzwi są na styku z komunikacją. SCHODY pomijane (routing
+    przez hol), para KOMUNIKACJA↔KOMUNIKACJA też (otwarta przestrzeń, bez drzwi). Strefa dzienna↔hol
+    oznaczana jako otwarcie (`is_opening`). AC-agnostyczne; drzwi raz na parę."""
+    valid = [r for r in rooms if r.polygon is not None]
+    seen: set = set()
+    out: list[DoorOpening] = []
+    for a in valid:
+        if a.spec.strefa == Strefa.KOMUNIKACJA:   # drzwi liczymy od strony POKOJU, nie komunikacji
+            continue
+        for b in valid:
+            if b is a or b.spec.strefa != Strefa.KOMUNIKACJA or b.spec.id == "schody":
+                continue
+            key = frozenset((a.spec.id, b.spec.id))
+            if key in seen:
+                continue
+            res = _shared_edge_door(a, b)
+            if res is None:
+                continue
+            seen.add(key)
+            center, axis, width = res
+            c = a.polygon.centroid
+            out.append(DoorOpening(a.spec.id, b.spec.id, center, axis, width, (c.x, c.y),
+                                   is_opening=(a.spec.strefa == Strefa.DZIENNA)))
+    return out
+
+
 def extract_doors(
     plan: FloorPlan,
     wall_to_guid: dict[frozenset, str] | None = None,

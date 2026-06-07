@@ -67,6 +67,72 @@ class WindowSegment:
     edge_length: float = 0.0
 
 
+@dataclass
+class FacadeWindow:
+    """Okno fasadowe wyprowadzone z samej geometrii (bez AC walls) — render + JSON contract.
+
+    `p1`/`p2` to końce odcinka okna NA fasadzie (do narysowania), `center` jego środek,
+    `wall` ∈ {S,N,W,E} orientacja ściany. Wymiary z reguły WT 1/8 (jak `extract_windows`)."""
+    room_id: str
+    room_name: str
+    center: tuple[float, float]
+    width: float
+    height: float
+    sill_height: float
+    wall: str
+    p1: tuple[float, float]
+    p2: tuple[float, float]
+
+
+def extract_facade_windows(rooms, boundary) -> list[FacadeWindow]:
+    """Okna fasadowe z geometrii pokoi + obrysu (AC-agnostyczne, do renderu i kontraktu).
+
+    Dla każdego pokoju z `wymaga_okna` bierze najdłuższą jego krawędź leżącą na fasadzie
+    obrysu, liczy wymiary WT 1/8 i zwraca `FacadeWindow` (odcinek wyśrodkowany na krawędzi).
+    Nie wymaga ścian AC — działa identycznie dla mieszkań i domów.
+    """
+    if boundary is None:
+        return []
+    facade_edges = [(e.start, e.end) for e in getattr(boundary, "facade_edges", [])]
+    if not facade_edges:
+        return []
+    out: list[FacadeWindow] = []
+    for room in rooms:
+        if room.polygon is None or not getattr(room.spec, "wymaga_okna", False):
+            continue
+        edges = _room_facade_edges(room.polygon, facade_edges)
+        if not edges:
+            continue
+        edges.sort(key=lambda e: -e[2])
+        p1, p2, edge_len = edges[0]
+        # 2·EDGE_MARGIN: okno wyśrodkowane na krawędzi zachowuje margines od OBU narożników
+        dims = _wt_compliant_dimensions(room.spec.strefa, room.polygon.area, edge_len - 2 * EDGE_MARGIN)
+        if dims is None:
+            continue
+        w = dims["width"]
+        mx, my = (p1[0] + p2[0]) / 2.0, (p1[1] + p2[1]) / 2.0
+        dx, dy = p2[0] - p1[0], p2[1] - p1[1]
+        L = math.hypot(dx, dy) or 1.0
+        ux, uy = dx / L, dy / L
+        sp1 = (mx - ux * w / 2.0, my - uy * w / 2.0)
+        sp2 = (mx + ux * w / 2.0, my + uy * w / 2.0)
+        horizontal = abs(dx) > abs(dy)            # strict: krawędź pozioma = większy rozrzut w x
+        cg = room.polygon
+        if cg.geom_type == "MultiPolygon":         # centroid z największego geom (L/U-pokój)
+            cg = max(cg.geoms, key=lambda p: p.area)
+        rc = cg.centroid
+        if horizontal:
+            wall = "S" if my < rc.y else "N"
+        else:
+            wall = "W" if mx < rc.x else "E"
+        out.append(FacadeWindow(
+            room_id=room.spec.id, room_name=room.spec.nazwa,
+            center=(mx, my), width=w, height=dims["height"], sill_height=dims["sill"],
+            wall=wall, p1=sp1, p2=sp2,
+        ))
+    return out
+
+
 def extract_windows(
     plan: FloorPlan,
     ac_walls: list[dict],

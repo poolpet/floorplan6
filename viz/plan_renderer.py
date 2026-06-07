@@ -7,6 +7,7 @@ bez rysunku jest NIEMOŻLIWE.
 """
 from __future__ import annotations
 
+import math
 from pathlib import Path
 from typing import Optional
 
@@ -40,6 +41,7 @@ def render_floor_plan(
     save_path: Optional[Path] = None,
     show: bool = True,
     figsize: tuple[float, float] = (10, 8),
+    furniture: Optional[list] = None,
 ) -> plt.Figure:
     """Renderuj FloorPlan jako matplotlib figure.
 
@@ -49,6 +51,7 @@ def render_floor_plan(
         save_path: Ścieżka do zapisu PNG (opcjonalna).
         show: Czy wyświetlić interaktywnie.
         figsize: Rozmiar figury.
+        furniture: lista Furniture (MVP — rzut „z meblami"); None → bez mebli.
 
     Returns:
         matplotlib Figure.
@@ -58,9 +61,18 @@ def render_floor_plan(
     # Rysuj obrys
     _draw_boundary(ax, plan.boundary)
 
-    # Rysuj pokoje
+    # Rysuj pokoje (etykiety odsunięte od mebli)
+    furn_by_room: dict[str, list] = {}
+    for f in (furniture or []):
+        furn_by_room.setdefault(f.room_id, []).append(f.polygon)
     for room in plan.rooms:
-        _draw_room(ax, room)
+        _draw_room(ax, room, furniture_polys=furn_by_room.get(room.spec.id))
+
+    # Meble + drzwi + okna (MVP)
+    if furniture:
+        _draw_furniture(ax, furniture)
+    _draw_doors(ax, plan.rooms)
+    _draw_windows(ax, plan.rooms, plan.boundary)
 
     # Tytuł
     if title is None:
@@ -77,15 +89,20 @@ def render_floor_plan(
                 facecolor=color, edgecolor="black",
                 label=strefa.display,
             ))
-    ax.legend(handles=legend_patches, loc="upper right", fontsize=9)
+    if furniture:
+        legend_patches.append(mpatches.Patch(facecolor="#A1887F", edgecolor="#4E342E", label="Meble"))
+    # legenda POD rzutem (poziomo) — nie zasłania etykiet pokoi
+    ax.legend(handles=legend_patches, loc="upper center", bbox_to_anchor=(0.5, -0.08),
+              ncol=len(legend_patches) or 1, fontsize=9, framealpha=0.9)
 
+    # info POD rzutem, z lewej (poza obszarem danych) — nie nachodzi na tytuł ani meble
     info_text = (
-        f"Outline area: {plan.boundary.area:.1f} m²\n"
-        f"Rooms area: {plan.total_room_area:.1f} m²\n"
+        f"Outline: {plan.boundary.area:.1f} m²   "
+        f"Rooms: {plan.total_room_area:.1f} m²   "
         f"Hub: {plan.hub_percent * 100:.1f}%"
     )
-    ax.text(0.02, 0.02, info_text, transform=ax.transAxes,
-            fontsize=8, verticalalignment="bottom",
+    ax.text(0.0, -0.15, info_text, transform=ax.transAxes,
+            fontsize=8, verticalalignment="top", horizontalalignment="left",
             bbox=dict(boxstyle="round", facecolor="white", alpha=0.8))
 
     ax.set_aspect("equal")
@@ -192,8 +209,12 @@ def _draw_storey(ax, rooms, boundary, core_abs, furniture, title):
     # przestrzeń — rysuj je bez krawędzi wewnętrznych, a potem jeden obrys ich unii
     # (brak linii ściany między salon↔kuchnia; ta sama barwa DZIENNA scala je wizualnie).
     day_rooms = [r for r in rooms if r.polygon is not None and r.spec.strefa == Strefa.DZIENNA]
+    furn_by_room: dict[str, list] = {}
+    for f in furniture:
+        furn_by_room.setdefault(f.room_id, []).append(f.polygon)
     for room in rooms:
-        _draw_room(ax, room, draw_edge=(room not in day_rooms))
+        _draw_room(ax, room, draw_edge=(room not in day_rooms),
+                   furniture_polys=furn_by_room.get(room.spec.id))
     if len(day_rooms) >= 2:
         from shapely.ops import unary_union
         union = unary_union([r.polygon for r in day_rooms])
@@ -211,6 +232,8 @@ def _draw_storey(ax, rooms, boundary, core_abs, furniture, title):
     else:
         _draw_stair(ax, core_abs)
     _draw_furniture(ax, furniture)
+    _draw_doors(ax, rooms)
+    _draw_windows(ax, rooms, boundary)
 
     ax.set_title(title, fontsize=13, fontweight="bold")
     legend_patches = [
@@ -220,7 +243,9 @@ def _draw_storey(ax, rooms, boundary, core_abs, furniture, title):
     ]
     if furniture:
         legend_patches.append(mpatches.Patch(facecolor="#A1887F", edgecolor="#4E342E", label="Meble"))
-    ax.legend(handles=legend_patches, loc="upper right", fontsize=8)
+    # legenda POD panelem (poziomo) — nie zasłania etykiet pokoi (MVP credibility)
+    ax.legend(handles=legend_patches, loc="upper center", bbox_to_anchor=(0.5, -0.10),
+              ncol=len(legend_patches) or 1, fontsize=8, framealpha=0.9)
 
     bx0, by0, bx1, by1 = bnds
     margin = max(bx1 - bx0, by1 - by0) * 0.05
@@ -320,6 +345,53 @@ def _draw_furniture(ax, furniture):
                     fontsize=5, color="#3E2723", zorder=6)
 
 
+def _draw_doors(ax, rooms):
+    """Symbole drzwi (otwór + skrzydło + łuk swingu) na styku pokój↔komunikacja."""
+    from core.door_extractor import infer_door_openings
+    for d in infer_door_openings(rooms):
+        _draw_door_symbol(ax, d)
+
+
+def _draw_door_symbol(ax, d):
+    cx, cy = d.center
+    w = d.width
+    if d.axis == "v":                                  # ściana pionowa x=cx, otwór wzdłuż y
+        p1, p2 = (cx, cy - w / 2), (cx, cy + w / 2)
+        sign = 1.0 if d.into[0] > cx else -1.0         # wnętrze pokoju po stronie ±x
+        leaf_end = (cx + sign * w, p1[1])
+    else:                                              # ściana pozioma y=cy, otwór wzdłuż x
+        p1, p2 = (cx - w / 2, cy), (cx + w / 2, cy)
+        sign = 1.0 if d.into[1] > cy else -1.0
+        leaf_end = (p1[0], cy + sign * w)
+    hinge = p1
+    # "wytnij" otwór w ścianie (biały odcinek)
+    ax.plot([p1[0], p2[0]], [p1[1], p2[1]], color="white", linewidth=2.6,
+            solid_capstyle="butt", zorder=5)
+    if getattr(d, "is_opening", False):
+        return                       # otwarcie bez skrzydła (strefa dzienna↔hol) — sam otwór
+    # skrzydło + łuk swingu
+    ax.plot([hinge[0], leaf_end[0]], [hinge[1], leaf_end[1]], color="#5D4037",
+            linewidth=1.0, zorder=6)
+    a1 = math.degrees(math.atan2(p2[1] - hinge[1], p2[0] - hinge[0]))
+    a2 = math.degrees(math.atan2(leaf_end[1] - hinge[1], leaf_end[0] - hinge[0]))
+    ax.add_patch(mpatches.Arc(hinge, 2 * w, 2 * w, angle=0.0,
+                              theta1=min(a1, a2), theta2=max(a1, a2),
+                              color="#5D4037", linewidth=0.8, zorder=6))
+
+
+def _draw_windows(ax, rooms, boundary):
+    """Okna na fasadzie — gruba jasnoniebieska linia na ścianie pokoju z oknem (wymaga_okna)."""
+    if boundary is None:
+        return
+    from core.window_extractor import extract_facade_windows
+    for w in extract_facade_windows(rooms, boundary):
+        (x1, y1), (x2, y2) = w.p1, w.p2
+        ax.plot([x1, x2], [y1, y2], color="#1565C0", linewidth=3.2,
+                solid_capstyle="butt", zorder=6)
+        ax.plot([x1, x2], [y1, y2], color="#E3F2FD", linewidth=1.0,
+                solid_capstyle="butt", zorder=7)
+
+
 def _draw_boundary(ax: plt.Axes, boundary: Boundary):
     """Rysuj obrys mieszkania."""
     x, y = boundary.polygon.exterior.xy
@@ -339,9 +411,10 @@ def _draw_boundary(ax: plt.Axes, boundary: Boundary):
     ax.set_ylim(by0 - margin, by1 + margin)
 
 
-def _draw_room(ax: plt.Axes, room: Room, draw_edge: bool = True):
+def _draw_room(ax: plt.Axes, room: Room, draw_edge: bool = True, furniture_polys=None):
     """Rysuj pojedynczy pokój. draw_edge=False → tylko wypełnienie bez krawędzi
-    (dla pokoi open-plan, których wspólny obrys rysuje się osobno)."""
+    (dla pokoi open-plan, których wspólny obrys rysuje się osobno).
+    furniture_polys → etykieta nazwy jest odsuwana od mebli (nie nachodzi na łóżko/szafę)."""
     if room.polygon is None:
         return
 
@@ -358,9 +431,8 @@ def _draw_room(ax: plt.Axes, room: Room, draw_edge: bool = True):
         x, y = room.polygon.exterior.xy
         ax.fill(x, y, alpha=0.6, facecolor=color, edgecolor=edge_color, linewidth=lw)
 
-    # Etykieta w centrum pokoju
-    cx = room.polygon.centroid.x
-    cy = room.polygon.centroid.y
+    # Etykieta — odsunięta od mebli (gdy podane), inaczej w centrum pokoju
+    cx, cy = _label_anchor(room.polygon, furniture_polys or [])
 
     label = f"{room.spec.nazwa}\n{room.area:.1f} m²"
     fontsize = _auto_fontsize(room)
@@ -370,6 +442,44 @@ def _draw_room(ax: plt.Axes, room: Room, draw_edge: bool = True):
             color="#333333",
             bbox=dict(boxstyle="round,pad=0.2", facecolor="white",
                       alpha=0.7, edgecolor="none"))
+
+
+def _label_anchor(poly, furniture_polys) -> tuple[float, float]:
+    """Punkt na etykietę nazwy pokoju — WEWNĄTRZ pokoju, jak najdalej od mebli.
+
+    Odporne na pokoje L/U i MultiPolygon: centroid bywa w wycięciu (poza pokojem), więc
+    fallback to representative_point (zawsze wewnątrz). Z meblami: spośród kandydatów
+    (centroid + siatka 5×5) wybierz leżący w pokoju o największym dystansie do mebla."""
+    from shapely.geometry import Point
+    g = poly
+    if g.geom_type == "MultiPolygon":
+        g = max(g.geoms, key=lambda p: p.area)
+    c = g.centroid
+    rep = g.representative_point()                 # gwarantowany punkt wewnątrz
+    centroid_inside = g.contains(c)
+    if not furniture_polys:
+        return (c.x, c.y) if centroid_inside else (rep.x, rep.y)
+    from shapely.ops import unary_union
+    union = unary_union(list(furniture_polys))
+    minx, miny, maxx, maxy = g.bounds
+    cands = ([(c.x, c.y)] if centroid_inside else []) + [(rep.x, rep.y)]
+    n = 5
+    for i in range(n):
+        for j in range(n):
+            cands.append((minx + (maxx - minx) * (i + 0.5) / n,
+                          miny + (maxy - miny) * (j + 0.5) / n))
+    inner = g.buffer(-1e-6)
+    if inner.is_empty:                             # cienki pokój → użyj samego polygonu
+        inner = g
+    best, best_d = (rep.x, rep.y), -1.0            # domyślnie gwarantowany punkt wewnątrz
+    for x, y in cands:
+        pt = Point(x, y)
+        if not inner.contains(pt):
+            continue
+        d = pt.distance(union)                     # 0 gdy punkt na meblu
+        if d > best_d:
+            best_d, best = d, (x, y)
+    return best
 
 
 def _auto_fontsize(room: Room) -> float:

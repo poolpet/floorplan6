@@ -242,6 +242,46 @@ def test_furnish_generated_single_storey_no_overlap():
     assert beds, "brak łóżka w domu"
 
 
+# ---- MVP: świadomość ścian wspólnych (sofa/szafa nie na otwartym styku) ----
+
+def test_room_shared_walls_detects_neighbor():
+    from core.furniture import _room_shared_walls
+    salon = _room("salon", Strefa.DZIENNA, 4.0, 6.0, x=0.0)    # box(0,0,4,6)
+    kuch = _room("kuchnia", Strefa.DZIENNA, 3.0, 6.0, x=4.0)   # box(4,0,7,6) — styk E salonu
+    assert _room_shared_walls(salon, [kuch]) == {"E"}
+    assert _room_shared_walls(kuch, [salon]) == {"W"}
+    assert _room_shared_walls(salon, []) == set()
+
+
+def test_wardrobe_uses_shared_wall_when_only_option():
+    # regresja A1: gdy ściany nie-wspólne nie mieszczą szafy, MUSI spaść na ścianę wspólną
+    # (a nie zostać pominięta). Sypialnia 4×3 z sąsiadami NOCNA na W i E → shared={W,E}.
+    from core.furniture import furnish_rooms
+    left = _room("sypialnia_0", Strefa.NOCNA, 2.0, 3.0, x=-2.0)
+    mid = _room("sypialnia_1", Strefa.NOCNA, 4.0, 3.0, x=0.0)
+    right = _room("sypialnia_2", Strefa.NOCNA, 2.0, 3.0, x=4.0)
+    res = furnish_rooms([left, mid, right])
+    mid_ward = [f for f in res.furniture if f.room_id == "sypialnia_1" and f.piece_type == "wardrobe"]
+    assert mid_ward, "szafa zgubiona w ciasnej sypialni ze ścianami wspólnymi (regresja A1)"
+
+
+def test_living_sofa_avoids_open_plan_shared_wall():
+    # MVP: w otwartej strefie dziennej sofa NIE może stać na krawędzi styku salon↔kuchnia
+    # (brak ściany → sofa "pływa"). Salon wysoki (4×6) → najdłuższe ściany to W/E (6).
+    # Bez świadomości styku: sofa idzie na E (najdłuższa, bez okna) = otwarty styk z kuchnią.
+    from core.furniture import furnish_rooms
+    from core.boundary_analyzer import analyze_boundary
+    b = analyze_boundary(Polygon([(0, 0), (7, 0), (7, 6), (0, 6)]), entry_point=(3.5, 0))
+    salon = Room(spec=RoomSpec(id="salon", nazwa="Salon", strefa=Strefa.DZIENNA, wymaga_okna=True, priorytet_fasady=1),
+                 polygon=box(0.0, 0.0, 4.0, 6.0)); salon.update_metrics()
+    kuch = Room(spec=RoomSpec(id="kuchnia", nazwa="Kuchnia", strefa=Strefa.DZIENNA, wymaga_okna=True, priorytet_fasady=2),
+                polygon=box(4.0, 0.0, 7.0, 6.0)); kuch.update_metrics()
+    res = furnish_rooms([salon, kuch], boundary=b)
+    sofa = next(f for f in res.furniture if f.piece_type == "sofa")
+    # sofa nie dosunięta do ściany wspólnej E (x≈4)
+    assert sofa.polygon.bounds[2] < 3.8, f"sofa na otwartym styku salon↔kuchnia (E, x≈4): {sofa.polygon.bounds}"
+
+
 # ---- poprawki z adwersaryjnego review (phase 4) ----
 
 def test_kitchen_counter_falls_back_off_blocked_window_wall():

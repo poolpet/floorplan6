@@ -403,3 +403,86 @@ def test_openings_payload_required_fields():
     assert p["basePoint"] == {"x": 1.0, "y": 2.0, "z": 0.0}
     assert p["width"] == 1.5
     assert p["height"] == 2.5
+
+
+# ====================================================================
+# MVP — geometryczne otwory drzwiowe do renderu (z sąsiedztwa z komunikacją)
+# ====================================================================
+
+def test_infer_door_openings_room_to_hub():
+    from core.door_extractor import infer_door_openings
+    from core.models import Room, RoomSpec, Strefa
+    from shapely.geometry import box
+
+    def mk(rid, strefa, x0, y0, x1, y1):
+        r = Room(spec=RoomSpec(id=rid, nazwa=rid, strefa=strefa, wymaga_okna=False, priorytet_fasady=None),
+                 polygon=box(x0, y0, x1, y1)); r.update_metrics()
+        return r
+
+    syp = mk("sypialnia_1", Strefa.NOCNA, 0, 0, 3, 3)
+    hub = mk("hub", Strefa.KOMUNIKACJA, 3, 0, 5, 3)        # styk pionowy x=3
+    doors = infer_door_openings([syp, hub])
+    assert len(doors) == 1, doors
+    d = doors[0]
+    assert {d.room_a, d.room_b} == {"sypialnia_1", "hub"}
+    assert d.axis == "v"
+    assert abs(d.center[0] - 3.0) < 1e-6
+    assert d.width > 0
+    # otwarcie do pokoju (nie do holu): wnętrze po stronie sypialni (x<3)
+    assert d.into[0] < 3.0
+
+    # schody (KOMUNIKACJA, ale klatka) NIE generują drzwi (F5: routing przez hol)
+    schody = mk("schody", Strefa.KOMUNIKACJA, 0, 3, 3, 5)
+    assert infer_door_openings([syp, schody]) == []
+
+    # dwa pokoje bez komunikacji między nimi → brak drzwi (drzwi tylko z holu)
+    syp2 = mk("sypialnia_2", Strefa.NOCNA, 3, 0, 6, 3)
+    assert infer_door_openings([syp, syp2]) == []
+
+
+def test_infer_door_openings_lroom_real_edge_not_bbox():
+    # review: L-pokój — drzwi na REALNEJ wspólnej krawędzi, nie na bbox (nieistniejąca ściana)
+    from core.door_extractor import infer_door_openings
+    from core.models import Room, RoomSpec, Strefa
+    from shapely.geometry import Polygon, box
+    # L: ściana x=3 istnieje tylko dla y∈[1,3]; wnęka x∈[2,3],y∈[0,1]
+    lpoly = Polygon([(0, 0), (2, 0), (2, 1), (3, 1), (3, 3), (0, 3)])
+    syp = Room(spec=RoomSpec(id="sypialnia_1", nazwa="S", strefa=Strefa.NOCNA, wymaga_okna=False, priorytet_fasady=None),
+               polygon=lpoly); syp.update_metrics()
+    hub = Room(spec=RoomSpec(id="hub", nazwa="Hol", strefa=Strefa.KOMUNIKACJA, wymaga_okna=False, priorytet_fasady=None),
+               polygon=box(3, 0, 5, 3)); hub.update_metrics()   # pełna wysokość — bbox dałby środek y=1.5
+    doors = infer_door_openings([syp, hub])
+    assert len(doors) == 1, doors
+    d = doors[0]
+    assert abs(d.center[0] - 3.0) < 1e-6
+    # realna krawędź y∈[1,3] → środek ~2.0; bbox (błąd) dałby ~1.5 (w niej nie ma ściany)
+    assert abs(d.center[1] - 2.0) < 0.4, f"drzwi na bbox a nie realnej krawędzi: {d.center}"
+
+
+def test_infer_door_openings_skips_circulation_pair():
+    # review: dwie komunikacje (hol↔wiatrołap/korytarz) → brak drzwi (otwarta przestrzeń)
+    from core.door_extractor import infer_door_openings
+    from core.models import Room, RoomSpec, Strefa
+    from shapely.geometry import box
+    hub = Room(spec=RoomSpec(id="hub", nazwa="Hol", strefa=Strefa.KOMUNIKACJA, wymaga_okna=False, priorytet_fasady=None),
+               polygon=box(0, 0, 3, 3)); hub.update_metrics()
+    kor = Room(spec=RoomSpec(id="wiatrolap", nazwa="Wiatrołap", strefa=Strefa.KOMUNIKACJA, wymaga_okna=False, priorytet_fasady=None),
+               polygon=box(3, 0, 5, 3)); kor.update_metrics()
+    assert infer_door_openings([hub, kor]) == []
+
+
+def test_infer_door_openings_dayzone_is_opening():
+    # review: strefa dzienna↔hol = OTWARCIE (bez skrzydła); pokój↔hol = drzwi
+    from core.door_extractor import infer_door_openings
+    from core.models import Room, RoomSpec, Strefa
+    from shapely.geometry import box
+    hub = Room(spec=RoomSpec(id="hub", nazwa="Hol", strefa=Strefa.KOMUNIKACJA, wymaga_okna=False, priorytet_fasady=None),
+               polygon=box(4, 0, 6, 3)); hub.update_metrics()
+    salon = Room(spec=RoomSpec(id="salon", nazwa="Salon", strefa=Strefa.DZIENNA, wymaga_okna=True, priorytet_fasady=1),
+                 polygon=box(0, 0, 4, 3)); salon.update_metrics()
+    d = infer_door_openings([salon, hub])[0]
+    assert d.is_opening is True, "strefa dzienna↔hol powinna być otwarciem"
+    syp = Room(spec=RoomSpec(id="sypialnia_1", nazwa="S", strefa=Strefa.NOCNA, wymaga_okna=False, priorytet_fasady=None),
+               polygon=box(0, 0, 4, 3)); syp.update_metrics()
+    d2 = infer_door_openings([syp, hub])[0]
+    assert d2.is_opening is False, "sypialnia↔hol powinna być drzwiami"

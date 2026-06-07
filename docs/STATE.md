@@ -3,7 +3,29 @@
 > Updated after every working session. If it doesn't reflect reality —
 > Claude updates immediately.
 >
-> **Last update:** 2026-06-06 (Session 21 — branch `feat/sfh-open-plan-day-zone`: **phase-4 furniture DONE**).
+> **Last update:** 2026-06-07 (Session 22 — branch `feat/sfh-open-plan-day-zone`: **MVP render: meble do ścian +
+> drzwi + okna**). Dawid: cel = jak najszybciej wypuścić MVP generujący rzuty MIESZKAŃ i DOMÓW z meblami, drzwiami
+> i oknami; lokalizacje mebli były najsłabsze. Diagnoza 5-agentowa (grounded) → plan A+B, TDD RED-first, NIE
+> commitnięte. **Zrobione:** (A1) świadomość ścian wspólnych — `core/furniture._room_shared_walls`; sofa/szafa
+> preferują ściany nie-wspólne (sofa już nie pływa na otwartym styku salon↔kuchnia; szafa unika ściany działowej
+> między sypialniami), fallbacki zachowują feasibility (szafa próbuje nie-wspólne POTEM wspólne — nie gubi się).
+> (A3) `viz/plan_renderer._label_anchor` — etykieta pokoju odsunięta od mebli, odporna na L/U-pokoje
+> (MultiPolygon→największy geom, representative_point gdy centroid w wycięciu). (B1) **drzwi rysowane** —
+> `core/door_extractor.infer_door_openings`+`_shared_edge_door` (REALNA krawędź boundary∩boundary, nie bbox →
+> poprawne dla L-pokoi; pomija schody i parę komunikacja↔komunikacja; strefa dzienna↔hol = `is_opening`);
+> `viz._draw_doors/_draw_door_symbol` (otwór+skrzydło+łuk swingu, otwarcie bez skrzydła). (B2) **okna rysowane** —
+> `core/window_extractor.extract_facade_windows`+`FacadeWindow` (geometria z fasady, reużywa `_room_facade_edges`+
+> `_wt_compliant_dimensions`; margines 2·EDGE_MARGIN od narożnika); `viz._draw_windows` (niebieski odcinek).
+> (B3) **okna w JSON contract** (`plan_contract` → `windows[]`). Render `render_floor_plan` rozszerzony o `furniture=`
+> + rysuje drzwi/okna (mieszkania), `render_two_storey` też (domy); legenda przeniesiona POD rzut, info-box pod spód
+> (nie zasłaniają etykiet/mebli). A2 (stół jadalny pływa) = fałszywy alarm (już omija meble via `zones`).
+> **Weryfikacja:** TDD RED-first każdy element; adwersaryjny 25-agentowy review → 6 realnych błędów ZNALEZIONYCH I
+> NAPRAWIONYCH (L-pokój bbox-drzwi, komunikacja↔komunikacja drzwi, dzienna↔hol skrzydło zamiast otwarcia, margines
+> okna, regresja szafy w ciasnej sypialni, `_label_anchor` poza L/U-pokojem); 77 testów dotkniętych modułów zielone;
+> 3 rzuty wizualne OK (`rzuty/renders_mvp/`: dom 2-kond., parterowiec, mieszkanie M3 — wyglądają jak realne rzuty).
+> NEXT: pełny suite (w toku), commit, ewentualnie GUI „z meblami" (toggle), reszta realizmu z punch-listy.
+>
+> **Poprzednio — Session 21 (2026-06-06):** branch `feat/sfh-open-plan-day-zone`: **phase-4 furniture DONE**).
 > Executed the 9-task window-aware furniture plan RED-first (commits `bc0a18a`..`bb865df`): `FurnishResult` +
 > `furnish_rooms(rooms, boundary=None)` (back-compat `place_furniture` wrapper); `_room_window_walls`
 > (facade-edge→window, lazy-imports `_detect_facade_sides`, notch-gated); `_place_on_wall`; semantic placers
