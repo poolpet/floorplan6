@@ -23,7 +23,20 @@
 > NAPRAWIONYCH (L-pokój bbox-drzwi, komunikacja↔komunikacja drzwi, dzienna↔hol skrzydło zamiast otwarcia, margines
 > okna, regresja szafy w ciasnej sypialni, `_label_anchor` poza L/U-pokojem); 77 testów dotkniętych modułów zielone;
 > 3 rzuty wizualne OK (`rzuty/renders_mvp/`: dom 2-kond., parterowiec, mieszkanie M3 — wyglądają jak realne rzuty).
-> NEXT: pełny suite (w toku), commit, ewentualnie GUI „z meblami" (toggle), reszta realizmu z punch-listy.
+> **MVP COMMITTED** `f71d4c3` (12 plików, +648/−25; `rzuty/` nadal untracked; branch NIE pushowany). Pełny suite:
+> 429 passed, 3 „failed" = ZNANE flaki CP-SAT pod kontencją (`day_zone_contiguous` PASS w izolacji; 11×11 single-storey
+> ×2 = timeout, `ok=True` przy 25s z wolnym CPU; `cpsat_solver`/`house_layout` NIE w diffie → moje zmiany nie mogą
+> wpłynąć na `lay.ok`). Zero regresji.
+> **DECYZJA kierunkowa (Dawid 2026-06-07): cel = NATYWNY dodatek do ArchiCAD.** Lokalny PyQt GUI = narzędzie dev/demo,
+> NIE produkt (czysty Python nie może być natywny). Stan eksportu do AC (`bridge/plan_writer.py` przez Tapir, porty
+> 19723-30): **mieszkania** dostają strefy+ścianki+drzwi+okna+etykiety ✅; **brak: meble** (nieeksportowane) i **domy**
+> (wyłączone). **NEXT (kolejność uzgodniona):** (1) **[Dawid, wymaga AC+Tapir] odpalić `notebooks/ac_export_check.py`**
+> (`! PYTHONPATH=. venv/bin/python notebooks/ac_export_check.py`) — zderiskować: czy pipe mieszkanie→AC żyje na jego
+> maszynie. (2) **meble→AC** — serializacja `FurnishResult`→payload Tapir przez JSON contract (payload testowalny
+> unit-owo; reprezentacja mebli w AC = obiekty biblioteczne vs Morph/2D — do decyzji z Dawidem). (3) **domy→AC**
+> (TwoStoreyLayout przez contract). (4) skorupa C++ = osobny milestone produktyzacji. Świadomie NIE budujemy nic w
+> bridge zanim (1) nie potwierdzi działania rury. Reszta (poza ścieżką AC): realizm punch-list (zlew, łazienka-linear,
+> Neufert), GAP/overflow-rooms (salon nadyma się na ≥70m²/kondygnację), phase 2c, micro-35, un-xfail M3.
 >
 > **Poprzednio — Session 21 (2026-06-06):** branch `feat/sfh-open-plan-day-zone`: **phase-4 furniture DONE**).
 > Executed the 9-task window-aware furniture plan RED-first (commits `bc0a18a`..`bb865df`): `FurnishResult` +
