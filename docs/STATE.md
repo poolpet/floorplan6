@@ -3,7 +3,31 @@
 > Updated after every working session. If it doesn't reflect reality —
 > Claude updates immediately.
 >
-> **Last update:** 2026-06-07 (Session 22 — branch `feat/sfh-open-plan-day-zone`: **MVP render: meble do ścian +
+> **Last update:** 2026-06-08 (Session 23 — branch `feat/sfh-open-plan-day-zone`: **mieszkanie→AC potwierdzone
+> LIVE + meble→AC jako obiekty biblioteczne (opcja A)**). Cel: zde-riskować rurę mieszkanie→AC i dowieźć meble do AC.
+> **(1) De-risk rury — root cause + fix:** stary `notebooks/ac_export_check.py` wstawiał syntetyk 10×8 w origin świata
+> (offset 0, brak ścian obwodowych) → strefy w pustce + komunikat „obrys nie zamknięty" + `windows=0` — to był artefakt
+> HARNESSU, NIE bug produktu. Przepisany na REALNY flow (`read_boundary_from_archicad` → shift do origin → `generate_variants`
+> → `export_plan_to_archicad(offset=róg-świata)`, jak GUI `_apply_imported_boundary`). Live na AC29: zones 5 / walls 7 /
+> doors 4 / labels 5 / **windows 3** w zaznaczonym obrysie. Dawid: „jestem zadowolony". **(2) meble→AC = opcja A (decyzja
+> Dawida): PRAWDZIWE obiekty biblioteczne AC.** Sonda `IsAddOnCommandAvailable`: `CreateObjects` ISTNIEJE w jego buildzie →
+> A to CZYSTY PYTHON, zero C++ (analiza-brief myliła się — widziała tylko wrapper). Schemat poznany empirycznie:
+> `{objectsData:[{libraryPartName, coordinates{x,y,z}, dimensions{x,y}}]}`, `additionalProperties:false`, **`angle` ODRZUCANE**.
+> Mapowanie z obiektów wybranych przez Dawida (AC29 `BuiltInLibraryParts.libpack`: łóżka/sofa/garderoba/szafka RTV/stoliki/
+> sanitariaty), REALNE wymiary z jego wyboru + centrowanie, reguła master→`Łóżko podwójne 01`/secondary→`Łóżko 01`.
+> **`core/furniture_extractor.py`** (RED-first, 13 testów) + `tapir.create_objects()` + blok „6. Meble" w `plan_writer`
+> (flaga `include_furniture`, `"furniture"` w return). Commit `a501c1e`. **(3) Iteracje wizualne (B8):** v1 rozciągało meble
+> (forsowałem `dimensions`=box) → fix: realne wymiary; v2 meble pływały / WC za ścianą → fix: **dociśnięcie do ściany +
+> clamp do pokoju** (`_anchor`), commit `ffca8d3`. Render `M3-B5C1` wstawiony — **ocena lokalizacji Dawida PENDING** (sesja
+> zakończona, kontynuacja potem). **⚠️ TWARDY LIMIT: ten build Tapira NIE obraca obiektów** (brak `angle` w CreateObjects,
+> brak `RotateElements`/`TransformElements`, `MoveElements`=tylko translacja) → meble pod 0° (część zwrócona domyślnie).
+> **DECYZJA odłożona (Dawid): 0°-MVP vs rozszerzenie custom-buildu Tapira o rotację w C++** — ocenić po obejrzeniu M3-B5C1.
+> Stan AC-export: **mieszkania** = strefy+ścianki+drzwi+okna+etykiety+**meble** ✅ (live); **domy** nadal wyłączone.
+> 44 testy regresji zielone, zero regresji. Throwaway-sondy `_probe_*` usunięte. **NEXT:** (a) Dawid ocenia lokalizację
+> `M3-B5C1`; (b) adwersaryjny review meble→AC; (c) decyzja rotacja (0° vs C++); (d) domy→AC (TwoStoreyLayout przez contract);
+> reszta backlog (realizm układu / GAP salon, phase 2c, micro-35, un-xfail M3, GUI 2-tab). Pamięć: [[project_ac_export_apartment_confirmed]].
+>
+> **Previously — Session 22 (2026-06-07):** branch `feat/sfh-open-plan-day-zone`: **MVP render: meble do ścian +
 > drzwi + okna**). Dawid: cel = jak najszybciej wypuścić MVP generujący rzuty MIESZKAŃ i DOMÓW z meblami, drzwiami
 > i oknami; lokalizacje mebli były najsłabsze. Diagnoza 5-agentowa (grounded) → plan A+B, TDD RED-first, NIE
 > commitnięte. **Zrobione:** (A1) świadomość ścian wspólnych — `core/furniture._room_shared_walls`; sofa/szafa
