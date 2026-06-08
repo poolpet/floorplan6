@@ -364,6 +364,24 @@ class TapirConnection:
         result = self._execute_tapir("CreateWalls", payload)
         return self._extract_guids(result)
 
+    def create_objects(self, objects_data: list[dict]) -> list[str]:
+        """Utwórz obiekty biblioteczne (meble) w ArchiCAD (Tapir CreateObjects).
+
+        Args:
+            objects_data: Lista dict z polami (schemat additionalProperties:false):
+                libraryPartName: str — dokładna nazwa obiektu z biblioteki AC
+                coordinates: {x, y, z} — kotwica (lewy-dolny róg obrysu obiektu)
+                dimensions: {x, y} — wymiary (orientacja przez x/y; kąt NIEobsługiwany)
+
+        Returns:
+            Lista GUID-ów utworzonych obiektów (pomija te z błędem per-obiekt,
+            np. "Not found library part with name X").
+        """
+        if not objects_data:
+            return []
+        result = self._execute_tapir("CreateObjects", {"objectsData": objects_data})
+        return [g for g in self._extract_guids(result) if g]
+
     @staticmethod
     def _extract_guids(result: dict) -> list[str]:
         """Wyodrębnij GUID-y z odpowiedzi Tapir."""

@@ -34,6 +34,11 @@ from core.window_extractor import (
     extract_windows,
     windows_to_tapir_payload,
 )
+from core.furniture import furnish_rooms
+from core.furniture_extractor import (
+    extract_furniture,
+    furniture_to_tapir_payload,
+)
 from bridge.tapir_connection import TapirConnection
 
 
@@ -50,6 +55,7 @@ def export_plan_to_archicad(
     zone_inset: Optional[float] = None,  # NOT USED in V2.4+ (auto-fill via referencePosition).
     include_labels: bool = True,
     include_windows: bool = True,
+    include_furniture: bool = True,
     apartment_id: Optional[str] = None,
 ) -> dict[str, list[str]]:
     """Wyeksportuj rzut jako strefy + ścianki działowe + drzwi do ArchiCAD.
@@ -289,6 +295,23 @@ def export_plan_to_archicad(
                     except Exception as e:
                         print(f"[V4 windows] CreateWindows EXCEPTION: {e}")
 
+    # ─────── 6. Meble jako obiekty biblioteczne (V5 — Tapir CreateObjects) ───────
+    # FurnishResult → obiekty biblioteczne AC (wybór Dawida). Kotwica+wymiary z
+    # boxa mebla; offset jak ściany/etykiety (współrzędne absolutne). Kąt
+    # nieobsługiwany przez CreateObjects — orientacja przez dimensions x/y.
+    object_guids: list[str] = []
+    if include_furniture:
+        try:
+            fr = furnish_rooms(plan.rooms, boundary=plan.boundary)
+        except Exception:
+            fr = furnish_rooms(plan.rooms)  # back-compat fallback (bez świadomości okien)
+        furn_objects = extract_furniture(fr, plan.rooms)
+        furn_payload = furniture_to_tapir_payload(furn_objects, offset=(ox, oy))
+        print(f"[V5 furniture] {len(furn_payload)} obiektów do wstawienia")
+        if furn_payload:
+            object_guids = tapir.create_objects(furn_payload)
+        print(f"[V5 furniture] wstawiono {len(object_guids)} obiektów")
+
     return {
         "zones": zone_guids,
         "walls": wall_guids,
@@ -296,5 +319,6 @@ def export_plan_to_archicad(
         "openings": [],
         "labels": label_guids,
         "windows": window_guids,
+        "furniture": object_guids,
         "apartment_id": apartment_id,  # dla diagnostyki / zestawiania
     }
