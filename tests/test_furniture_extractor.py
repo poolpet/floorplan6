@@ -70,6 +70,26 @@ def test_single_bedroom_bed_is_double():
     assert obj.library_part_name == BED_DOUBLE
 
 
+def test_object_pushed_flush_to_wall_not_floating():
+    # box przy DOLNEJ ścianie, GŁĘBSZY niż realna sofa (0.85): centrowanie
+    # odkleiłoby ją od ściany → musi być DOCIŚNIĘTA (y0 = dolna krawędź boxa).
+    room = _room("salon", 4.0, 4.0, Strefa.DZIENNA)
+    f = Furniture("sofa", box(1.0, 0.1, 3.4, 1.5), "salon", "Sofa")
+    obj = extract_furniture(FurnishResult([f], []), [room])[0]
+    assert obj.y == pytest.approx(0.1)            # dociśnięta do dolnej ściany
+    assert obj.x == pytest.approx(2.2 - 1.6 / 2)  # wycentrowana WZDŁUŻ ściany
+    assert (obj.dim_x, obj.dim_y) == pytest.approx((1.6, 0.85))
+
+
+def test_oversized_object_clamped_into_room_bounds():
+    # realny obiekt (dining 2.6×1.8) większy niż pokój 2×2 → clamp, bbox nie ujemny
+    room = _room("salon", 2.0, 2.0, Strefa.DZIENNA)
+    f = Furniture("dining_table", box(0.5, 0.5, 1.5, 1.5), "salon", "Stół")
+    obj = extract_furniture(FurnishResult([f], []), [room])[0]
+    assert obj.x >= -1e-9
+    assert obj.y >= -1e-9
+
+
 def test_unmapped_piece_type_is_skipped():
     # boiler/shelving nie zostały wybrane przez Dawida → brak w mapie → pomijamy
     f = Furniture("boiler", box(0, 0, 0.6, 0.8), "kotlownia", "Kocioł")

@@ -70,6 +70,7 @@ def extract_furniture(
 ) -> list[FurnitureObject]:
     """FurnishResult -> lista obiektów bibliotecznych (pomija niezmapowane typy)."""
     master = _master_bedroom_id(furnish_result.furniture, rooms)
+    room_poly = {r.spec.id: r.polygon for r in rooms if r.polygon is not None}
     out: list[FurnitureObject] = []
     for f in furnish_result.furniture:
         entry = FURNITURE_LIBRARY_MAP.get(f.piece_type)
@@ -81,17 +82,48 @@ def extract_furniture(
                 (BED_DOUBLE, *_BED_DOUBLE_DIM) if f.room_id == master
                 else (BED_SINGLE, *_BED_SINGLE_DIM)
             )
-        # Realne wymiary obiektu, CENTROWANE na centroidzie boxa z layoutu
-        # (kotwica = lewy-dolny róg obiektu = centroid - poł. wymiaru). Bez
-        # rozciągania; kąt 0° (rotacja niedostępna w tym buildzie Tapira).
-        c = f.polygon.centroid
+        # Realne wymiary obiektu (bez rozciągania); kąt 0° (rotacja niedostępna).
+        x0, y0 = _anchor(f.polygon, dim_x, dim_y, room_poly.get(f.room_id))
         out.append(FurnitureObject(
             library_part_name=name,
-            x=c.x - dim_x / 2, y=c.y - dim_y / 2, z=0.0,
+            x=x0, y=y0, z=0.0,
             dim_x=dim_x, dim_y=dim_y,
             piece_type=f.piece_type, room_id=f.room_id,
         ))
     return out
+
+
+def _anchor(box_poly, dim_x: float, dim_y: float, room):
+    """Kotwica (lewy-dolny róg obiektu o wymiarach dim_x×dim_y).
+
+    Z pokojem: DOCIŚNIĘTY do ściany, przy której stoi box (najmniejsza szczelina
+    box↔bbox pokoju), wycentrowany WZDŁUŻ tej ściany, na końcu CLAMP do bounds
+    pokoju (nie wystaje poza obrys). Bez pokoju: centrowanie na centroidzie boxa.
+    """
+    bx0, by0, bx1, by1 = box_poly.bounds
+    bxc, byc = (bx0 + bx1) / 2.0, (by0 + by1) / 2.0
+    if room is None:
+        return bxc - dim_x / 2.0, byc - dim_y / 2.0
+
+    rx0, ry0, rx1, ry1 = room.bounds
+    gaps = {
+        "left": bx0 - rx0, "right": rx1 - bx1,
+        "bottom": by0 - ry0, "top": ry1 - by1,
+    }
+    wall = min(gaps, key=gaps.get)
+    if wall == "bottom":
+        x0, y0 = bxc - dim_x / 2.0, by0
+    elif wall == "top":
+        x0, y0 = bxc - dim_x / 2.0, by1 - dim_y
+    elif wall == "left":
+        x0, y0 = bx0, byc - dim_y / 2.0
+    else:  # right
+        x0, y0 = bx1 - dim_x, byc - dim_y / 2.0
+
+    # CLAMP do bounds pokoju (obiekt większy od pokoju → dosunięty do rogu min).
+    x0 = max(rx0, min(x0, rx1 - dim_x))
+    y0 = max(ry0, min(y0, ry1 - dim_y))
+    return x0, y0
 
 
 def furniture_to_tapir_payload(
