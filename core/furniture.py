@@ -96,6 +96,10 @@ def furnish_rooms(rooms: list[Room], boundary=None) -> FurnishResult:
     # inne NOCNA (ściana działowa) → sofa/szafa ich unikają (MVP — meble do ścian "twardych").
     day_rooms = [r for r in rooms if r.polygon is not None and r.spec.strefa == Strefa.DZIENNA]
     night_rooms = [r for r in rooms if r.polygon is not None and r.spec.strefa == Strefa.NOCNA]
+    # czy plan ma OSOBNY pokój kuchnia (dom)? jeśli NIE, otwarta strefa dzienna
+    # (salon_aneks, mieszkania) musi dostać aneks kuchenny tu (H1).
+    has_kuchnia = any(r.spec.id.split("_")[0] == "kuchnia"
+                      for r in rooms if r.polygon is not None)
     furniture: list[Furniture] = []
     warnings: list[str] = []
     for room in rooms:
@@ -118,7 +122,13 @@ def furnish_rooms(rooms: list[Room], boundary=None) -> FurnishResult:
         elif key == "kuchnia":
             f, w = _furnish_kitchen(room, windows, rzones)
         elif key == "salon":
-            f, w = _furnish_living(room, windows, rzones, _room_shared_walls(room, day_rooms))
+            shared = _room_shared_walls(room, day_rooms)
+            f, w = _furnish_living(room, windows, rzones, shared)
+            if _is_kitchenette(room) and not has_kuchnia:
+                kf, kw = _furnish_kitchenette(room, windows, rzones,
+                                              [x.polygon for x in f], shared)
+                f += kf
+                w += kw
         elif key in ("lazienka", "wc"):
             f, w = _furnish_bathroom(room, windows, rzones)
         else:
@@ -310,6 +320,35 @@ def _furnish_kitchen(room: Room, windows: set, zones):
         return out, warn
     out.append(Furniture("kitchen_counter", rect, room.spec.id, counter.label))
     return out, warn
+
+
+def _is_kitchenette(room: Room) -> bool:
+    """Otwarta strefa dzienna z aneksem kuchennym (mieszkania: `salon_aneks`)."""
+    rid = room.spec.id.lower()
+    nm = (room.spec.nazwa or "").lower()
+    return "aneks" in rid or "aneks" in nm or "kitchenette" in nm
+
+
+def _furnish_kitchenette(room: Room, windows: set, zones, occupied, shared: set):
+    """Aneks kuchenny w otwartej strefie dziennej: liniowy blat na wolnej ścianie.
+
+    Preferuje ścianę z oknem (zlew pod oknem), unika otwartego styku (`shared`) z
+    resztą strefy dziennej oraz mebli salonu (`occupied`). Best-effort — przy braku
+    miejsca zwraca ostrzeżenie zamiast pomijać kuchnię po cichu.
+    """
+    region = _inset(room.polygon)
+    counter = next(p for p in FURNITURE_SETS["kuchnia"] if p.type == "kitchen_counter")
+    blocked = list(zones) + list(occupied)
+    walls = sorted(("S", "N", "W", "E"),
+                   key=lambda w: (w not in windows, w in shared, -_wall_len(region, w)))
+    for wall in walls:
+        length = min(counter.b, _wall_len(region, wall))
+        if length < 0.8:
+            continue
+        rect = _place_on_wall(region, length, counter.a, wall, [], blocked)
+        if rect is not None:
+            return [Furniture("kitchen_counter", rect, room.spec.id, counter.label)], []
+    return [], [f"{room.spec.id} ({room.polygon.area:.1f} m²): brak miejsca na aneks kuchenny"]
 
 
 def _furnish_bathroom(room: Room, windows: set, zones):

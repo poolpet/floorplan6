@@ -2,7 +2,7 @@
 from shapely.geometry import Polygon, box
 
 from core.models import Room, RoomSpec, Strefa
-from core.furniture import place_furniture, Furniture
+from core.furniture import place_furniture, furnish_rooms, Furniture
 
 
 def _room(room_id: str, strefa: Strefa, w: float, h: float, x: float = 0.0, y: float = 0.0) -> Room:
@@ -27,6 +27,19 @@ def _assert_inside_and_disjoint(furniture: list[Furniture], room: Room):
         for j in range(i + 1, len(furniture)):
             inter = furniture[i].polygon.intersection(furniture[j].polygon).area
             assert inter < 1e-6, f"kolizja {furniture[i].piece_type} × {furniture[j].piece_type}"
+
+
+def test_open_plan_salon_aneks_gets_kitchen_counter():
+    # Mieszkania M1-M5 mają otwartą strefę dzienną `salon_aneks` (BEZ osobnego pokoju
+    # `kuchnia`). Aneks kuchenny MUSI dostać blat — inaczej rzut nie ma kuchni
+    # (bug z rzutu Dawida 2026-06-08: "Living room with kitchenette" bez kuchni).
+    spec = RoomSpec(id="salon_aneks", nazwa="Pokój dzienny z aneksem kuchennym",
+                    strefa=Strefa.DZIENNA, wymaga_okna=True, priorytet_fasady=1)
+    room = Room(spec=spec, polygon=box(0.0, 0.0, 6.0, 5.0))
+    room.update_metrics()
+    res = furnish_rooms([room])
+    assert any(f.piece_type == "kitchen_counter" for f in res.furniture), \
+        "salon_aneks nie dostał blatu kuchennego"
 
 
 def test_sypialnia_gets_bed_and_wardrobe():

@@ -170,6 +170,13 @@ def _detect_entry_side(boundary: Boundary) -> str:
     return min(dists, key=dists.get)
 
 
+# Cap otwartej strefy dziennej mieszkania (salon_aneks). Bez niego Q6 (salon = min +
+# 80% nadmiaru) dawało gigant 84 m² na 124 m² (render Dawida 2026-06-09). Nadmiar ponad
+# cap przepychany do sypialni. EDYTOWALNE — dostroić na rzutach (ARCHON: salon 35 + aneks).
+# Tylko mieszkania (domy mają osobny compute_house_targets z DEFAULT_HOUSE_CAPS).
+APARTMENT_DAY_ZONE_CAP = 45.0
+
+
 def _compute_target_areas(
     specs: list[RoomSpec], usable_area_m2: float
 ) -> dict[str, float]:
@@ -230,12 +237,34 @@ def _compute_target_areas(
         return targets
 
     excess = available - min_total
-    targets[salon.id] = salon.min_powierzchnia + 0.8 * excess
-    sum_syp_min = sum(syp_mins)
-    for s, smin in zip(sypialnie, syp_mins):
-        targets[s.id] = smin + 0.2 * excess * (smin / sum_syp_min)
-
+    # Q6: salon bierze 80% nadmiaru — ALE z capem (salon_aneks nie pęcznieje w nieskończoność).
+    # Nadmiar ponad cap przepychany do sypialni.
+    salon_cap = APARTMENT_DAY_ZONE_CAP if "aneks" in salon.id else float("inf")
+    salon_take = min(0.8 * excess, max(0.0, salon_cap - salon.min_powierzchnia))
+    targets[salon.id] = salon.min_powierzchnia + salon_take
+    syp_excess = excess - salon_take
+    # Sypialnie: water-filling do RÓWNEGO rozmiaru (nadmiar podnosi najmniejsze najpierw),
+    # NIE proporcjonalnie do min — to dawało 7.5 vs 27 (render Dawida 2026-06-09).
+    _water_fill(targets, sypialnie, syp_mins, sum(syp_mins) + syp_excess)
     return targets
+
+
+def _water_fill(targets, specs, mins, total):
+    """Rozdziel `total` m² na pokoje tak, by były jak najrówniejsze (każdy ≥ swój min).
+
+    Szuka poziomu wody T (binsearch): pole pokoju = max(min_i, T), suma == total.
+    Pokoje o dużym min zostają na min, mniejsze podnoszone do T → wyrównanie.
+    """
+    lo, hi = 0.0, total
+    for _ in range(60):
+        T = (lo + hi) / 2.0
+        if sum(max(m, T) for m in mins) < total:
+            lo = T
+        else:
+            hi = T
+    T = (lo + hi) / 2.0
+    for spec, m in zip(specs, mins):
+        targets[spec.id] = max(m, T)
 
 
 def solve_cpsat(

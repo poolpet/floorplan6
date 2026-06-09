@@ -16,6 +16,23 @@ from core.models import (
 )
 
 
+# Dobór typu mieszkania wg powierzchni użytkowej (m²). M1=0, M2=1, M3=2, M4=3,
+# M5=4 sypialnie. Bez tego runnery brały M3 (2 syp.) zawsze → duże mieszkanie miało
+# za mało pokoi (uwaga Dawida 2026-06-09: 124 m² → 3 sypialnie). EDYTOWALNE — progi
+# do dostrojenia na rzutach. (próg, typ); area < próg → typ; powyżej wszystkich → M5.
+_MTYPE_BY_AREA: list[tuple[float, str]] = [
+    (35.0, "M1"), (52.0, "M2"), (78.0, "M3"), (135.0, "M4"),
+]
+
+
+def suggest_mtype(usable_area_m2: float) -> str:
+    """Sugerowany typ mieszkania (M1..M5) dla danej powierzchni użytkowej."""
+    for threshold, mtype in _MTYPE_BY_AREA:
+        if usable_area_m2 < threshold:
+            return mtype
+    return "M5"
+
+
 # ============================================================
 # Ładowanie szablonów z JSON
 # ============================================================

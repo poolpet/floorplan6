@@ -382,6 +382,38 @@ class TapirConnection:
         result = self._execute_tapir("CreateObjects", {"objectsData": objects_data})
         return [g for g in self._extract_guids(result) if g]
 
+    def get_gdl_parameters(self, guids: list[str]) -> list[dict]:
+        """Pobierz parametry GDL elementów (Tapir GetGDLParametersOfElements).
+
+        Returns: lista (po jednej na element) list paramów {name, type, value, ...}.
+        """
+        if not guids:
+            return []
+        elements = [{"elementId": {"guid": g}} for g in guids]
+        result = self._execute_tapir("GetGDLParametersOfElements", {"elements": elements})
+        return result.get("gdlParametersOfElements", [])
+
+    def set_gdl_parameters(self, elements_with_params: list[dict]) -> dict:
+        """Ustaw parametry GDL elementów (Tapir SetGDLParametersOfElements).
+
+        Args:
+            elements_with_params: lista dict gotowych pod schemat:
+                {"elementId": {"guid": G},
+                 "gdlParameters": [{"name": "A", "value": 1.6}, ...]}
+              (np. z core.furniture_extractor.furniture_to_gdl_payload). Dla obiektów
+              ustawia A/B (Length, w metrach) → realny rozmiar 2D/3D; to JEDYNA komenda
+              Tapira realnie zapisująca A/B (CreateObjects.dimensions = tylko xRatio/yRatio).
+
+        Returns:
+            Surowy wynik (zawiera executionResults).
+        """
+        if not elements_with_params:
+            return {}
+        return self._execute_tapir(
+            "SetGDLParametersOfElements",
+            {"elementsWithGDLParameters": elements_with_params},
+        )
+
     @staticmethod
     def _extract_guids(result: dict) -> list[str]:
         """Wyodrębnij GUID-y z odpowiedzi Tapir."""

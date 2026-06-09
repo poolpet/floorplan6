@@ -3,8 +3,53 @@
 > Updated after every working session. If it doesn't reflect reality —
 > Claude updates immediately.
 >
-> **Last update:** 2026-06-08 (Session 23 — branch `feat/sfh-open-plan-day-zone`: **mieszkanie→AC potwierdzone
-> LIVE + meble→AC jako obiekty biblioteczne (opcja A)**). Cel: zde-riskować rurę mieszkanie→AC i dowieźć meble do AC.
+> **Last update:** 2026-06-09 (Session 25 — branch `feat/sfh-open-plan-day-zone`: **meble→AC pivot na pojedyncze
+> meble + jakość układu mieszkań**). FURNITURE: realny rozmiar przez `SetGDLParametersOfElements(A,B)` — Tapir
+> `dimensions`=MNOŻNIK domyślnego A/B (NIE metry, źródłowo potwierdzone w `ElementCreationCommands.cpp`); kuchnia
+> rozbita na moduły 0.6 m (`Szafka podstawowa`+`Lodówka`, wyposażenie przez bSink/bCooktop/bCounter — wybór Dawida);
+> ekstraktor odwzorowuje box solvera 1:1 (usunięto `_orient_to_box`/`_anchor` — to one rozjeżdżały lokalizację/skalę).
+> **TWARDA BARIERA: ten build Tapira NIE obraca obiektów** (`AddOnMain.cpp`: brak RotateElements/ModifyObjects, kąt
+> w CreateObjects=brak) → duże meble (sofa/łóżko) deformują się na pionowych ścianach. **Decyzja Dawida: meble-AC
+> zamrożone, rotacja przez dokładkę C++ do Tapira (PR-upstream), robić ją gdy układ dopięty.** LAYOUT MIESZKAŃ
+> (algorytm-first): `APARTMENT_DAY_ZONE_CAP=45` (cap salonu, nadmiar→sypialnie), `suggest_mtype(area)` (M1-M5 wg
+> powierzchni: 124m²→M4=3syp), water-fill sypialni (równe). 124m² render: salon 63→32, 2→3 sypialnie. Domy OK dla
+> REALNYCH obrysów (74m² zbalansowany; 124m²-dom bloat = obrys za duży na dom, nie bug). **NEXT (w toku): research
+> najpopularniejszych PL układów (archon.pl) → 10 reprezentatywnych obrysów → seria testów → strojenie algorytmu
+> do najczęstszych (= najchętniej wybieranych) układów** (dyrektywa Dawida). Testy: 26 (caps+extractor) + 36
+> (cpsat/e2e) + 54 (furniture) zielone, domy nietknięte. Pamięć: [[project_ac_export_apartment_confirmed]].
+>
+> **Previously — Session 24 (2026-06-08)** — branch `feat/sfh-open-plan-day-zone`: **meble→AC bug-fix po ocenie Dawida;
+> dane poprawne, ale wizualnie NADAL ŹLE — nieparametryczne części biblioteczne**). Dawid ocenił meble M3 w AC →
+> 2 bugi: meble pływają + brak kuchni. **Diagnoza (grounded 15-agent workflow, adwersaryjnie zweryfikowana) +
+> 4 fixy RED-first** w `core/furniture.py` + `core/furniture_extractor.py`: **(H2 pływanie)** `_orient_to_box` —
+> eksport do AC (`extract_furniture`) re-derywował geometrię NIEZALEŻNIE od renderera matplotlib (renderer rysuje
+> surowy box solvera, już dociśnięty → OK; AC podstawiał stałe wymiary biblioteczne w stałej osi → mebel przy ścianie
+> W/E przekręcony, wybrzusza się). Rotacja niedostępna → zamiana dim_x↔dim_y. **(H1 kuchnia)** mieszkania M1-M5 NIE
+> mają pokoju `kuchnia` — otwarty `salon_aneks` → `key="salon"` → `_furnish_living`, NIGDY `_furnish_kitchen` (jedyny
+> producent `kitchen_counter`) → nowy `_furnish_kitchenette` (blat na ścianie aneksu; strażnik `not has_kuchnia` →
+> domy bez zmian). **(blat)** `LINEAR_TYPES={kitchen_counter}` → footprint boxa (cienki), nie sztywny blok 1.92×2.52.
+> **(stolik)** `CENTERED_TYPES={coffee_table}` → centrowany na boxie, nie dociskany do ściany. **Kotwica
+> ROZSTRZYGNIĘTA** (`notebooks/ac_anchor_probe.py`): CreateObjects `coordinates` = origin obiektu 1:1 = LEWY-DOLNY
+> RÓG (readback z czystego AC: 46 mebli → 0 floatujących); angle=0; brakująca część znika po cichu (H3);
+> GetBoundingBoxes2D/3D niedostępne. Nowe runnery: `furniture_export_check.py` (offline dual-panel renderer-vs-AC),
+> `ac_export_multi.py` (multi-obrys: grupuje zaznaczone ściany w komponenty spójności = osobne mieszkania),
+> `ac_outlines_render.py` (read-only render realnych obrysów), `ac_clean_and_export.py` (kasuje wygenerowane śmieci
+> zachowując zaznaczone ściany+drzwi → 1 czysty eksport). **Weryfikacja:** 85 testów zielonych (+5 nowych); pełna
+> regresja 449 passed (4 znane flaki single-storey CP-SAT, potwierdzone w izolacji); offline render 4 realnych obrysów
+> Dawida (prostokąt+L+trapez) = 0 AXIS/OUT/float, kuchnia wszędzie; live: dokument AC wyczyszczony (1263 śmieci z ~100
+> runów) + 4/4 mieszkania wyeksportowane na czysto. **⚠️ NADAL ŹLE WIZUALNIE (Dawid wieczorem „nadal źle"):** mimo
+> poprawnych danych (origin+dimensions w obrysie, 0 floating), **części biblioteczne AC rysują STAŁE 2D symbole
+> ignorujące nasze `dimensions`** — zwłaszcza `Zestaw mebli kuchennych` rysuje wielki rząd AGD WYCHODZĄCY POZA ściany
+> (najgorzej trapez + środkowy obrys). To NIE bug współrzędnych — to NIEodpowiednie (nieparametryczne) części.
+> **NEXT (jutro, KONTYNUACJA): wybrać Z DAWIDEM PARAMETRYCZNE części respektujące `dimensions` (zwł. cienki blat
+> ~0.6 m), ALBO zmienić reprezentację kuchni na Morph/2D fill/Slab — powrót do odłożonej decyzji „library objects vs
+> Morph/2D".** LEKCJA: dokument AC kumuluje strefy/obiekty z każdego eksportu (brak auto-cleanup) → zawsze czyść przed
+> oceną. **Kod NIE commitnięty** (working tree: `core/furniture.py`, `core/furniture_extractor.py`, `tests/test_furniture*.py`,
+> + 4 nowe notebooks; gałąź lokalna). Reszta backlogu: rotacja 0° vs C++, domy→AC, 2 szafki nocne 0.15 m², GAP/realizm,
+> phase 2c, micro-35, un-xfail M3, GUI 2-tab. Pamięć: [[project_ac_export_apartment_confirmed]].
+>
+> **Previously — Session 23 (2026-06-08)** — branch `feat/sfh-open-plan-day-zone`: **mieszkanie→AC potwierdzone
+> LIVE + meble→AC jako obiekty biblioteczne (opcja A)**. Cel: zde-riskować rurę mieszkanie→AC i dowieźć meble do AC.
 > **(1) De-risk rury — root cause + fix:** stary `notebooks/ac_export_check.py` wstawiał syntetyk 10×8 w origin świata
 > (offset 0, brak ścian obwodowych) → strefy w pustce + komunikat „obrys nie zamknięty" + `windows=0` — to był artefakt
 > HARNESSU, NIE bug produktu. Przepisany na REALNY flow (`read_boundary_from_archicad` → shift do origin → `generate_variants`

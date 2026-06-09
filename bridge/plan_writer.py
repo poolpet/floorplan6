@@ -37,7 +37,8 @@ from core.window_extractor import (
 from core.furniture import furnish_rooms
 from core.furniture_extractor import (
     extract_furniture,
-    furniture_to_tapir_payload,
+    furniture_to_create_payload,
+    furniture_to_gdl_payload,
 )
 from bridge.tapir_connection import TapirConnection
 
@@ -295,10 +296,12 @@ def export_plan_to_archicad(
                     except Exception as e:
                         print(f"[V4 windows] CreateWindows EXCEPTION: {e}")
 
-    # ─────── 6. Meble jako obiekty biblioteczne (V5 — Tapir CreateObjects) ───────
-    # FurnishResult → obiekty biblioteczne AC (wybór Dawida). Kotwica+wymiary z
-    # boxa mebla; offset jak ściany/etykiety (współrzędne absolutne). Kąt
-    # nieobsługiwany przez CreateObjects — orientacja przez dimensions x/y.
+    # ─────── 6. Meble jako obiekty biblioteczne (V6 — CreateObjects + SetGDL A/B) ───────
+    # FurnishResult → obiekty biblioteczne AC (wybór Dawida). Kotwica = lewy-dolny róg
+    # boxa; offset jak ściany/etykiety (współrzędne absolutne). Rozmiar: NIE przez
+    # dimensions (AC czyta je jako mnożnik, nie metry — źródło Tapira), tylko 2-krokowo:
+    # CreateObjects (rozmiar domyślny) → SetGDLParametersOfElements A/B w metrach.
+    # Kuchnia = rozbita na pojedyncze moduły (lodówka+szafki) w extract_furniture.
     object_guids: list[str] = []
     if include_furniture:
         try:
@@ -306,11 +309,15 @@ def export_plan_to_archicad(
         except Exception:
             fr = furnish_rooms(plan.rooms)  # back-compat fallback (bez świadomości okien)
         furn_objects = extract_furniture(fr, plan.rooms)
-        furn_payload = furniture_to_tapir_payload(furn_objects, offset=(ox, oy))
-        print(f"[V5 furniture] {len(furn_payload)} obiektów do wstawienia")
-        if furn_payload:
-            object_guids = tapir.create_objects(furn_payload)
-        print(f"[V5 furniture] wstawiono {len(object_guids)} obiektów")
+        create_payload = furniture_to_create_payload(furn_objects, offset=(ox, oy))
+        print(f"[V6 furniture] {len(create_payload)} obiektów do wstawienia")
+        if create_payload:
+            object_guids = tapir.create_objects(create_payload)
+            gdl_payload = furniture_to_gdl_payload(furn_objects, object_guids)
+            if gdl_payload:
+                tapir.set_gdl_parameters(gdl_payload)
+            print(f"[V6 furniture] wstawiono {len(object_guids)} obiektów, "
+                  f"A/B ustawione dla {len(gdl_payload)}")
 
     return {
         "zones": zone_guids,
