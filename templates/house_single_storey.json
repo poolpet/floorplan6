@@ -5,31 +5,293 @@
   "source": "manual",
   "n_source_plans": 0,
   "pokoje": [
-    { "id": "hub", "nazwa": "Hol", "strefa": "KOMUNIKACJA", "wymaga_okna": false, "priorytet_fasady": null, "min_powierzchnia": 4.0, "opt_powierzchnia": 6.0, "min_szerokosc": 1.5, "max_proporcja": 2.0, "procent_powierzchni": [0.04, 0.10] },
-    { "id": "wiatrolap", "nazwa": "Wiatrołap", "strefa": "KOMUNIKACJA", "wymaga_okna": false, "priorytet_fasady": null, "min_powierzchnia": 2.5, "opt_powierzchnia": 4.0, "min_szerokosc": 1.2, "max_proporcja": 2.0, "procent_powierzchni": [0.02, 0.06] },
-    { "id": "salon", "nazwa": "Salon", "strefa": "DZIENNA", "wymaga_okna": true, "priorytet_fasady": 1, "preferowana_orientacja": [], "min_powierzchnia": 20.0, "opt_powierzchnia": 25.0, "min_szerokosc": 3.5, "max_proporcja": 2.0, "procent_powierzchni": [0.20, 0.35] },
-    { "id": "kuchnia", "nazwa": "Kuchnia", "strefa": "DZIENNA", "wymaga_okna": true, "priorytet_fasady": 2, "preferowana_orientacja": [], "min_powierzchnia": 7.0, "opt_powierzchnia": 10.0, "min_szerokosc": 2.4, "max_proporcja": 2.0, "procent_powierzchni": [0.07, 0.14] },
-    { "id": "spizarnia", "nazwa": "Spiżarnia", "strefa": "USŁUGOWA", "wymaga_okna": false, "priorytet_fasady": null, "min_powierzchnia": 2.0, "opt_powierzchnia": 3.5, "min_szerokosc": 1.2, "max_proporcja": 2.5, "procent_powierzchni": [0.02, 0.05] },
-    { "id": "wc", "nazwa": "WC", "strefa": "USŁUGOWA", "wymaga_okna": false, "priorytet_fasady": null, "min_powierzchnia": 1.5, "opt_powierzchnia": 2.2, "min_szerokosc": 1.0, "max_proporcja": 2.0, "procent_powierzchni": [0.01, 0.04] },
-    { "id": "lazienka", "nazwa": "Łazienka", "strefa": "USŁUGOWA", "wymaga_okna": false, "priorytet_fasady": null, "min_powierzchnia": 2.5, "opt_powierzchnia": 4.8, "min_szerokosc": 1.5, "max_proporcja": 2.0, "procent_powierzchni": [0.06, 0.12] },
-    { "id": "kotlownia", "nazwa": "Kotłownia", "strefa": "USŁUGOWA", "wymaga_okna": false, "priorytet_fasady": null, "min_powierzchnia": 4.0, "opt_powierzchnia": 5.0, "min_szerokosc": 1.5, "max_proporcja": 2.0, "procent_powierzchni": [0.03, 0.07] },
-    { "id": "sypialnia_1", "nazwa": "Sypialnia główna", "strefa": "NOCNA", "wymaga_okna": true, "priorytet_fasady": 1, "preferowana_orientacja": [], "min_powierzchnia": 11.0, "opt_powierzchnia": 14.0, "min_szerokosc": 3.0, "max_proporcja": 2.0, "procent_powierzchni": [0.15, 0.25] },
-    { "id": "sypialnia_2", "nazwa": "Sypialnia 2", "strefa": "NOCNA", "wymaga_okna": true, "priorytet_fasady": 2, "preferowana_orientacja": [], "min_powierzchnia": 9.0, "opt_powierzchnia": 11.5, "min_szerokosc": 2.5, "max_proporcja": 2.0, "procent_powierzchni": [0.12, 0.22] },
-    { "id": "sypialnia_3", "nazwa": "Sypialnia 3", "strefa": "NOCNA", "wymaga_okna": true, "priorytet_fasady": 3, "preferowana_orientacja": [], "min_powierzchnia": 8.0, "opt_powierzchnia": 10.5, "min_szerokosc": 2.4, "max_proporcja": 2.0, "procent_powierzchni": [0.10, 0.18] },
-    { "id": "garderoba", "nazwa": "Garderoba", "strefa": "USŁUGOWA", "wymaga_okna": false, "priorytet_fasady": null, "min_powierzchnia": 2.5, "opt_powierzchnia": 4.0, "min_szerokosc": 1.2, "max_proporcja": 2.5, "procent_powierzchni": [0.03, 0.07] }
+    {
+      "id": "hub",
+      "nazwa": "Hol",
+      "strefa": "KOMUNIKACJA",
+      "wymaga_okna": false,
+      "priorytet_fasady": null,
+      "min_powierzchnia": 4.0,
+      "opt_powierzchnia": 6.0,
+      "min_szerokosc": 1.5,
+      "max_proporcja": 2.0,
+      "procent_powierzchni": [
+        0.04,
+        0.1
+      ]
+    },
+    {
+      "id": "wiatrolap",
+      "nazwa": "Wiatrołap",
+      "strefa": "KOMUNIKACJA",
+      "wymaga_okna": false,
+      "priorytet_fasady": null,
+      "min_powierzchnia": 2.5,
+      "opt_powierzchnia": 4.0,
+      "min_szerokosc": 1.2,
+      "max_proporcja": 2.0,
+      "procent_powierzchni": [
+        0.02,
+        0.06
+      ]
+    },
+    {
+      "id": "salon",
+      "nazwa": "Salon",
+      "strefa": "DZIENNA",
+      "wymaga_okna": true,
+      "priorytet_fasady": 1,
+      "preferowana_orientacja": [],
+      "min_powierzchnia": 20.0,
+      "opt_powierzchnia": 25.0,
+      "min_szerokosc": 3.5,
+      "max_proporcja": 2.0,
+      "procent_powierzchni": [
+        0.2,
+        0.35
+      ]
+    },
+    {
+      "id": "kuchnia",
+      "nazwa": "Kuchnia",
+      "strefa": "DZIENNA",
+      "wymaga_okna": true,
+      "priorytet_fasady": 2,
+      "preferowana_orientacja": [],
+      "min_powierzchnia": 7.0,
+      "opt_powierzchnia": 10.0,
+      "min_szerokosc": 2.4,
+      "max_proporcja": 2.0,
+      "procent_powierzchni": [
+        0.07,
+        0.14
+      ]
+    },
+    {
+      "id": "spizarnia",
+      "nazwa": "Spiżarnia",
+      "strefa": "USŁUGOWA",
+      "wymaga_okna": false,
+      "priorytet_fasady": null,
+      "min_powierzchnia": 2.0,
+      "opt_powierzchnia": 3.5,
+      "min_szerokosc": 1.2,
+      "max_proporcja": 2.5,
+      "procent_powierzchni": [
+        0.02,
+        0.05
+      ]
+    },
+    {
+      "id": "wc",
+      "nazwa": "WC",
+      "strefa": "USŁUGOWA",
+      "wymaga_okna": false,
+      "priorytet_fasady": null,
+      "min_powierzchnia": 1.5,
+      "opt_powierzchnia": 2.2,
+      "min_szerokosc": 1.0,
+      "max_proporcja": 2.0,
+      "procent_powierzchni": [
+        0.01,
+        0.04
+      ]
+    },
+    {
+      "id": "lazienka",
+      "nazwa": "Łazienka",
+      "strefa": "USŁUGOWA",
+      "wymaga_okna": false,
+      "priorytet_fasady": null,
+      "min_powierzchnia": 2.5,
+      "opt_powierzchnia": 4.8,
+      "min_szerokosc": 1.5,
+      "max_proporcja": 2.0,
+      "procent_powierzchni": [
+        0.06,
+        0.12
+      ]
+    },
+    {
+      "id": "kotlownia",
+      "nazwa": "Kotłownia",
+      "strefa": "USŁUGOWA",
+      "wymaga_okna": false,
+      "priorytet_fasady": null,
+      "min_powierzchnia": 4.0,
+      "opt_powierzchnia": 5.0,
+      "min_szerokosc": 1.5,
+      "max_proporcja": 2.0,
+      "procent_powierzchni": [
+        0.03,
+        0.07
+      ]
+    },
+    {
+      "id": "sypialnia_1",
+      "nazwa": "Sypialnia główna",
+      "strefa": "NOCNA",
+      "wymaga_okna": true,
+      "priorytet_fasady": 1,
+      "preferowana_orientacja": [],
+      "min_powierzchnia": 11.0,
+      "opt_powierzchnia": 14.0,
+      "min_szerokosc": 3.0,
+      "max_proporcja": 2.0,
+      "procent_powierzchni": [
+        0.15,
+        0.25
+      ]
+    },
+    {
+      "id": "sypialnia_2",
+      "nazwa": "Sypialnia 2",
+      "strefa": "NOCNA",
+      "wymaga_okna": true,
+      "priorytet_fasady": 2,
+      "preferowana_orientacja": [],
+      "min_powierzchnia": 9.0,
+      "opt_powierzchnia": 11.5,
+      "min_szerokosc": 2.5,
+      "max_proporcja": 2.0,
+      "procent_powierzchni": [
+        0.12,
+        0.22
+      ]
+    },
+    {
+      "id": "sypialnia_3",
+      "nazwa": "Sypialnia 3",
+      "strefa": "NOCNA",
+      "wymaga_okna": true,
+      "priorytet_fasady": 3,
+      "preferowana_orientacja": [],
+      "min_powierzchnia": 8.0,
+      "opt_powierzchnia": 10.5,
+      "min_szerokosc": 2.4,
+      "max_proporcja": 2.0,
+      "procent_powierzchni": [
+        0.1,
+        0.18
+      ]
+    },
+    {
+      "id": "garderoba",
+      "nazwa": "Garderoba",
+      "strefa": "USŁUGOWA",
+      "wymaga_okna": false,
+      "priorytet_fasady": null,
+      "min_powierzchnia": 2.5,
+      "opt_powierzchnia": 4.0,
+      "min_szerokosc": 1.2,
+      "max_proporcja": 2.5,
+      "procent_powierzchni": [
+        0.03,
+        0.07
+      ]
+    },
+    {
+      "id": "sypialnia_4",
+      "nazwa": "Sypialnia 4",
+      "strefa": "NOCNA",
+      "wymaga_okna": true,
+      "priorytet_fasady": 4,
+      "preferowana_orientacja": [],
+      "min_powierzchnia": 8.0,
+      "opt_powierzchnia": 10.5,
+      "min_szerokosc": 2.4,
+      "max_proporcja": 2.0,
+      "procent_powierzchni": [
+        0.1,
+        0.18
+      ]
+    },
+    {
+      "id": "lazienka_2",
+      "nazwa": "Łazienka 2",
+      "strefa": "USŁUGOWA",
+      "wymaga_okna": false,
+      "priorytet_fasady": null,
+      "min_powierzchnia": 3.5,
+      "opt_powierzchnia": 5.0,
+      "min_szerokosc": 1.5,
+      "max_proporcja": 2.0,
+      "procent_powierzchni": [
+        0.06,
+        0.12
+      ]
+    }
   ],
   "sasiedztwo": [
-    { "room_a": "wiatrolap", "room_b": "_outside", "connection_type": "entry_door" },
-    { "room_a": "hub", "room_b": "wiatrolap", "connection_type": "door" },
-    { "room_a": "hub", "room_b": "salon", "connection_type": "door" },
-    { "room_a": "hub", "room_b": "wc", "connection_type": "door" },
-    { "room_a": "hub", "room_b": "kotlownia", "connection_type": "door" },
-    { "room_a": "hub", "room_b": "lazienka", "connection_type": "door" },
-    { "room_a": "hub", "room_b": "garderoba", "connection_type": "door" },
-    { "room_a": "hub", "room_b": "sypialnia_1", "connection_type": "door" },
-    { "room_a": "hub", "room_b": "sypialnia_2", "connection_type": "door" },
-    { "room_a": "hub", "room_b": "sypialnia_3", "connection_type": "door" },
-    { "room_a": "salon", "room_b": "kuchnia", "connection_type": "opening" },
-    { "room_a": "kuchnia", "room_b": "spizarnia", "connection_type": "door" }
+    {
+      "room_a": "wiatrolap",
+      "room_b": "_outside",
+      "connection_type": "entry_door"
+    },
+    {
+      "room_a": "hub",
+      "room_b": "wiatrolap",
+      "connection_type": "door"
+    },
+    {
+      "room_a": "hub",
+      "room_b": "salon",
+      "connection_type": "door"
+    },
+    {
+      "room_a": "hub",
+      "room_b": "wc",
+      "connection_type": "door"
+    },
+    {
+      "room_a": "hub",
+      "room_b": "kotlownia",
+      "connection_type": "door"
+    },
+    {
+      "room_a": "hub",
+      "room_b": "lazienka",
+      "connection_type": "door"
+    },
+    {
+      "room_a": "hub",
+      "room_b": "garderoba",
+      "connection_type": "door"
+    },
+    {
+      "room_a": "hub",
+      "room_b": "sypialnia_1",
+      "connection_type": "door"
+    },
+    {
+      "room_a": "hub",
+      "room_b": "sypialnia_2",
+      "connection_type": "door"
+    },
+    {
+      "room_a": "hub",
+      "room_b": "sypialnia_3",
+      "connection_type": "door"
+    },
+    {
+      "room_a": "salon",
+      "room_b": "kuchnia",
+      "connection_type": "opening"
+    },
+    {
+      "room_a": "kuchnia",
+      "room_b": "spizarnia",
+      "connection_type": "door"
+    },
+    {
+      "room_a": "hub",
+      "room_b": "sypialnia_4",
+      "connection_type": "door"
+    },
+    {
+      "room_a": "hub",
+      "room_b": "lazienka_2",
+      "connection_type": "door"
+    }
   ]
 }

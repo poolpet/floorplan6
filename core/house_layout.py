@@ -29,7 +29,14 @@ PRZEDSIONEK_MIN_AREA = 50.0     # D2: poniżej tego progu drzwi wprost do holu (
 # Dobór pokoi parterowca wg powierzchni obrysu. Rdzeń zawsze; reszta greedy wg sumy
 # minów z marginesem na upakowanie ((suma_min+m)·margin ≤ area). Wiatrołap wg progu D2.
 _SINGLE_CORE = ["hub", "salon", "kuchnia", "lazienka", "sypialnia_1"]
-_SINGLE_OPTIONAL = ["wc", "sypialnia_2", "spizarnia", "kotlownia", "sypialnia_3", "garderoba"]
+# Priorytet: sypialnie WYSOKO (research archon.pl: bestseller = 4 syp + 2 łazienki na
+# 85-130 m²; 63-85 m² → 3 syp). 2. łazienka + wc + kotłownia, luksusy (spiżarnia/garderoba)
+# na końcu (i tak zwykle ucięte capem liczby pokoi).
+_SINGLE_OPTIONAL = ["sypialnia_2", "sypialnia_3", "sypialnia_4", "lazienka_2",
+                    "wc", "kotlownia", "spizarnia", "garderoba"]
+# Cap liczby pokoi parterowca — CP-SAT robi się wolny/zawiesza powyżej ~12 pokoi
+# (14 pokoi na 106 m² = timeout). 12 mieści realny program (4 syp + 2 łaz + usługowe).
+_SINGLE_MAX_ROOMS = 12
 _PACK_MARGIN = 1.12   # prowizoryczny; podnieś jeśli wybrany zestaw okaże się INFEASIBLE w macierzy
 
 
@@ -42,7 +49,7 @@ def single_storey_room_ids(specs: list, area_m2: float) -> list[str]:
         chosen.append("wiatrolap")
         cum += by_id["wiatrolap"].min_powierzchnia
     for rid in _SINGLE_OPTIONAL:                                         # greedy wg sumy minów
-        if rid not in by_id:
+        if rid not in by_id or len(chosen) >= _SINGLE_MAX_ROOMS:         # cap liczby pokoi
             continue
         m = by_id[rid].min_powierzchnia
         if (cum + m) * _PACK_MARGIN <= area_m2:
