@@ -1,0 +1,221 @@
+{
+ "outlines": [
+  {
+   "label": "Kawalerka / studio M1 (deweloperski)",
+   "kind": "apartment",
+   "width_m": 4.6,
+   "height_m": 7.2,
+   "area_m2": 33,
+   "shape": "rectangle",
+   "expected_program": "salon z aneksem kuchennym (1 pokój) + łazienka + przedpokój; 0 osobnych sypialni (część dzienna = sypialnia)",
+   "rationale": "Studio typical 30-35 m² for new developer units (~16% of sales, 2nd-largest single segment). Rectangle ~1:1.5; day zone (salon+aneks) on the window facade, łazienka+hol behind. Hits generator M1 band (<35 m²)."
+  },
+  {
+   "label": "2-pokojowe M2 kompaktowe (najpopularniejsze, ~40% sprzedaży)",
+   "kind": "apartment",
+   "width_m": 5.6,
+   "height_m": 7.9,
+   "area_m2": 44,
+   "shape": "rectangle",
+   "expected_program": "salon z aneksem kuchennym + 1 sypialnia + łazienka + przedpokój/hol; 1 sypialnia",
+   "rationale": "2-pok is the market LEADER (~40% of sales in big-7 metros, ~22% of rental demand at ~40 m²). Compact fast-sell band 35-45 m², core 40-50. Open aneks kuchenny = primary-market standard (~2/3 of flats). Unit = rectangle ~6-9 m wide carved from 10-12 m trakt. Lands in generator M2 band (<52)."
+  },
+  {
+   "label": "2-pokojowe M2 pełne (~48 m²)",
+   "kind": "apartment",
+   "width_m": 6,
+   "height_m": 8,
+   "area_m2": 48,
+   "shape": "rectangle",
+   "expected_program": "salon z aneksem kuchennym + 1 sypialnia + łazienka + hol; 1 sypialnia",
+   "rationale": "Upper end of the 40-50 m² 2-room band; avg sold metraż ~51 m² in 2025 so 48 m² sits right at the market center of mass. Tests the M2 template near its upper threshold (52) and day-zone vs bedroom split. Rectangle ~1:1.3."
+  },
+  {
+   "label": "3-pokojowe M3 (rodzinne, druga co do popularności)",
+   "kind": "apartment",
+   "width_m": 7.2,
+   "height_m": 8.6,
+   "area_m2": 62,
+   "shape": "rectangle",
+   "expected_program": "salon z aneksem kuchennym + 2 sypialnie + łazienka + hol; 2 sypialnie",
+   "rationale": "3-pok typical 60-70 m² (band 55-70), the family second-pillar of developer supply. Day zone near entry, 2 bedrooms + bath deeper (private zone). Rectangle ~6-9 m wide x 8-12 deep. Lands in generator M3 band (52-78)."
+  },
+  {
+   "label": "3-pokojowe M3 z osobnym WC (~68 m²)",
+   "kind": "apartment",
+   "width_m": 7.5,
+   "height_m": 9.1,
+   "area_m2": 68,
+   "shape": "rectangle",
+   "expected_program": "salon z aneksem kuchennym + 2 sypialnie + łazienka + WC + hol; 2 sypialnie",
+   "rationale": "Top of the 55-70 m² 3-room band; larger 3-rooms add a guest WC by the entry. Tests generator's WC program slot and upper M3 threshold. Rectangle ~1:1.2."
+  },
+  {
+   "label": "Malutki parterowiec / barn (permit-free sub-80, na zgłoszenie)",
+   "kind": "house_1storey",
+   "width_m": 8,
+   "height_m": 9,
+   "area_m2": 72,
+   "shape": "rectangle",
+   "expected_program": "otwarta strefa dzienna (salon+kuchnia) + 2-3 sypialnie + łazienka + wiatrołap + kotłownia/gospodarcze; 2-3 sypialnie",
+   "rationale": "Booming sub-80 m² permit-free segment (≤70 m² zabudowy → 'na zgłoszenie'). Anchored on Kruszczyki 22 (81.87 m², 3 syp, 2 bath) and Malutki form. 3 BR ≈ 63-85 m². Simple rectangle, side entry, gable roof. Single-storey, no garage."
+  },
+  {
+   "label": "Parterowiec bestseller (Dom przy Bukowej 5, rectangle, 4 syp)",
+   "kind": "house_1storey",
+   "width_m": 15,
+   "height_m": 10.2,
+   "area_m2": 106,
+   "shape": "rectangle",
+   "expected_program": "otwarta strefa dzienna (salon+kuchnia+jadalnia, kominek) + 4 sypialnie + 2 łazienki + spiżarnia + pralnia + wiatrołap + hol; 4 sypialnie",
+   "rationale": "BENCHMARK bestseller parterówka: Dom przy Bukowej 5 = 106.39 m² usable, 15.0 m wide, 4 BR, 2 bath, no garage, rectangle, gable 30°. 4 BR + 2 bath single-storey is the single most-repeated config. THE primary tuning anchor (80-120 m² core band)."
+  },
+  {
+   "label": "Parterowiec near-square z garażem 2-st. (Bukowej 31 / HomeKoncept 133)",
+   "kind": "house_1storey",
+   "width_m": 15.9,
+   "height_m": 12.6,
+   "area_m2": 120,
+   "shape": "rectangle",
+   "expected_program": "otwarta strefa dzienna (salon+kuchnia+jadalnia) + 4 sypialnie + 2 łazienki + spiżarnia + pralnia + kotłownia + wiatrołap + hol (garaż 2-st. opcjonalnie wbudowany, ~36 m²); 4 sypialnie",
+   "rationale": "BENCHMARK 'parterowy + garaż 2-stan.' on near-square footprint: Bukowej 31 = 120 m², 15.94x16.25 m, 4 BR, 2 bath, integrated 2-car garage. HomeKoncept 133 = 130 m², 14.28x17.99, hip roof. The premium-economy 'no stairs, 2-car garage' archetype (garage 2-st. default ≥120 m²). Near-square ~1:1.05-1.25."
+  },
+  {
+   "label": "Parterowiec z poddaszem użytkowym, wąski (Tracja 6) — PARTER",
+   "kind": "house_2storey",
+   "width_m": 15.9,
+   "height_m": 9.9,
+   "area_m2": 123,
+   "shape": "rectangle",
+   "expected_program": "PARTER: otwarta strefa dzienna (salon+kuchnia) + 1 sypialnia/gabinet + łazienka + WC + kotłownia + pralnia + wiatrołap + hol + schody. PODDASZE (~53 m²): 3 sypialnie + łazienka. Łącznie 4 sypialnie",
+   "rationale": "BENCHMARK narrow-lot two-level economy house: Tracja 6 = 122.88 m² usable, 15.94x9.94 m ground floor + 53.45 m² attic, 4 rooms, 2 bath, no garage, gable 35°. The classic 'cheap rooms on a narrow lot' poddasze użytkowe variant. Elongated rectangle ~1:1.6. Tests the parter+schody template + staircase."
+  },
+  {
+   "label": "Dom z poddaszem L-kształtny (garaż-driven, klasa mid-150)",
+   "kind": "house_2storey",
+   "width_m": 14,
+   "height_m": 13,
+   "area_m2": 140,
+   "shape": "L",
+   "expected_program": "PARTER: otwarta strefa dzienna + gabinet/sypialnia gościnna + łazienka/WC + kotłownia + pralnia + spiżarnia + wiatrołap + hol + schody (garaż 2-st. wpisany w skrzydło L). PODDASZE: 3-4 sypialnie (w tym master z garderobą) + łazienka; 4-5 sypialni",
+   "rationale": "L-shape is the real-but-secondary class (minority vs rectangle), 'almost always driven by wrapping a double garage' (extradom Doskonały / Parterowy 3). 120-150 m² → 4-5 BR. Tests the generator's L-outline path + garage wing + master+garderoba on poddasze. Only 1 L-shape because rectangle dominates >50%."
+  }
+ ],
+ "room_targets": [
+  {
+   "room": "salon",
+   "typical_m2": 25,
+   "max_m2": 35,
+   "min_m2": 18
+  },
+  {
+   "room": "salon_aneks (otwarta strefa dzienna, mieszkanie)",
+   "typical_m2": 22,
+   "max_m2": 30,
+   "min_m2": 16
+  },
+  {
+   "room": "day_zone (salon+kuchnia+jadalnia, dom open-plan)",
+   "typical_m2": 38,
+   "max_m2": 45,
+   "min_m2": 28
+  },
+  {
+   "room": "kuchnia (osobna)",
+   "typical_m2": 9,
+   "max_m2": 13,
+   "min_m2": 7
+  },
+  {
+   "room": "aneks kuchenny (open kitchenette into salon)",
+   "typical_m2": 7,
+   "max_m2": 10,
+   "min_m2": 5
+  },
+  {
+   "room": "jadalnia",
+   "typical_m2": 12,
+   "max_m2": 16,
+   "min_m2": 9
+  },
+  {
+   "room": "sypialnia (2-os / dziecięca)",
+   "typical_m2": 12,
+   "max_m2": 14,
+   "min_m2": 9
+  },
+  {
+   "room": "sypialnia (1-os / mała)",
+   "typical_m2": 9.5,
+   "max_m2": 11,
+   "min_m2": 8
+  },
+  {
+   "room": "master / sypialnia główna",
+   "typical_m2": 16,
+   "max_m2": 16.5,
+   "min_m2": 12
+  },
+  {
+   "room": "lazienka (parter / apartment, F2 cap)",
+   "typical_m2": 4.8,
+   "max_m2": 5,
+   "min_m2": 3.5
+  },
+  {
+   "room": "lazienka (poddasze / duża, F2 cap)",
+   "typical_m2": 6.5,
+   "max_m2": 8,
+   "min_m2": 4
+  },
+  {
+   "room": "wc",
+   "typical_m2": 2.2,
+   "max_m2": 3,
+   "min_m2": 1.5
+  },
+  {
+   "room": "garderoba",
+   "typical_m2": 4,
+   "max_m2": 6,
+   "min_m2": 2.5
+  },
+  {
+   "room": "kotlownia",
+   "typical_m2": 7,
+   "max_m2": 8,
+   "min_m2": 4
+  },
+  {
+   "room": "pralnia",
+   "typical_m2": 5,
+   "max_m2": 6,
+   "min_m2": 4
+  },
+  {
+   "room": "spizarnia",
+   "typical_m2": 2.5,
+   "max_m2": 5,
+   "min_m2": 1.5
+  },
+  {
+   "room": "wiatrolap",
+   "typical_m2": 4,
+   "max_m2": 8,
+   "min_m2": 2.5
+  },
+  {
+   "room": "hol / przedpokoj (hub, ~15% usable, min szer. 1.2 m)",
+   "typical_m2": 6,
+   "max_m2": 12,
+   "min_m2": 4
+  },
+  {
+   "room": "schody (poddasze)",
+   "typical_m2": 4.5,
+   "max_m2": 5,
+   "min_m2": 3.5
+  }
+ ],
+ "notes": "SIZE→ROOM-COUNT MAPPING (tune _MTYPE_BY_AREA and house bedroom-count selection to this).\n\nAPARTMENTS (deweloperski, 2025-26; avg sold ~51 m², shrinking). The generator's current thresholds (M1<35, M2<52, M3<78, M4<135) are well-aligned with the data — KEEP them. Mapping: kawalerka/M1 ~30-35 m² (0 separate bedrooms, day zone doubles as sleeping); 2-pok/M2 ~40-50 m² (1 bedroom) — THE market leader at ~40% of sales, compact fast-sell 35-45; 3-pok/M3 ~55-70 m² (2 bedrooms) — family second-place; 4-pok/M4 niche ~65-90 m² (3 bedrooms), low volume. STANDARD apartment layout = OPEN kitchen merged into salon (salon_aneks, ~2/3 of new flats); day zone on the window facade near entry, bedrooms+bath in the private zone deeper in. Unit footprint = rectangle ~6-9 m wide x 8-12 m deep, carved from a 10-12 m trakt. Caveat: ignore GUS ~58/88 m² averages — they blend in houses; use 50-65 m² for city flats.\n\nHOUSES (the PRIMARY tuning target — optimize for COMPACT SINGLE-STOREY RECTANGLE first). Bedroom count scales tightly with size: 63-85 m² → 3 BR; 85-130 m² → 4 BR (MODAL); 120-150 m² → 4-5 BR; 150-220 m² → 5 BR. Bathrooms: 1 below ~90 m², 2 from ~90 m² up. THE single most-repeated config across all catalogs = 4-bedroom, 2-bathroom single-storey rectangle ~85-130 m². ACTION ITEM: house_single_storey.json currently ships only 3 bedrooms (sypialnia_1..3) — for the modal 100-120 m² parterówka it should generate 4 bedrooms + 2 bathrooms. Standard house program = open-plan day zone (salon+kuchnia+jadalnia, often kitchen island + spiżarnia) + separate utility (kotłownia + pralnia) + 1 guest WC by entry + 1 main bathroom + 3-4 bedrooms in night zone + covered terrace; double garage (~27-40 m², 2-st.) default ≥120 m². Parterowy dominates 80-130 m² ('no stairs' preferred); parterowy z poddaszem użytkowym is the cheap-rooms/narrow-lot variant 120-170 m² (attic adds ~53 m², holds ~3 bedrooms); full piętrowy mainly for segments and >150 m².\n\nDOMINANT SHAPE (generator must match): SIMPLE RECTANGLE dominates by a wide margin (>50%; ARCHON+ rectangle category = 1,592 projects, the single largest). Aspect ratio cluster 1:1.2-1:1.8; short side ~7-10 m for narrow/poddasze, near-SQUARE (~1:1.05-1.25, ~15x16 m) for single-storey + garage and footprints >150 m². Footprint widths cluster 14-16 m, depths 9-18 m. L-SHAPE is a real but SECONDARY minority class, almost always garage-driven (wrap a double garage); T/U/complex are rare. Weight the test mix ~80% rectangle/near-square, ~10-20% L. Entry: default FRONT-CENTER for wide symmetric facades; SIDE entry for narrow-plot rectangles (perpendicular to street) to shorten the hall. Permit-free small houses (≤70 m² zabudowy) are even more constrained: max 6 m axis span forces narrow ~7x10 / 8x9 m bays — matches F7 (≤2.5) and an aspect cap ~1.8 for rectangles.\n\nCAP/TARGET TUNING (vs existing DEFAULT_HOUSE_CAPS — mostly aligned, keep). salon cap 35 = correct (open-plan day-zone 30-40); the house day_zone combined cap (salon+kuchnia+jadalnia) ~43-45 @120 m² matches ARCHON. kuchnia 13 OK (z jadalnią 12-15). sypialnia 13 / master 16.5 = good (double 12-16, master 16-20; 16.5 is the tight side of master 16-20 — acceptable). łazienka F2 cap 5 (parter/apartment) / 8 (poddasze) is a DELIBERATE design choice TIGHTER than market practice (main bath 6-8 m²) — KEEP it, do not relax to a norm. wc 3, garderoba 6, spiżarnia 5, wiatrołap 8 OK. kotłownia 8 OK (real ~8-9, only needed for gas/solid-fuel — heat-pump homes can omit it). hol/hub deliberately uncapped as the flex overflow sink, but keep it MINIMAL (F4 ~15% of usable, WT corridor clear width ≥1.2 m, local 0.9 m over ≤1.5 m) and push excess into bedrooms (may be L-shaped polygons), NOT into the corridor."
+}

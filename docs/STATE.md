@@ -13,10 +13,15 @@
 > zamrożone, rotacja przez dokładkę C++ do Tapira (PR-upstream), robić ją gdy układ dopięty.** LAYOUT MIESZKAŃ
 > (algorytm-first): `APARTMENT_DAY_ZONE_CAP=45` (cap salonu, nadmiar→sypialnie), `suggest_mtype(area)` (M1-M5 wg
 > powierzchni: 124m²→M4=3syp), water-fill sypialni (równe). 124m² render: salon 63→32, 2→3 sypialnie. Domy OK dla
-> REALNYCH obrysów (74m² zbalansowany; 124m²-dom bloat = obrys za duży na dom, nie bug). **NEXT (w toku): research
-> najpopularniejszych PL układów (archon.pl) → 10 reprezentatywnych obrysów → seria testów → strojenie algorytmu
-> do najczęstszych (= najchętniej wybieranych) układów** (dyrektywa Dawida). Testy: 26 (caps+extractor) + 36
-> (cpsat/e2e) + 54 (furniture) zielone, domy nietknięte. Pamięć: [[project_ac_export_apartment_confirmed]].
+> REALNYCH obrysów (74m² zbalansowany; 124m²-dom bloat = obrys za duży na dom, nie bug). **OPTYMALIZACJA POD
+> NAJCZĘSTSZE PL UKŁADY (dyrektywa Dawida, archon.pl):** research (workflow) → suite `notebooks/common_pl_suite.json`
+> (10 obrysów + wzorce pokoi) + harness `notebooks/layout_suite.py` (generuje→renderuje→ocenia vs wzorce →
+> `rzuty/suite/`). DONE: M-typ mieszkań POTWIERDZONY z rynkiem (keep); **parterowiec 4 syp + 2 łaz wg powierzchni**
+> (85-130m²→4 syp; szablon +sypialnia_4/lazienka_2, `_SINGLE_OPTIONAL` priorytet sypialni, `_SINGLE_MAX_ROOMS=12`)
+> → 106m² Bukowej-5 = zbalansowany 4-syp parterowiec (`689c132`). KOLEJKA: (1) mieszkanie 44m² (2-pok=market leader
+> ~40%) → M2 infeasible na wąskim obrysie (priorytet); (2) domy 2-kond. — 123m² timeout, 140m² tylko 3 syp +
+> salon-bloat (poddasze potrzebuje skalowania sypialni jak parter); (3) wydajność solvera (12 pokoi ~60s). Testy:
+> 26+36+54 + test_house_single_storey 24 zielone. Pamięć: [[project_ac_export_apartment_confirmed]] [[project_layout_optimization_archon]].
 >
 > **Previously — Session 24 (2026-06-08)** — branch `feat/sfh-open-plan-day-zone`: **meble→AC bug-fix po ocenie Dawida;
 > dane poprawne, ale wizualnie NADAL ŹLE — nieparametryczne części biblioteczne**). Dawid ocenił meble M3 w AC →
