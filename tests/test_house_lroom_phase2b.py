@@ -34,7 +34,7 @@ def _entry(side, W, H):
 _CACHE = {}
 
 
-def _layout(W, H, side, t=25.0):
+def _layout(W, H, side, t=45.0):
     """Generuje (i cache'uje) układ — ten sam (W,H,side) nie jest solvowany dwa razy."""
     key = (W, H, side)
     if key not in _CACHE:
@@ -61,8 +61,9 @@ def _shared(a, b):
 def test_wc_external_and_parter_hol_compact(side):
     """Bug Dawida #1: WC dotyka ściany ZEWNĘTRZNEJ (nie landlocked w środku) — i to BEZ
     rozdęcia korytarza: hol parteru ≤ F4 (15%). To dokładnie konflikt, który faza 2b
-    rozwiązuje L-holem (prostokątny model rozdymał hol >15% na 9×7, stąd rewert)."""
-    W, H = 9.0, 7.0
+    rozwiązuje L-holem (prostokątny model rozdymał hol >15%, stąd rewert).
+    Obrys 11×8 (88 m²): knee-wall (S26) wymaga pasa poddasza ≥ programu piętra."""
+    W, H = 11.0, 8.0
     lay = _layout(W, H, side)
     assert lay.ok, f"{W}x{H} {side}: {lay.message}"
     wc = _room(lay.parter_rooms, "wc")
@@ -80,7 +81,7 @@ def test_wc_external_and_parter_hol_compact(side):
 def test_wiatrolap_on_entry_wall(side):
     """Bug Dawida #2: wiatrołap (śluza wejściowa) dotyka ściany WEJŚCIA — wchodzisz
     przez niego, hol jest za nim. Wiąże poprawną krawędź bbox wg strony wejścia."""
-    W, H = 9.0, 7.0
+    W, H = 11.0, 8.0
     lay = _layout(W, H, side)
     assert lay.ok, f"{W}x{H} {side}: {lay.message}"
     w = _room(lay.parter_rooms, "wiatrolap")
@@ -96,7 +97,7 @@ def test_wiatrolap_on_entry_wall(side):
 def test_wc_and_wiatrolap_reachable_through_hub(side):
     """F5: hol (gwiazda-rozdzielacz) dotyka WC i wiatrołapu wspólną krawędzią ≥0.9 m
     mimo owinięcia ich ramieniem L (sąsiedztwo przez którykolwiek prostokąt)."""
-    W, H = 9.0, 7.0
+    W, H = 11.0, 8.0
     lay = _layout(W, H, side)
     assert lay.ok, f"{W}x{H} {side}: {lay.message}"
     hub = _room(lay.parter_rooms, "hub")
@@ -111,12 +112,14 @@ def test_f1_coverage_exact_and_no_overlap_with_l_hub():
     """F1 w pełnym znaczeniu: z aktywnym L-holem suma pól == usable (==, nie <=) ORAZ
     żadne dwa pokoje się nie nakładają. Sama suma nie wykryłaby nakładania, gdyby
     opcjonalny 2. prostokąt wypadł z NoOverlap2D."""
-    W, H = 9.0, 7.0
+    W, H = 11.0, 8.0
     lay = _layout(W, H, "south")
     assert lay.ok, lay.message
-    usable = W * H
+    # knee-wall (S26): usable PIĘTRA = pas poddasza, parter = pełny obrys
+    usable_per = {"parter": W * H, "pietro": lay.attic_boundary.polygon.area}
     for label, rooms in (("parter", lay.parter_rooms), ("pietro", lay.pietro_rooms)):
         total = sum(r.polygon.area for r in rooms)
+        usable = usable_per[label]
         assert abs(total - usable) < 1e-3, f"{label}: pokrycie {total:.4f} != usable {usable}"
         for i in range(len(rooms)):
             for j in range(i + 1, len(rooms)):
@@ -126,7 +129,7 @@ def test_f1_coverage_exact_and_no_overlap_with_l_hub():
 
 
 # --- 5. Hol-L jest spójnym Polygonem ---
-@pytest.mark.parametrize("W,H", [(9.0, 7.0), (11.0, 9.0)])
+@pytest.mark.parametrize("W,H", [(11.0, 8.0), (11.0, 9.0)])
 def test_l_hub_is_connected_polygon(W, H):
     """Gdy hol jest L (unia 2 prostokątów) musi być JEDNYM spójnym Polygonem
     (ciągłość t_contig==1), nigdy rozłącznym MultiPolygonem (dwie wyspy)."""
@@ -138,7 +141,7 @@ def test_l_hub_is_connected_polygon(W, H):
 
 
 # --- 6. Hol nie-spine wg REALNEGO kontraktu modelu ---
-@pytest.mark.parametrize("W,H", [(8.0, 8.0), (9.0, 7.0)])
+@pytest.mark.parametrize("W,H", [(10.0, 8.0), (11.0, 8.0)])
 def test_hub_span_within_real_model_bound(W, H):
     """F4 nie-spine wg REALNEGO modelu: bok holu ≤ max(0.6·B, 0.8·min(BW,BH)).
     (Świadomie NIE asertujemy aspect≤1.5 ani twardego 60% — w cpsat_solver.py ich nie ma,
@@ -158,7 +161,7 @@ def test_hub_span_within_real_model_bound(W, H):
 def test_wc_stays_rectangular_and_wet_rooms_capped():
     """WC NIE jest L-capable → musi zostać prostokątem (area == pole bbox). F2 niezmienione
     przez fazę 2b: lazienka ≤ 5, WC ≤ 3 na obu kondygnacjach."""
-    lay = _layout(9.0, 7.0, "south")
+    lay = _layout(11.0, 8.0, "south")
     assert lay.ok, lay.message
     wc = _room(lay.parter_rooms, "wc")
     b = wc.polygon.bounds

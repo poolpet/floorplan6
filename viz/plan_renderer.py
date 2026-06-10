@@ -165,10 +165,15 @@ def render_two_storey(
     sx, sy, sw, sh = layout.stair_core
     core_abs = (sx + bx0, sy + by0, sw, sh)
 
+    # Knee-wall (S26): poddasze ma WŁASNY, mniejszy obrys (pas przy kalenicy);
+    # pełny footprint parteru rysowany na panelu poddasza jako "duch" (skos dachu).
+    attic_b = getattr(layout, "attic_boundary", None)
     _draw_storey(ax_p, layout.parter_rooms, layout.boundary, core_abs,
                  parter_furniture or [], "PARTER")
-    _draw_storey(ax_g, layout.pietro_rooms, layout.boundary, core_abs,
-                 pietro_furniture or [], "PIĘTRO")
+    _draw_storey(ax_g, layout.pietro_rooms, attic_b or layout.boundary, core_abs,
+                 pietro_furniture or [],
+                 "PODDASZE" if attic_b is not None else "PIĘTRO",
+                 ghost_boundary=layout.boundary if attic_b is not None else None)
 
     if title is None:
         title = "Dom jednorodzinny 2-kondygnacyjny"
@@ -194,7 +199,7 @@ def _frame_origin(layout) -> tuple[float, float]:
     return 0.0, 0.0
 
 
-def _draw_storey(ax, rooms, boundary, core_abs, furniture, title):
+def _draw_storey(ax, rooms, boundary, core_abs, furniture, title, ghost_boundary=None):
     # obrys
     if boundary is not None and getattr(boundary, "polygon", None) is not None:
         bx, by = boundary.polygon.exterior.xy
@@ -204,6 +209,12 @@ def _draw_storey(ax, rooms, boundary, core_abs, furniture, title):
         xs = [c for r in rooms if r.polygon for c in (r.polygon.bounds[0], r.polygon.bounds[2])]
         ys = [c for r in rooms if r.polygon for c in (r.polygon.bounds[1], r.polygon.bounds[3])]
         bnds = (min(xs), min(ys), max(xs), max(ys)) if xs else (0, 0, 1, 1)
+    # Knee-wall: duch pełnego footprintu pod pasem poddasza + wspólne limity osi
+    # z parterem (panele wizualnie wyrównane, widać cofnięcie ścianki kolankowej).
+    if ghost_boundary is not None and getattr(ghost_boundary, "polygon", None) is not None:
+        gx, gy = ghost_boundary.polygon.exterior.xy
+        ax.plot(gx, gy, color="#9E9E9E", linewidth=1.2, linestyle="--", zorder=1)
+        bnds = ghost_boundary.polygon.bounds
 
     # Open-plan day-zone (faza 1): pokoje DZIENNA (salon+kuchnia) to JEDNA otwarta
     # przestrzeń — rysuj je bez krawędzi wewnętrznych, a potem jeden obrys ich unii

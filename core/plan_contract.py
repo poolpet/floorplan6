@@ -163,8 +163,11 @@ def house_to_contract(layout, parter_furnish=None, pietro_furnish=None) -> dict:
         )
     }
     if layout.pietro_rooms:
+        # Knee-wall (S26): poddasze żyje na PASIE przy kalenicy — okna/bbox kontraktu
+        # liczone z attic_boundary, nie z pełnego obrysu parteru.
+        pietro_b = getattr(layout, "attic_boundary", None) or layout.boundary
         out["poddasze"] = plan_to_contract(
-            layout.pietro_rooms, layout.boundary, pietro_furnish,
+            layout.pietro_rooms, pietro_b, pietro_furnish,
             storey="poddasze", template=tpls.get("house_pietro"),
         )
     return out

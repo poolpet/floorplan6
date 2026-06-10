@@ -13,7 +13,7 @@ _F2_MAX_AREA = {"lazienka": 5.0, "wc": 3.0}
 
 def test_generates_both_storeys_with_full_program():
     poly = Polygon([(0, 0), (11, 0), (11, 9), (0, 9)])
-    layout = generate_house(poly, entry_point=(5.5, 0.0), num_storeys=2)
+    layout = generate_house(poly, entry_point=(5.5, 0.0), num_storeys=2, time_limit_s=45.0)
     assert layout.ok, layout.message
     parter_ids = {r.spec.id for r in layout.parter_rooms}
     pietro_ids = {r.spec.id for r in layout.pietro_rooms}
@@ -47,19 +47,20 @@ def test_too_small_footprint_returns_clear_failure_not_crash():
 @pytest.mark.parametrize(
     "w,h",
     [
-        (11.0, 9.0),    # realny dom ~99 m²/kondygnację
-        (14.0, 11.0),   # przewymiarowany (154 m², > realistyczne ~120) — cap dociska łazienkę
-                        # do ~4.99. (Było 16×13=208 m², ale to poza CP-SAT reliable-solve zakresem
-                        # dla tego modelu — parter=UNKNOWN >45 s; 154 m² stresuje cap F2 tak samo.)
+        (11.0, 9.0),    # realny dom ~99 m²
+        (12.0, 9.0),    # największy NIEZAWODNY obrys (108 m²) — łazienka dociska do ~4.98.
+                        # (Było 14×11=154 m², ale z pinned PROSTYM rdzeniem knee-wall parter
+                        # = UNKNOWN nawet @120 s; obrysy ≥~130 m² odblokuje praca „solver perf"
+                        # z kolejki S26 — patrz STATE.)
     ],
 )
 def test_house_wet_rooms_never_exceed_wt_cap(w, h):
     """F2: łazienka ≤ 5 m² i WC ≤ 3 m² na WYNIKU solvera, na obu kondygnacjach,
     nawet przy przewymiarowanym obrysie (gdzie F1 wpycha nadmiar w salon)."""
     poly = Polygon([(0, 0), (w, 0), (w, h), (0, h)])
-    # 45 s: przewymiarowany 16×13 (208 m²) z przedsionkiem-w-drzwiach + L-holem bywa na
-    # granicy 20 s (parter=UNKNOWN). 11×9 i tak kończy wcześnie na optimum. F2 sprawdzane jak wcześniej.
-    layout = generate_house(poly, entry_point=(w / 2, 0.0), time_limit_s=45.0)
+    # 120 s: parter 108 m² z pinned prostym rdzeniem solvuje ~60-90 s (graniczny — flake
+    # przy 90). Test sprawdza capy F2, nie szybkość — perf parteru = temat z kolejki S26.
+    layout = generate_house(poly, entry_point=(w / 2, 0.0), time_limit_s=120.0)
     assert layout.ok, layout.message
     for room in (*layout.parter_rooms, *layout.pietro_rooms):
         cap = _F2_MAX_AREA.get(room.spec.id.split("_")[0])

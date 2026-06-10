@@ -3,8 +3,41 @@
 > Updated after every working session. If it doesn't reflect reality —
 > Claude updates immediately.
 >
-> **Last update:** 2026-06-10 (Session 26 — branch `feat/sfh-open-plan-day-zone`: **apt-44 M2 lider rynku NAPRAWIONY
-> + diagnoza domów 2-kond.**). **DONE — wąskie mieszkanie 2-pok (M2, ~40% sprzedaży) renderowało się jako kawalerka.**
+> **Last update:** 2026-06-10 (Session 27 — branch `feat/sfh-open-plan-day-zone`: **domy 2-kond. „poddasze-shrink"
+> (KNEE-WALL) WDROŻONE**). Piętro NIE solvuje się już na pełnym obrysie — dostaje **pas użytkowy przy kalenicy**:
+> pełna długość wzdłuż dłuższej osi × `ATTIC_BAND_FACTOR=0.60` krótszej (zakres decyzji Dawida 0.55-0.65),
+> wycentrowany, MUSI zawierać rdzeń schodów, przycięty do obrysu (`core/house_layout._attic_band_polygon`).
+> **Dwie UDOWODNIONE (presolve) sprzeczności znalezione i rozwiązane po drodze:** (1) szczelina pas↔rdzeń < szer.
+> pokoju jest niepokrywalna przy F1 (==) → krawędź pasa DOSNAPOWANA do krawędzi rdzenia (`ATTIC_CORE_SNAP=1.5`);
+> (2) U-rdzeń 2.4 m zjada połowę pasa → **dom 2-kond. ma teraz ZAWSZE bieg prosty wzdłuż kalenicy**
+> (`_stair_core_dims(force_straight)`) i **podest L-capable** (`l_capable_ids={"hub"}` — ta sama mechanika co
+> „mini-korytarz" S26; U-w-pasie wolny/INFEASIBLE nawet przy głębokości 6.6, sondy w sesji). Rdzeń re-bazowany do
+> bboxa pasa = ta sama pozycja świata → piony schodów z konstrukcji. Pre-check: pas ≥ (Σ minów piętra bez schodów
+> + pole pinu)·1.12 → czytelny komunikat (min. footprint 2-kond. ≈ **76+ m², macierz testowa 80-108 m²**).
+> Pas dostaje jawne `wall_types=FACADE` (pseudo-entry nie gasi okien ścianki kolankowej). Konsumenci: renderer
+> (panel PODDASZE = pas + szary „duch" parteru, wspólne osie), `house_preview` (meble piętra na pasie, raport
+> per kondygnacja), **`plan_contract.house_to_contract` (poddasze bbox/okna z pasa — bug złapany w tej sesji)**.
+> `TwoStoreyLayout.attic_boundary` (None = parterowiec/stare ścieżki). RED-first: `tests/test_house_attic_shrink.py`
+> (15: geometria pasa czysta + integracja CP-SAT + kontrakt + render); zaktualizowane: staircase_b (macierz
+> 10×8/11×8/12×8/8×11 × 4 strony; 10×8 W/E świadomie poza — pas 48 m² + rdzeń środkowo-osiowy = granica modelu),
+> open_plan_dayzone, lroom_phase2b, house_program (salon ≤ ŁĄCZNY cap 45 — odłożony day-zone-overflow GAP),
+> przedsionek_entry, service_placement (garderoba poddasza vs krawędzie PASA; parterowa garderoba martwa od S25
+> priorytetów — udokumentowane), stary test_house_staircase. Batch 73/81 + świeży re-run flaków 6/8 → realne fail-e
+> = tylko `parter=UNKNOWN` na 96-108 m² (graniczne limity; podbite 60/120 s z komentarzem); smoke mieszkań
+> (test_cpsat_solver + test_narrow_apartment_m2) zielony. **Render 11×8: master 15.5 m² (cap 16.5; BYŁO 61.8!),
+> syp 9.6/8.8, łazienka 5.0, podest 6.3 (12%), schody w pionie** — `rzuty/renders_mvp/1_dwukondygnacyjny.png`.
+> **ZNANE/NEXT:** (1) **parter ≥~130 m² = UNKNOWN nawet @120 s** (Tracja-6 157 m²/L-140 z suite nadal czerwone na
+> PARTERZE; przed zmianą „działały" 90 s ale ze śmieciowym poddaszem; piętro = OPTIMAL w sekundy) → **NEXT = solver
+> perf (kolejka S26)**; (2) potem area-scaling sypialni + cap day-zone-overflow parteru (render: salon 40.3/kuchnia
+> 19.2 na 88 m²); (3) L-footprinty domów dalej niepodparte (rdzeń notch-unaware — pre-existing S18; band∩L
+> zaimplementowane defensywnie: płat z rdzeniem); (4) kosmetyka z review: strzałka schodów przy L-podeście, kolizje
+> etykiet usługowych, stare notebooki-sondy z obrysami < bramki pasa. Adversarial-review workflow uciął się na
+> limicie sesji w fazie verify — 20 surowych findingów strijażowane ręcznie (realne naprawione: MultiPolygon-
+> płat-z-rdzeniem, wall_types pasa, kontrakt poddasza, testy nie-origin + snap gap_hi). Pamięć:
+> [[project_layout_optimization_archon]] [[project_session17_gap_fix]].
+>
+> **Previously — Session 26 (2026-06-10)** — branch `feat/sfh-open-plan-day-zone`: **apt-44 M2 lider rynku NAPRAWIONY
+> + diagnoza domów 2-kond.** **DONE — wąskie mieszkanie 2-pok (M2, ~40% sprzedaży) renderowało się jako kawalerka.**
 > Root cause (eksperymentalny, nie zgadnięty): prostokątny hol na wąskim obrysie (krótki bok <6 m) MUSI sięgnąć od salonu
 > (góra) do łazienki/sypialni (dół) → minimum feasible holu = **24% (>F4 15%)**, a przy wejściu w CENTRUM krótkiej ściany
 > wręcz INFEASIBLE (binary-search potwierdził floor 24%; pin hub-at-entry zmusza hub do straddle'owania środka). Relaksacja

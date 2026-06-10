@@ -10,14 +10,17 @@ def _room(rooms, rid):
     return next((r for r in rooms if r.spec.id == rid), None)
 
 
+# Obrysy 11×8 (88 m²): knee-wall (S26) wymaga pasa poddasza ≥ programu piętra,
+# stare 9×7 (pas 37.8 m²) jest architektonicznie za małe na dom 2-kond.
 @pytest.mark.parametrize("W,H,ex,ey,side", [
-    (9.0, 7.0, 4.5, 0.0, "south"),
-    (9.0, 7.0, 0.0, 3.5, "west"),
-    (9.0, 7.0, 9.0, 3.5, "east"),
-    (9.0, 7.0, 4.5, 7.0, "north"),
+    (11.0, 8.0, 5.5, 0.0, "south"),
+    (11.0, 8.0, 0.0, 4.0, "west"),
+    (11.0, 8.0, 11.0, 4.0, "east"),
+    (11.0, 8.0, 5.5, 8.0, "north"),
 ])
 def test_two_storey_door_is_inside_wiatrolap(W, H, ex, ey, side):
-    layout = generate_house(Polygon([(0, 0), (W, 0), (W, H), (0, H)]), (ex, ey), num_storeys=2)
+    layout = generate_house(Polygon([(0, 0), (W, 0), (W, H), (0, H)]), (ex, ey),
+                            num_storeys=2, time_limit_s=45.0)
     assert layout.ok, layout.message
     wiat = _room(layout.parter_rooms, "wiatrolap")
     hub = _room(layout.parter_rooms, "hub")

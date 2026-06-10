@@ -23,8 +23,10 @@ def furnish_layout(layout: TwoStoreyLayout, with_furniture: bool) -> tuple[list,
     if not with_furniture:
         return [], []
     b = getattr(layout, "boundary", None)
+    # Knee-wall (S26): meble poddasza liczone na PASIE (własne fasady/okna pasa).
+    ab = getattr(layout, "attic_boundary", None) or b
     return (place_furniture(layout.parter_rooms, b),
-            place_furniture(layout.pietro_rooms, b))
+            place_furniture(layout.pietro_rooms, ab))
 
 
 def house_details_text(layout: TwoStoreyLayout) -> str:
@@ -32,9 +34,16 @@ def house_details_text(layout: TwoStoreyLayout) -> str:
     area = getattr(getattr(layout, "boundary", None), "area", None)
     if area is None:
         area = sum(r.area for r in layout.parter_rooms)
-    lines = ["Dom jednorodzinny 2-kondygnacyjny", f"Obrys/kondygnacja: {area:.1f} m²"]
+    attic = getattr(layout, "attic_boundary", None)
+    lines = ["Dom jednorodzinny 2-kondygnacyjny"]
+    if attic is not None:  # knee-wall: kondygnacje mają RÓŻNE powierzchnie
+        lines.append(f"Obrys parteru: {area:.1f} m²")
+        lines.append(f"Poddasze użytkowe (pas przy kalenicy): {attic.area:.1f} m²")
+    else:
+        lines.append(f"Obrys/kondygnacja: {area:.1f} m²")
     for storey_title, rooms in (("PARTER", layout.parter_rooms),
-                                ("PIĘTRO", layout.pietro_rooms)):
+                                ("PODDASZE" if attic is not None else "PIĘTRO",
+                                 layout.pietro_rooms)):
         lines.append("")
         lines.append(f"{storey_title}:")
         for r in rooms:

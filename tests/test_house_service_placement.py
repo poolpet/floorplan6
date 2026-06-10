@@ -19,23 +19,33 @@ def _at_ext_wall(room, W, H, tol=0.05):
 
 
 def test_single_storey_kotlownia_garderoba_external_when_roomy():
-    W, H = 10.0, 10.0  # 100 m² — zestaw zawiera kotłownię I garderobę, ściany jest dużo
+    W, H = 10.0, 10.0  # 100 m² — ściany jest dużo
     lay = generate_house(Polygon([(0, 0), (W, 0), (W, H), (0, H)]), (W / 2, 0.0),
                          num_storeys=1, time_limit_s=30)
     assert lay.ok, lay.message
     kot = _room(lay.parter_rooms, "kotlownia")
-    gard = _room(lay.parter_rooms, "garderoba")
-    assert kot is not None and gard is not None, "100 m² parterowiec ma kotłownię i garderobę"
+    assert kot is not None, "100 m² parterowiec ma kotłownię"
     assert _at_ext_wall(kot, W, H), f"kotłownia w środku: {kot.polygon.bounds}"
-    assert _at_ext_wall(gard, W, H), f"garderoba w środku: {gard.polygon.bounds}"
+    # garderoba: od S25 (689c132, priorytety archon.pl) luksusy są OSTATNIE w kolejce
+    # i cap 12 pokoi tnie je na 100 m² (4 syp + 2 łaz wygrywają) — garderoba zwykle
+    # nieobecna. Jeśli kiedyś wejdzie — też ma być przy ścianie.
+    gard = _room(lay.parter_rooms, "garderoba")
+    if gard is not None:
+        assert _at_ext_wall(gard, W, H), f"garderoba w środku: {gard.polygon.bounds}"
 
 
 def test_two_storey_kotlownia_parter_garderoba_pietro_external():
     W, H = 11.0, 9.0
     lay = generate_house(Polygon([(0, 0), (W, 0), (W, H), (0, H)]), (W / 2, 0.0),
-                         num_storeys=2, time_limit_s=45)
+                         num_storeys=2, time_limit_s=60)
     assert lay.ok, lay.message
     kot = _room(lay.parter_rooms, "kotlownia")    # parter
     gard = _room(lay.pietro_rooms, "garderoba")   # piętro
     assert _at_ext_wall(kot, W, H), f"kotłownia (parter) w środku: {kot.polygon.bounds}"
-    assert _at_ext_wall(gard, W, H), f"garderoba (piętro) w środku: {gard.polygon.bounds}"
+    # knee-wall (S26): piętro żyje na PASIE poddasza — ściany zewnętrzne garderoby
+    # to krawędzie pasa (szczyty + ścianki kolankowe), nie pełnego obrysu.
+    ab = lay.attic_boundary.polygon.bounds
+    gb = gard.polygon.bounds
+    at_attic_wall = (abs(gb[0] - ab[0]) < 0.05 or abs(gb[2] - ab[2]) < 0.05 or
+                     abs(gb[1] - ab[1]) < 0.05 or abs(gb[3] - ab[3]) < 0.05)
+    assert at_attic_wall, f"garderoba (poddasze) w środku pasa: {gb} vs pas {ab}"

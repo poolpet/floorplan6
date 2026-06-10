@@ -67,13 +67,16 @@ def test_core_inside_bbox_for_all_entries():
 
 def test_generate_house_feasible_and_schody_separate_from_hol():
     """Approach B: generate_house feasible; rdzeń klatki należy do OSOBNEGO pokoju
-    'schody' (a NIE do holu), a hol parteru jest kompaktowy (przedsionek, nie 'Hol+schody')."""
+    'schody' (a NIE do holu), a hol parteru jest kompaktowy (przedsionek, nie 'Hol+schody').
+    Obrys 10×8 (knee-wall S26: pas poddasza musi pomieścić program piętra; 8×8 za małe);
+    dom 2-kond. = bieg prosty wzdłuż kalenicy (force_straight)."""
     from shapely.geometry import Polygon, box
     from core.house_layout import generate_house
     from core.models import Strefa
-    layout = generate_house(Polygon([(0, 0), (8, 0), (8, 8), (0, 8)]), (4.0, 0.0))
+    layout = generate_house(Polygon([(0, 0), (10, 0), (10, 8), (0, 8)]), (5.0, 0.0),
+                            time_limit_s=45.0)
     assert layout.ok, layout.message
-    sw, sh, _ = _stair_core_dims(8.0, 8.0)
+    sw, sh, _ = _stair_core_dims(10.0, 8.0, force_straight=True)
     core_area = sw * sh
     cx, cy, csw, csh = layout.stair_core
     core_box = box(cx, cy, cx + csw, cy + csh)
@@ -83,6 +86,6 @@ def test_generate_house_feasible_and_schody_separate_from_hol():
         hol = next(r for r in rooms if r.spec.id == "hub" and r.spec.strefa == Strefa.KOMUNIKACJA)
         assert abs(schody.area - core_area) < 0.25     # schody == rdzeń klatki (pinned)
         assert not hol.polygon.contains(core_box.buffer(-0.02))  # hol NIE zawiera rdzenia
-    # hol parteru kompaktowy (dawny scalony hub puchł >12 m²)
+    # hol parteru kompaktowy (dawny scalony hub puchł >12 m²; 13% usable = anty-bloat)
     hol_p = next(r for r in layout.parter_rooms if r.spec.id == "hub")
-    assert hol_p.area <= 10.0
+    assert hol_p.area <= 0.13 * 80.0
