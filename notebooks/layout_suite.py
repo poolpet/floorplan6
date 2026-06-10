@@ -78,10 +78,15 @@ def _evaluate(rooms, expected_beds, targets) -> tuple[int, list[str]]:
 def _run_apartment(o, targets, idx):
     w, h = _dims(o)
     poly = Polygon([(0, 0), (w, 0), (w, h), (0, h)])
+    # Wejście: realny lokal z korytarza ma drzwi POZA centrum krótkiej ściany (hol idzie
+    # w narożnik), NIE w martwym środku. Dla wąskich obrysów (krótki bok < 6.5 m) kładziemy
+    # drzwi off-center (~20% szerokości, min 0.9 m od rogu). Szersze = front-center.
+    entry_x = max(0.9, w * 0.2) if min(w, h) < 6.5 else w / 2
+    entry = (entry_x, 0.0)
     mt0 = suggest_mtype(poly.area)
     for mt in [mt0] + [m for m in APT_FALLBACK if m != mt0]:
         try:
-            plans = generate_variants(poly, (w / 2, 0.0), mt, max_variants=1)
+            plans = generate_variants(poly, entry, mt, max_variants=1)
         except Exception:
             continue
         if plans:

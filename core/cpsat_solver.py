@@ -309,6 +309,12 @@ def solve_cpsat(
     BH = round(boundary.height * SCALE)
     B_AREA = BW * BH  # cm²
 
+    # Wąskie mieszkanie (lokal z korytarza, krótki bok ≤6 m): hol dostaje kształt L
+    # (patrz auto-l_capable niżej) — bez tego prostokątny hol na wąskim obrysie tyje/pada.
+    # Tylko mieszkania (program_config is None); domy mają osobny model holu.
+    NARROW_APT_CM = 600
+    narrow_apt = program_config is None and min(BW, BH) <= NARROW_APT_CM
+
     n = len(template.pokoje)
     specs = template.pokoje
 
@@ -427,6 +433,17 @@ def solve_cpsat(
         x_intervals.append(notch_x_iv)
         y_intervals.append(notch_y_iv)
 
+    # Wąskie mieszkanie → hol L-kształtny ("mini-korytarz", decyzja Dawida S26). Bez tego
+    # na obrysie ≤6 m prostokątny hol musi sięgnąć od salonu (góra) do łazienki/sypialni
+    # (dół) i rozdyma się do ~24% (>F4) — a przy wejściu w centrum krótkiej ściany jest
+    # INFEASIBLE. Cienki L owija łazienkę, dotyka wszystkich pokoi mniejszym polem (~14%)
+    # i jest feasible niezależnie od pozycji drzwi. Auto-włączenie nadpisywalne jawnym
+    # l_capable_ids; tylko mieszkania (program_config is None → narrow_apt).
+    if narrow_apt and not l_capable_ids:
+        hub_spec_id = next((s.id for s in specs if s.strefa == Strefa.KOMUNIKACJA), None)
+        if hub_spec_id is not None:
+            l_capable_ids = {hub_spec_id}
+
     # === Approach 2b: opcjonalny 2. prostokąt dla pokoi L-capable (hol/sypialnie) ===
     # Każdy L-capable pokój może być unią 2 prostokątów (L) lub zostać prostokątem.
     # Bramkowane l_capable_ids — None/pusty ⇒ brak L, zachowanie IDENTYCZNE (mieszkania też).
@@ -518,8 +535,14 @@ def solve_cpsat(
                 continue
             pair = (hub_idx, i)
             if pair not in required_adj and (i, hub_idx) not in required_adj:
-                _add_adjacency_constraint(model, hub_idx, i, x, y, w, h,
-                                          x_ends, y_ends, BW, BH, MIN_SHARED_EDGE_CM)
+                # L-aware gdy hol (lub pokój) jest L-capable — pokój może dotykać
+                # KTÓREGOKOLWIEK ramienia L holu, nie tylko prostokąta podstawowego.
+                if l_capable_ids and (has_L[hub_idx] is not None or has_L[i] is not None):
+                    _apply_adjacency(model, hub_idx, i, x, y, x_ends, y_ends,
+                                     x2, y2, x2e, y2e, has_L, BW, BH, MIN_SHARED_EDGE_CM)
+                else:
+                    _add_adjacency_constraint(model, hub_idx, i, x, y, w, h,
+                                              x_ends, y_ends, BW, BH, MIN_SHARED_EDGE_CM)
 
     # ====================================================================
     # Hub constraints: compact, at entry, not spine
