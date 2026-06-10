@@ -3,7 +3,32 @@
 > Updated after every working session. If it doesn't reflect reality —
 > Claude updates immediately.
 >
-> **Last update:** 2026-06-09 (Session 25 — branch `feat/sfh-open-plan-day-zone`: **meble→AC pivot na pojedyncze
+> **Last update:** 2026-06-10 (Session 26 — branch `feat/sfh-open-plan-day-zone`: **apt-44 M2 lider rynku NAPRAWIONY
+> + diagnoza domów 2-kond.**). **DONE — wąskie mieszkanie 2-pok (M2, ~40% sprzedaży) renderowało się jako kawalerka.**
+> Root cause (eksperymentalny, nie zgadnięty): prostokątny hol na wąskim obrysie (krótki bok <6 m) MUSI sięgnąć od salonu
+> (góra) do łazienki/sypialni (dół) → minimum feasible holu = **24% (>F4 15%)**, a przy wejściu w CENTRUM krótkiej ściany
+> wręcz INFEASIBLE (binary-search potwierdził floor 24%; pin hub-at-entry zmusza hub do straddle'owania środka). Relaksacja
+> capa kompaktowości = NO-OP (caps niewiążące). **Fix (decyzja Dawida = "mini-korytarz"): hol L-kształtny dla wąskich
+> mieszkań — auto `l_capable_ids={hub}` gdy `program_config is None` i `min(BW,BH)≤600cm`** (`core/cpsat_solver.py`
+> `narrow_apt`; reużycie maszynerii Approach 2b). Cienki L owija łazienkę, dotyka wszystkich pokoi mniejszym polem →
+> **14%, feasible przy KAŻDej pozycji drzwi** (też centrum). Auto-star uczyniony L-aware. Harness `notebooks/layout_suite.py`
+> = wejście off-center dla wąskich (realny lokal z korytarza). **Commit `a09e637`** (branch 46 ahead, NIE pushowany).
+> Weryfikacja: nowy `test_narrow_apartment_m2` 7/7 (RED-first); regresja mieszkań 41 passed+1 xpass; meble/drzwi/okna 98;
+> `lroom_phase2b` 19; suite apartamenty **5/5 OK** (apt-44 = pełny 2-pok 1 syp). Domy bramkowane out → nietknięte.
+> **NEXT (decyzja podjęta, NIE rozpoczęte) — domy 2-kond. „poddasze-shrink".** Diagnoza: `generate_house` (num_storeys==2,
+> `core/house_layout.py:220`) solvuje OBIE kondygnacje na PEŁNYM obrysie (123 m²) ze STAŁYMI szablonami `house_parter`/
+> `house_pietro` → 3 objawy z jednego źródła (F1 pokrycie upycha nadmiar): poddasze-bloat (master 61.8 m² na Tracja-6,
+> podest 23.4 na L-140), parter day-zone-bloat (salon 61/kuchnia 25 >cap 35/13), 3≠4 syp, solve 90 s (>45 s suite→UNKNOWN
+> „timeout"). **Dominujący root cause: poddasze użytkowe jest MNIEJSZE (skos dachu — Tracja-6 realnie 53/123 m²), kod robi
+> je pełnowymiarowym.** Dawid wybrał: **model = KNEE-WALL** (poddasze użytkowe = pas przy kalenicy: pełna długość wzdłuż
+> kalenicy × ~0.55-0.65 krótszej osi, wycentrowany; MUSI zawierać rdzeń schodów `reserved_core`) + **zakres tej sesji =
+> TYLKO shrink poddasza** (RED-first; reszta — area-scaling sypialni jak `single_storey_room_ids` z `689c132` + cap overflow
+> strefy dziennej parteru — osobno potem). Punkty wdrożenia: wyprowadź mniejszy attic-boundary, solvuj `pietro` na nim;
+> renderer (`render_two_storey`/`viz/house_preview`) musi rysować 2 kondygnacje o RÓŻNYCH footprintach (attic = pas
+> wycentrowany); `reserved_core` musi pozostać ważny w attic. Pamięć: [[project_layout_optimization_archon]]
+> [[project_session17_gap_fix]].
+>
+> **Previously — Session 25 (2026-06-09)** — branch `feat/sfh-open-plan-day-zone`: **meble→AC pivot na pojedyncze
 > meble + jakość układu mieszkań**). FURNITURE: realny rozmiar przez `SetGDLParametersOfElements(A,B)` — Tapir
 > `dimensions`=MNOŻNIK domyślnego A/B (NIE metry, źródłowo potwierdzone w `ElementCreationCommands.cpp`); kuchnia
 > rozbita na moduły 0.6 m (`Szafka podstawowa`+`Lodówka`, wyposażenie przez bSink/bCooktop/bCounter — wybór Dawida);
