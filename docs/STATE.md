@@ -26,6 +26,24 @@
 > ekstrakcji wzorców (44 PDF + dataset_raw ~120 dok.); (3) micro-35 parterowiec (A01_35 FAIL na bramce 45 m²);
 > (4) L-footprinty. Pamięć: [[project_layout_optimization_archon]].
 >
+> **Session 29 cz.2 (2026-06-11) — ROOM-SET SCALING 2-kond. (kolejność wg benchmarku).** Dane z korpusu:
+> A01_70 poddasze 54 m² netto = **4 SYPIALNIE** + łazienka; A01_120 = 3 syp + **2 ŁAZIENKI**; A01_120 parter ma
+> **GABINET + GARAŻ** (absorbery nadmiaru — salon realnie 42.9 ≈ cap 45); ŻADEN wzorcowy poddasze nie ma garderoby.
+> Wdrożone: szablony +`sypialnia_4`/+`lazienka_2` (piętro), +`gabinet`/+`garaz` (parter, cap garaż 22);
+> **selektory wg powierzchni** (`pietro_room_ids` po POWIERZCHNI EFEKTYWNEJ = pełna − 0.5·stref niskich ≈ norma
+> PL — dla A01_70 daje 55 vs 53.8 netto z tabeli ✓; `parter_room_ids` gross: gabinet ≥115 — korpusowe 97 NETTO;
+> garaż ≥120; garderoba poddasza ≥95 eff). **Program**: water-fill 2a NOCNE→DO CAPÓW przed proporcjonalnym 2b
+> (2b przywrócone per reguła Dawida: dzień trzyma łączny cap póki nocne istnieją). **Solver**: pasma programu
+> (dom): wszystkie pokoje ≤1.35·target (anty-pompowanie), SYPIALNIE dodatkowo ≥0.7·target (balans-od-dołu;
+> max/min-equality nad polami = UNKNOWN — za drogie); nagroda ścienna kotłowni/garderoby 0.03→0.06 (pasma
+> zmieniły skalę odchyleń — kotłownia deterministycznie lądowała w środku). **EFEKT BENCHMARK: A01_70
+> 53.7 → 60.7** (poddasze F1 0.77→0.86, MAPE 28.5→14.0%). **KRAWĘDŹ SOLVERA (udokumentowana, 3 testy
+> skip-as-spec):** parter ≥~120 m² gross z garażem+gabinetem (10 pokoi) = UNKNOWN @120 s niezależnie od
+> formulacji → **A01_120 i Tracja-gross czekają na „solver perf II" (solution hints z targetów) — TOP kolejki**.
+> Testy: `test_house_roomset_scaling.py` (6+3 skip), house_program units ✓, service/matrix/layout ✓ (flaki
+> kontencji potwierdzane w izolacji). Ekstrakcja pełnego korpusu (36 PDF) padła na limicie sesji subagentów
+> (resety 21:10/2:00) — `wf_f8cab93b` do wznowienia (resumeFromRunId; ~6 plików scache'owanych).
+>
 > **Previously — Session 28 (2026-06-11)** — branch `feat/sfh-open-plan-day-zone`: **solver perf NAPRAWIONY (~15×)
 > + benchmark do wzorców Dawida + tri-scenariusze**. **PERF (ablacja → fix, `notebooks/parter_perf_probe.py`):**
 > parter był feasible ale wolny (13×10: pierwsze rozwiązanie 79 s, OPTIMAL 285 s; Tracja-6 479 s; żaden pojedynczy

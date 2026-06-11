@@ -57,7 +57,7 @@ class HouseProgramConfig:
 # EDYTOWALNE — UI/per-run nadpisuje przez HouseProgramConfig.caps.
 DEFAULT_HOUSE_CAPS: dict[str, float] = {
     "salon": 35.0, "kuchnia": 13.0, "sypialnia": 13.0, "master": 16.5,
-    "gabinet": 14.0, "pokoj": 14.0, "kotlownia": 8.0, "pralnia": 6.0,
+    "gabinet": 14.0, "pokoj": 14.0, "garaz": 22.0, "kotlownia": 8.0, "pralnia": 6.0,
     "spizarnia": 5.0, "garderoba": 6.0, "wiatrolap": 8.0, "wc": 3.0,
     "schowek": 3.5, "pom": 6.0, "gosp": 6.0, "schody": 5.0,
     # uwaga: "hub" (hol/podest) celowo BEZ cap-u — jest elastycznym sinkiem nadmiaru
@@ -139,13 +139,30 @@ def compute_house_targets(
                 targets[k] += add * (h / total_head)
             leftover = usable_area_m2 - sum(targets.values())
         if leftover > 1e-9:
-            # 2) RESZTĘ do SYPIALNI (poddasze) lub STREFY DZIENNEJ (parter) — NIGDY do huba.
-            # Reguła Dawida: korytarz możliwie najmniejszy (F4); nadmiar zyskują pokoje, nie korytarz.
+            # 2a) NOCNA water-fill DO CAPÓW (S29, korpus: nadmiar→pokoje, ale najpierw
+            # z poszanowaniem capów — master nie pompuje się, póki inne mają headroom;
+            # na parterze absorbuje gabinet).
             night_ids = [s.id for s in specs if s.strefa == Strefa.NOCNA]
+            for _ in range(200):
+                if leftover <= 1e-9:
+                    break
+                headroom = {k: caps[k] - targets[k] for k in night_ids
+                            if not math.isinf(caps[k]) and caps[k] - targets[k] > 1e-9}
+                total_head = sum(headroom.values())
+                if total_head <= 1e-9:
+                    break
+                add = min(leftover, total_head)
+                for k, h in headroom.items():
+                    targets[k] += add * (h / total_head)
+                leftover = usable_area_m2 - sum(targets.values())
+        if leftover > 1e-9:
+            # 2b) RESZTĘ do SYPIALNI (ponad capy — reguła Dawida: korytarz minimalny,
+            # nadmiar zyskują pokoje nocne; dzień trzyma ŁĄCZNY cap póki nocne istnieją)
+            # lub STREFY DZIENNEJ (parter bez pokoi nocnych) — NIGDY do huba.
             if night_ids:
                 sink_pool = night_ids
             elif day_ids:
-                sink_pool = day_ids                      # parter: dzień wchłania (soft ponad łączny cap)
+                sink_pool = day_ids                      # dzień wchłania (soft ponad łączny cap)
             else:
                 sink_pool = [k for k in targets if k != hub_id] or list(targets)
             total = sum(targets[k] for k in sink_pool) or 1.0

@@ -751,6 +751,27 @@ def solve_cpsat(
             biggest_idx = max(range(n), key=lambda i: target_areas_cm2[i])
             target_areas_cm2[biggest_idx] += diff
 
+    # Pasma programu (S29): dom trzyma pokoje ≤1.35·TARGET (sufit anty-pompowanie;
+    # poza hubem-sinkiem i pinned schodami), a SYPIALNIE dodatkowo ≥0.7·TARGET
+    # (balans-od-dołu: bez tego solver na dużych obrysach oddawał 43.7 vs 12.4 mimo
+    # zbalansowanych targetów). Dolne pasmo TYLKO dla sypialni — pełne pasma na
+    # wszystkich pokojach usztywniały feasibility ≥120 m² (UNKNOWN); usługi/salon
+    # zostają elastyczne. Korpus: balans sypialni max/min ≤ ~2 (A01_120: 1.83).
+    if program_config is not None:
+        for i, spec in enumerate(specs):
+            if i in (hub_idx, stair_idx):
+                continue
+            t = target_areas_cm2[i]
+            min_a = round(spec.min_powierzchnia * SCALE * SCALE)
+            ub = max(round(1.35 * t), min_a)
+            key = spec.id.split("_")[0]
+            if key in WT_MAX_AREA:  # F2: twardy cap WT ma pierwszeństwo nad pasmem
+                ub = min(ub, round(WT_MAX_AREA[key] * SCALE * SCALE))
+            model.add(areas[i] <= ub)
+            if key == "sypialnia":
+                lb = min(max(min_a, round(0.7 * t)), ub)
+                model.add(areas[i] >= lb)
+
     # Zmienne odchyleń
     obj_terms = []
 
@@ -797,7 +818,10 @@ def solve_cpsat(
     # Dom only (program_config) + brak notcha. Pozycja nie wpływa na area_dev, więc nagroda
     # konkuruje głównie z proporcjami/upakowaniem — nie zniekształca metraży. Hol BEZ wymogu.
     if program_config is not None and notch is None:
-        w_ext = max(1, round(0.03 * B_AREA))
+        # 0.06 (było 0.03): pasma programu (S29) zmniejszyły skalę odchyleń pól,
+        # przez co nagroda 0.03 przegrywała z dopasowaniem i kotłownia lądowała
+        # w środku NA PRZESTRONNYM obrysie. Nadal soft — ustępuje na ciasnych.
+        w_ext = max(1, round(0.06 * B_AREA))
         for rid in ("kotlownia", "garderoba"):
             idx = next((i for i, s in enumerate(specs) if s.id == rid), None)
             if idx is None:

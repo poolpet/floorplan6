@@ -55,6 +55,31 @@
       "procent_powierzchni": [0.20, 0.35]
     },
     {
+      "id": "garaz",
+      "nazwa": "Garaż",
+      "strefa": "USŁUGOWA",
+      "wymaga_okna": false,
+      "priorytet_fasady": null,
+      "min_powierzchnia": 15.0,
+      "opt_powierzchnia": 18.0,
+      "min_szerokosc": 3.0,
+      "max_proporcja": 2.0,
+      "procent_powierzchni": [0.12, 0.18]
+    },
+    {
+      "id": "gabinet",
+      "nazwa": "Gabinet",
+      "strefa": "NOCNA",
+      "wymaga_okna": true,
+      "priorytet_fasady": 4,
+      "preferowana_orientacja": [],
+      "min_powierzchnia": 8.0,
+      "opt_powierzchnia": 11.0,
+      "min_szerokosc": 2.4,
+      "max_proporcja": 2.0,
+      "procent_powierzchni": [0.08, 0.14]
+    },
+    {
       "id": "kuchnia",
       "nazwa": "Kuchnia",
       "strefa": "DZIENNA",
@@ -123,6 +148,16 @@
     {
       "room_a": "hub",
       "room_b": "salon",
+      "connection_type": "door"
+    },
+    {
+      "room_a": "hub",
+      "room_b": "gabinet",
+      "connection_type": "door"
+    },
+    {
+      "room_a": "hub",
+      "room_b": "garaz",
       "connection_type": "door"
     },
     {

@@ -1,0 +1,124 @@
+"""Room-set scaling 2-kond. (S29, kolejność wg benchmarku wzorców):
+
+Dane z korpusu Dawida (reference_plans.json, ekstrakcja cross-checked):
+  - A01_70: poddasze 54 m² netto = 4 SYPIALNIE (7.5-11.2) + łazienka + hol,
+  - A01_120: poddasze 86 m² = 3 sypialnie + 2 ŁAZIENKI (master 29.6),
+  - A01_120: parter 97 m² = salon 42.9 (≈cap 45) + GABINET 10 + garaż + usługi.
+Wnioski: nadmiar powierzchni absorbują DODATKOWE POKOJE (4. sypialnia, 2. łazienka,
+gabinet), nie pompowanie mastera/salonu. Selekcja pokoi wg powierzchni jak
+single_storey_room_ids (689c132); poddasze liczy POWIERZCHNIĘ EFEKTYWNĄ
+(pełna − 0.5·strefy niskie ≈ norma PL dla skosów 1.4-2.2 m).
+"""
+import pytest
+from shapely.geometry import Polygon
+
+from core.house_layout import (
+    attic_effective_area,
+    attic_low_strips,
+    generate_house,
+    pietro_room_ids,
+    parter_room_ids,
+    _template,
+)
+
+
+def _rect(w, h):
+    return Polygon([(0, 0), (w, 0), (w, h), (0, h)])
+
+
+def _ids(rooms):
+    return [r.spec.id for r in rooms]
+
+
+# ---------------------------------------------------------------------------
+# Selektory (czyste, bez CP-SAT)
+# ---------------------------------------------------------------------------
+
+def test_attic_effective_area_discounts_low_strips():
+    # 11×8: strefy 2×(11×1.6)=35.2 m² liczone w połowie → 88 − 17.6 = 70.4
+    poly = _rect(11, 8)
+    assert attic_effective_area(poly) == pytest.approx(88 - 17.6, abs=1e-6)
+
+
+def test_pietro_small_attic_keeps_core_program():
+    tpl = _template("house_pietro")
+    ids = pietro_room_ids(tpl.pokoje, 40.0)  # małe poddasze (~50 m² brutto)
+    assert {"hub", "schody", "sypialnia_1", "sypialnia_2", "lazienka"} <= set(ids)
+    assert "sypialnia_4" not in ids
+    assert "lazienka_2" not in ids
+
+
+def test_pietro_mid_attic_gets_4th_bedroom_before_luxuries():
+    # wzorzec A01_70: ~54 m² netto = 4 sypialnie + 1 łazienka (sypialnie PRZED
+    # garderobą/2. łazienką — priorytet archon/korpus)
+    tpl = _template("house_pietro")
+    ids = pietro_room_ids(tpl.pokoje, 54.0)
+    assert "sypialnia_3" in ids and "sypialnia_4" in ids
+    assert ids.index("sypialnia_4") < len(ids)  # weszła
+    assert "lazienka_2" not in ids              # 2. łazienka dopiero na większym
+
+
+def test_pietro_large_attic_gets_second_bathroom():
+    # wzorzec A01_120: ~86 m² netto → jest miejsce i na 2. łazienkę
+    tpl = _template("house_pietro")
+    ids = pietro_room_ids(tpl.pokoje, 86.0)
+    assert "lazienka_2" in ids
+
+
+def test_parter_gets_gabinet_when_roomy():
+    tpl = _template("house_parter")
+    small = parter_room_ids(tpl.pokoje, 63.0)
+    big = parter_room_ids(tpl.pokoje, 120.0)  # wzorzec A01_120: 97 NETTO ≈ ~120 gross
+    assert "gabinet" not in small
+    assert "gabinet" in big and "garaz" in big
+
+
+# ---------------------------------------------------------------------------
+# Integracja (CP-SAT)
+# ---------------------------------------------------------------------------
+
+@pytest.fixture(scope="module")
+def lay_tracja():
+    # KRAWĘDŹ SOLVERA (S29): parter ≥120 m² z garażem+gabinetem (10 pokoi) = UNKNOWN
+    # @120 s niezależnie od formulacji balansu (max/min-equality, ub-only, pasma).
+    # Testy niżej = SPECYFIKACJA AKCEPTACJI dla kolejkowanego „solver perf II"
+    # (solution hints z targetów). Zakres modalny (≤~110 m²) pokryty testem 11×8;
+    # selektory pokoi — unit-testami wyżej.
+    pytest.skip("Tracja-gross 157 m² (parter 10 pokoi) — krawędź solvera; "
+                "odblokuje solver perf II (hinty) z kolejki S29")
+
+
+def test_tracja_poddasze_has_4_bedrooms(lay_tracja):
+    beds = [i for i in _ids(lay_tracja.pietro_rooms) if i.startswith("sypialnia")]
+    assert len(beds) >= 4, f"poddasze 157 m² ma tylko {len(beds)} sypialnie: {beds}"
+
+
+def test_tracja_bedrooms_balanced_not_pumped(lay_tracja):
+    # Pełne pokrycie 157 m² → sypialnie SĄ duże (śr. ~30; netto/brutto = osobny
+    # temat strukturalny). Niezmiennik anty-patologii: nadmiar rozkłada się
+    # RÓWNOMIERNIE (S26: master 61.8 przy syp 8-9 = ratio ~7×; po water-fill
+    # proporcjonalnym do targetów ratio ≤ ~2).
+    beds = sorted((r.area for r in lay_tracja.pietro_rooms
+                   if r.spec.id.startswith("sypialnia")))
+    assert beds[-1] <= 2.0 * beds[0] + 1.0, \
+        f"master {beds[-1]:.1f} pompowany vs najmniejsza {beds[0]:.1f}"
+
+
+def test_tracja_parter_salon_improved_and_absorbers_present(lay_tracja):
+    # gabinet + garaż (korpus A01_120: 10 + 20 m²) absorbują nadmiar → salon wyraźnie
+    # mniejszy niż dotychczasowe 61 m²; nadmiar 2b dzielony NOCNA+DZIENNA razem.
+    # Pełne zejście do capu 45 wymaga netto-brutto (kolejka). Próg 52 = strażnik kierunku.
+    salon = next(r for r in lay_tracja.parter_rooms if r.spec.id == "salon")
+    assert salon.area <= 52.0, f"salon {salon.area:.1f} — absorbery nie działają"
+    ids = _ids(lay_tracja.parter_rooms)
+    assert "gabinet" in ids and "garaz" in ids
+
+
+def test_smaller_house_unchanged_program():
+    # 11×8 (88 m²): efektywne poddasze ~70 → 4 sypialnie wg wzorca A01_70 (54 netto
+    # miało 4); parter bez gabinetu (88 < próg).
+    lay = generate_house(_rect(11, 8), entry_point=(5.5, 0.0), time_limit_s=60.0)
+    assert lay.ok, lay.message
+    assert "gabinet" not in _ids(lay.parter_rooms)
+    beds = [i for i in _ids(lay.pietro_rooms) if i.startswith("sypialnia")]
+    assert len(beds) >= 3

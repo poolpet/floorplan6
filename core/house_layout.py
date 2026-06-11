@@ -185,6 +185,61 @@ def _reserve_core(bbox, entry_point, force_straight: bool = False) -> tuple[floa
     return (round(cx, 3), round(cy, 3), round(sw, 3), round(sh, 3))
 
 
+# --- Room-set scaling 2-kond. (S29, dane z korpusu wzorców reference_plans.json) ---
+# Poddasze: A01_70 (54 m² netto) = 4 SYPIALNIE + 1 łazienka; A01_120 (86) = 3 syp
+# + 2 ŁAZIENKI. Parter: A01_120 (97) ma GABINET. Nadmiar absorbują DODATKOWE pokoje,
+# nie pompowanie mastera/salonu.
+_PIETRO_CORE = ["hub", "schody", "sypialnia_1", "sypialnia_2", "lazienka"]
+_PIETRO_OPTIONAL = ["sypialnia_3", "sypialnia_4", "lazienka_2", "garderoba"]
+_PIETRO_LAZ2_MIN_EFF = 70.0     # 2. łazienka od ~70 m² efektywnych (korpus: 54→1, 86→2)
+_PIETRO_GARDEROBA_MIN_EFF = 95.0  # garderoba = rzadki luksus: ŻADEN wzorcowy poddasze
+                                  # (A01_70 i A01_120) jej nie ma; 9. pokój spowalniał piętro
+_PARTER_GABINET_MIN_AREA = 115.0  # gabinet od ~115 m² GROSS (korpus: 97 NETTO ≈ ~115-120
+                                  # gross; niżej 9-pokojowy parter spowalniał solver na
+                                  # rozmiarach macierzy 96-108)
+_PARTER_GARAZ_MIN_AREA = 120.0    # garaż w obrysie od ~120 m² gross (korpus A01_120:
+                                  # garaż 20; suite L-140 = klasa garage-driven)
+
+
+def attic_effective_area(polygon: Polygon) -> float:
+    """Powierzchnia EFEKTYWNA poddasza do doboru programu: pełna − 0.5·strefy niskie
+    (norma PL: wysokość 1.4-2.2 m liczona w 50%). Dla A01_70 daje ~55 vs 53.8 netto
+    z tabeli rzutu — dobra korespondencja."""
+    return polygon.area - 0.5 * sum(s.area for s in attic_low_strips(polygon))
+
+
+def pietro_room_ids(specs: list, eff_area_m2: float) -> list[str]:
+    """Zestaw pokoi poddasza wg powierzchni efektywnej (greedy po sumie minów,
+    jak single_storey_room_ids; sypialnie PRZED luksusami, 2. łazienka bramkowana)."""
+    by_id = {s.id: s for s in specs}
+    chosen = [r for r in _PIETRO_CORE if r in by_id]
+    cum = sum(by_id[r].min_powierzchnia for r in chosen)
+    for rid in _PIETRO_OPTIONAL:
+        if rid not in by_id:
+            continue
+        if rid == "lazienka_2" and eff_area_m2 < _PIETRO_LAZ2_MIN_EFF:
+            continue
+        if rid == "garderoba" and eff_area_m2 < _PIETRO_GARDEROBA_MIN_EFF:
+            continue
+        m = by_id[rid].min_powierzchnia
+        if (cum + m) * _PACK_MARGIN <= eff_area_m2:
+            chosen.append(rid)
+            cum += m
+    return chosen
+
+
+def parter_room_ids(specs: list, area_m2: float) -> list[str]:
+    """Zestaw pokoi parteru: pełny program; gabinet i garaż (absorbery nadmiaru,
+    korpus A01_120) dopiero na przestronnych obrysach."""
+    by_id = {s.id for s in specs}
+    ids = [s.id for s in specs if s.id not in ("gabinet", "garaz")]
+    if area_m2 >= _PARTER_GABINET_MIN_AREA and "gabinet" in by_id:
+        ids.append("gabinet")
+    if area_m2 >= _PARTER_GARAZ_MIN_AREA and "garaz" in by_id:
+        ids.append("garaz")
+    return ids
+
+
 def attic_low_strips(polygon: Polygon) -> list[Polygon]:
     """Strefy niskiej ścianki kolankowej poddasza (world coords): dwa pasy wzdłuż
     DŁUŻSZYCH krawędzi bboxa (okapy), głębokość ATTIC_LOW_STRIP_FACTOR · krótsza oś."""
@@ -241,6 +296,11 @@ def generate_house(polygon: Polygon, entry_point: tuple[float, float],
     pietro_tpl = _template("house_pietro")
     if parter_tpl is None or pietro_tpl is None:
         return TwoStoreyLayout(ok=False, message="Brak szablonow domu (house_parter/house_pietro).")
+    # Room-set scaling (S29, korpus wzorców): zestaw pokoi wg powierzchni —
+    # poddasze wg EFEKTYWNEJ (pełna − 0.5·stref niskich), parter wg pełnej.
+    eff = attic_effective_area(polygon)
+    pietro_tpl = _filter_template(pietro_tpl, set(pietro_room_ids(pietro_tpl.pokoje, eff)))
+    parter_tpl = _filter_template(parter_tpl, set(parter_room_ids(parter_tpl.pokoje, polygon.area)))
     # Konfigurowalny program domu (cap-y ARCHON) — parter vs poddasze; master = sypialnia_1.
     parter_cfg = default_house_config(storey="parter")
     pietro_cfg = default_house_config(storey="poddasze", master_id="sypialnia_1")

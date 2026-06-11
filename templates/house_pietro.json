@@ -69,6 +69,19 @@
       "procent_powierzchni": [0.10, 0.18]
     },
     {
+      "id": "sypialnia_4",
+      "nazwa": "Sypialnia 4",
+      "strefa": "NOCNA",
+      "wymaga_okna": true,
+      "priorytet_fasady": 4,
+      "preferowana_orientacja": [],
+      "min_powierzchnia": 7.0,
+      "opt_powierzchnia": 9.0,
+      "min_szerokosc": 2.2,
+      "max_proporcja": 2.0,
+      "procent_powierzchni": [0.08, 0.15]
+    },
+    {
       "id": "lazienka",
       "nazwa": "Łazienka",
       "strefa": "USŁUGOWA",
@@ -79,6 +92,18 @@
       "min_szerokosc": 1.5,
       "max_proporcja": 2.0,
       "procent_powierzchni": [0.06, 0.12]
+    },
+    {
+      "id": "lazienka_2",
+      "nazwa": "Łazienka 2",
+      "strefa": "USŁUGOWA",
+      "wymaga_okna": false,
+      "priorytet_fasady": null,
+      "min_powierzchnia": 2.5,
+      "opt_powierzchnia": 4.8,
+      "min_szerokosc": 1.5,
+      "max_proporcja": 2.0,
+      "procent_powierzchni": [0.05, 0.10]
     },
     {
       "id": "garderoba",
@@ -116,7 +141,17 @@
     },
     {
       "room_a": "hub",
+      "room_b": "sypialnia_4",
+      "connection_type": "door"
+    },
+    {
+      "room_a": "hub",
       "room_b": "lazienka",
+      "connection_type": "door"
+    },
+    {
+      "room_a": "hub",
+      "room_b": "lazienka_2",
       "connection_type": "door"
     },
     {

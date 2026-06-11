@@ -40,8 +40,9 @@ def test_two_storey_kotlownia_parter_garderoba_pietro_external():
                          num_storeys=2, time_limit_s=60)
     assert lay.ok, lay.message
     kot = _room(lay.parter_rooms, "kotlownia")    # parter
-    gard = _room(lay.pietro_rooms, "garderoba")   # piętro
     assert _at_ext_wall(kot, W, H), f"kotłownia (parter) w środku: {kot.polygon.bounds}"
-    # knee-wall v2 (S29): poddasze na pełnym obrysie — garderoba przy ścianie
-    # zewnętrznej footprintu (regały i tak omijają strefę niską na poziomie mebli)
-    assert _at_ext_wall(gard, W, H), f"garderoba (piętro) w środku: {gard.polygon.bounds}"
+    # Room-set scaling (S29): garderoba na poddaszu = rzadki luksus (≥95 m² eff;
+    # żaden wzorzec korpusu jej nie ma) — na 11×9 nieobecna. Gdy jest — przy ścianie.
+    gard = _room(lay.pietro_rooms, "garderoba")   # piętro
+    if gard is not None:
+        assert _at_ext_wall(gard, W, H), f"garderoba (piętro) w środku: {gard.polygon.bounds}"
