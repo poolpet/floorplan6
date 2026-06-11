@@ -347,7 +347,6 @@ def solve_cpsat(
 
     for i, spec in enumerate(specs):
         min_dim_cm = max(round(spec.min_szerokosc * SCALE), 100)  # min 1m
-        min_area_cm2 = round(spec.min_powierzchnia * SCALE * SCALE)
 
         xi = model.new_int_var(0, BW, f"x_{i}")
         yi = model.new_int_var(0, BH, f"y_{i}")
@@ -388,20 +387,18 @@ def solve_cpsat(
             model.add(wi * 100 <= max_ratio_num * hi)
             model.add(hi * 100 <= max_ratio_num * wi)
 
-        # --- Min area: w*h >= min_area ---
-        # CP-SAT nie ma bezpośrednio produktu w ograniczeniu, używamy zmiennej pomocniczej
+    # Zmienne area — JEDEN produkt w·h per pokój, z widełkami [min, cap-WT].
+    # (Dawniej dublowane: area_{i} z widełkami + area_ref_{i} bez — 2× enkodowanie
+    # produktu i utrata propagacji dolnej granicy w pokryciu; perf S28.)
+    areas = []
+    for i, spec in enumerate(specs):
+        min_area_cm2 = round(spec.min_powierzchnia * SCALE * SCALE)
         # F2 (FUNDAMENTAL_RULES): twardy cap WT dla łazienki/WC ma pierwszeństwo nad procent_powierzchni
         upper_bound = BW * BH
         key = spec.id.split("_")[0]  # "lazienka_2" -> "lazienka"
         if key in WT_MAX_AREA:
             upper_bound = min(upper_bound, round(WT_MAX_AREA[key] * SCALE * SCALE))
-        area_i = model.new_int_var(min_area_cm2, upper_bound, f"area_{i}")
-        model.add_multiplication_equality(area_i, [wi, hi])
-
-    # Zmienne area (referencja)
-    areas = []
-    for i in range(n):
-        ai = model.new_int_var(0, BW * BH, f"area_ref_{i}")
+        ai = model.new_int_var(min_area_cm2, upper_bound, f"area_{i}")
         model.add_multiplication_equality(ai, [w[i], h[i]])
         areas.append(ai)
 
@@ -651,40 +648,40 @@ def solve_cpsat(
     half_w = BW // 2
     half_h = BH // 2
 
-    # Zmienne kwadrantowe dla każdego pokoju
+    # Zmienne kwadrantowe TYLKO gdy są zablokowane układy (warianty 2+). Pierwszy
+    # wariant i domy nie mają blocked_arrangements — kwadranty wyniku liczone
+    # post-hoc w Pythonie (_quadrant_of), bez 6 zmiennych + 10 reifikacji per pokój
+    # w modelu (perf S28; semantyka blokowania bez zmian).
     quadrant_vars: dict[int, list] = {}  # idx -> [q0, q1, q2, q3]
-    for i in range(n):
-        qvars = []
-        for q in range(4):
-            qv = model.new_bool_var(f"quad_{i}_{q}")
-            qvars.append(qv)
-        # Środek pokoju (x + w/2, y + h/2) wyznacza kwadrant
-        # q0 = lewy-dolny, q1 = prawy-dolny, q2 = lewy-górny, q3 = prawy-górny
-        cx = model.new_int_var(0, BW, f"cx_{i}")
-        cy = model.new_int_var(0, BH, f"cy_{i}")
-        # cx = x + w/2 (approx: x*2 + w) / 2 — używamy 2*cx = 2*x + w
-        cx2 = model.new_int_var(0, 2 * BW, f"cx2_{i}")
-        cy2 = model.new_int_var(0, 2 * BH, f"cy2_{i}")
-        model.add(cx2 == 2 * x[i] + w[i])
-        model.add(cy2 == 2 * y[i] + h[i])
-
-        # q0: cx < half_w AND cy < half_h (lewy-dolny)
-        model.add(cx2 < 2 * half_w).only_enforce_if(qvars[0])
-        model.add(cy2 < 2 * half_h).only_enforce_if(qvars[0])
-        # q1: cx >= half_w AND cy < half_h (prawy-dolny)
-        model.add(cx2 >= 2 * half_w).only_enforce_if(qvars[1])
-        model.add(cy2 < 2 * half_h).only_enforce_if(qvars[1])
-        # q2: cx < half_w AND cy >= half_h (lewy-górny)
-        model.add(cx2 < 2 * half_w).only_enforce_if(qvars[2])
-        model.add(cy2 >= 2 * half_h).only_enforce_if(qvars[2])
-        # q3: cx >= half_w AND cy >= half_h (prawy-górny)
-        model.add(cx2 >= 2 * half_w).only_enforce_if(qvars[3])
-        model.add(cy2 >= 2 * half_h).only_enforce_if(qvars[3])
-
-        model.add_exactly_one(qvars)
-        quadrant_vars[i] = qvars
-
     if blocked_arrangements:
+        for i in range(n):
+            qvars = []
+            for q in range(4):
+                qv = model.new_bool_var(f"quad_{i}_{q}")
+                qvars.append(qv)
+            # Środek pokoju (x + w/2, y + h/2) wyznacza kwadrant
+            # q0 = lewy-dolny, q1 = prawy-dolny, q2 = lewy-górny, q3 = prawy-górny
+            cx2 = model.new_int_var(0, 2 * BW, f"cx2_{i}")
+            cy2 = model.new_int_var(0, 2 * BH, f"cy2_{i}")
+            model.add(cx2 == 2 * x[i] + w[i])
+            model.add(cy2 == 2 * y[i] + h[i])
+
+            # q0: cx < half_w AND cy < half_h (lewy-dolny)
+            model.add(cx2 < 2 * half_w).only_enforce_if(qvars[0])
+            model.add(cy2 < 2 * half_h).only_enforce_if(qvars[0])
+            # q1: cx >= half_w AND cy < half_h (prawy-dolny)
+            model.add(cx2 >= 2 * half_w).only_enforce_if(qvars[1])
+            model.add(cy2 < 2 * half_h).only_enforce_if(qvars[1])
+            # q2: cx < half_w AND cy >= half_h (lewy-górny)
+            model.add(cx2 < 2 * half_w).only_enforce_if(qvars[2])
+            model.add(cy2 >= 2 * half_h).only_enforce_if(qvars[2])
+            # q3: cx >= half_w AND cy >= half_h (prawy-górny)
+            model.add(cx2 >= 2 * half_w).only_enforce_if(qvars[3])
+            model.add(cy2 >= 2 * half_h).only_enforce_if(qvars[3])
+
+            model.add_exactly_one(qvars)
+            quadrant_vars[i] = qvars
+
         for arr_idx, arr in enumerate(blocked_arrangements):
             # Przynajmniej jeden pokój musi być w innym kwadrancie
             different_bools = []
@@ -800,6 +797,12 @@ def solve_cpsat(
     solver.parameters.num_workers = 8
     # Zakończ wcześniej jeśli rozwiązanie jest bliskie optimum (gap < 5%)
     solver.parameters.relative_gap_limit = 0.05
+    # Pakowanie prostokątów: energetyczne wnioskowanie + timetabling w NoOverlap2D
+    # drastycznie skracają czas-do-pierwszego-rozwiązania (perf S28: parter ~130 m²
+    # pierwsze rozwiązanie ~79 s bez, patrz notebooks/parter_perf_probe.py).
+    solver.parameters.use_energetic_reasoning_in_no_overlap_2d = True
+    solver.parameters.use_timetabling_in_no_overlap_2d = True
+    solver.parameters.use_area_energetic_reasoning_in_no_overlap_2d = True
 
     status = solver.solve(model)
 
@@ -846,12 +849,16 @@ def solve_cpsat(
         rooms.append(room)
 
     # --- Wyciągnij arrangement (topologię) do blokowania ---
+    # Kwadrant = czysta funkcja rozwiązania (te same porównania co reifikacje
+    # w bloku blocked_arrangements) — liczona z wartości, nie ze zmiennych modelu.
     arrangement = RoomArrangement()
     for i, spec in enumerate(specs):
-        for q in range(4):
-            if solver.value(quadrant_vars[i][q]):
-                arrangement.room_quadrants[spec.id] = q
-                break
+        cx2_v = 2 * solver.value(x[i]) + solver.value(w[i])
+        cy2_v = 2 * solver.value(y[i]) + solver.value(h[i])
+        if cx2_v < 2 * half_w:
+            arrangement.room_quadrants[spec.id] = 0 if cy2_v < 2 * half_h else 2
+        else:
+            arrangement.room_quadrants[spec.id] = 1 if cy2_v < 2 * half_h else 3
 
     return CpsatResult(
         status=status_name,

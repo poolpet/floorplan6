@@ -3,8 +3,36 @@
 > Updated after every working session. If it doesn't reflect reality —
 > Claude updates immediately.
 >
-> **Last update:** 2026-06-10 (Session 27 — branch `feat/sfh-open-plan-day-zone`: **domy 2-kond. „poddasze-shrink"
-> (KNEE-WALL) WDROŻONE**). Piętro NIE solvuje się już na pełnym obrysie — dostaje **pas użytkowy przy kalenicy**:
+> **Last update:** 2026-06-11 (Session 28 — branch `feat/sfh-open-plan-day-zone`: **solver perf NAPRAWIONY (~15×)
+> + benchmark do wzorców Dawida + tri-scenariusze**). **PERF (ablacja → fix, `notebooks/parter_perf_probe.py`):**
+> parter był feasible ale wolny (13×10: pierwsze rozwiązanie 79 s, OPTIMAL 285 s; Tracja-6 479 s; żaden pojedynczy
+> pin nie był winowajcą — bez L-holu wręcz GORZEJ). Fix w `core/cpsat_solver.py` (semantyka nietknięta):
+> **(1) `use_energetic_reasoning/timetabling/area_energetic_in_no_overlap_2d=True`** (główna dźwignia),
+> (2) merge zdublowanych zmiennych pola (było 2× produkt w·h per pokój), (3) kwadranty budowane TYLKO przy
+> `blocked_arrangements` (ekstrakcja post-hoc w Pythonie). **Wynik: 13×10 first-sol 6.3 s / OPTIMAL 53 s;
+> Tracja-6 OPTIMAL 32 s, w limicie suite (45 s) = 14.5 s.** Regresja: batch domowy+e2e+contract 103/105
+> (2 = flaki kontencji, w izolacji ✓), solver+narrow-M2 zielone. **Suite: Tracja-6 PO RAZ PIERWSZY SIĘ
+> GENERUJE** — pozostałe flagi = znane kolejkowane GAPy (salon 61>cap35 day-zone-overflow; 3≠4 sypialnie
+> room-set-scaling); L-140 nadal parter=UNKNOWN (L-ścieżka niepodparta: rdzeń notch-unaware).
+> **NOWE NARZĘDZIA (prośby Dawida): (a) `notebooks/ac_tri_scenarios.py`** — każdy ZAZNACZONY obrys z AC
+> generowany ×3 (mieszkanie / parterowiec / dom piętrowy), rendery `rzuty/tri/` + tabela statusów; tryb
+> `--offline` smoke OK (B_88: wszystkie 3 scenariusze; fail-e z czytelnymi powodami).
+> **(b) benchmark podobieństwa do WZORCÓW:** ekstrakcja ground-truth z PDF (vision workflow `wf_4a2dad06`,
+> cross-checked per plik) → `notebooks/reference_plans.json` (pilot: kanoniczna seria A.01.1-5 z `rzuty/domy`;
+> powierzchnie NETTO z tabel rzutów) → harness `notebooks/reference_benchmark.py` (zestaw pokoi F1 50% +
+> UDZIAŁY powierzchni MAPE 30% (netto vs 100%-pokrycie → udziały, nie m²!) + sąsiedztwa Jaccard 20%;
+> rendery `rzuty/benchmark/`). **PIERWSZE LICZBY: A01_120 = 56.7/100** (parter F1 0.57 / MAPE 24.6% / adj 0.21;
+> poddasze F1 0.77 / 19.9% / 0.44); A01_35 = FAIL (bramka micro-45), **A01_70 = FAIL (pas 41 < program piętra
+> — a realne poddasze tego domu ma 0.78 footprintu vs nasz sztywny ATTIC_BAND_FACTOR=0.60; realny zakres
+> w korpusie 0.43-0.78!)** → twardy dowód na elastyczne szablony / konfigurowalny współczynnik pasa.
+> **NEXT:** (1) skala ekstrakcji: pozostałe 44 PDF `rzuty/domy` + `~/Desktop/claude code/schematics/dataset_raw`
+> (konopnickiej 25 / natura_life 50 / podręcznik 39 / domy jednorodzinne 6 projektów); (2) kolejność napraw WG
+> BENCHMARKU (kandydaci: day-zone-overflow cap, room-set scaling 2-kond. + elastyczny pas, L-footprinty);
+> (3) tri-scenariusze na realnych obrysach Dawida z AC (czeka na sesję z AC+Tapir). Pamięć:
+> [[project_layout_optimization_archon]].
+>
+> **Previously — Session 27 (2026-06-10)** — branch `feat/sfh-open-plan-day-zone`: **domy 2-kond. „poddasze-shrink"
+> (KNEE-WALL) WDROŻONE**. Piętro NIE solvuje się już na pełnym obrysie — dostaje **pas użytkowy przy kalenicy**:
 > pełna długość wzdłuż dłuższej osi × `ATTIC_BAND_FACTOR=0.60` krótszej (zakres decyzji Dawida 0.55-0.65),
 > wycentrowany, MUSI zawierać rdzeń schodów, przycięty do obrysu (`core/house_layout._attic_band_polygon`).
 > **Dwie UDOWODNIONE (presolve) sprzeczności znalezione i rozwiązane po drodze:** (1) szczelina pas↔rdzeń < szer.
