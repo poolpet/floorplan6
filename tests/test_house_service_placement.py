@@ -42,10 +42,6 @@ def test_two_storey_kotlownia_parter_garderoba_pietro_external():
     kot = _room(lay.parter_rooms, "kotlownia")    # parter
     gard = _room(lay.pietro_rooms, "garderoba")   # piętro
     assert _at_ext_wall(kot, W, H), f"kotłownia (parter) w środku: {kot.polygon.bounds}"
-    # knee-wall (S26): piętro żyje na PASIE poddasza — ściany zewnętrzne garderoby
-    # to krawędzie pasa (szczyty + ścianki kolankowe), nie pełnego obrysu.
-    ab = lay.attic_boundary.polygon.bounds
-    gb = gard.polygon.bounds
-    at_attic_wall = (abs(gb[0] - ab[0]) < 0.05 or abs(gb[2] - ab[2]) < 0.05 or
-                     abs(gb[1] - ab[1]) < 0.05 or abs(gb[3] - ab[3]) < 0.05)
-    assert at_attic_wall, f"garderoba (poddasze) w środku pasa: {gb} vs pas {ab}"
+    # knee-wall v2 (S29): poddasze na pełnym obrysie — garderoba przy ścianie
+    # zewnętrznej footprintu (regały i tak omijają strefę niską na poziomie mebli)
+    assert _at_ext_wall(gard, W, H), f"garderoba (piętro) w środku: {gard.polygon.bounds}"

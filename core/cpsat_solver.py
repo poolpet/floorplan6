@@ -274,6 +274,7 @@ def solve_cpsat(
     forced_facade: Optional[dict[str, str]] = None,
     blocked_arrangements: Optional[list[RoomArrangement]] = None,
     reserved_core: Optional[tuple[float, float, float, float]] = None,
+    low_zones: Optional[list[tuple[float, float, float, float]]] = None,
     program_config: Optional[HouseProgramConfig] = None,
     stair_room_id: Optional[str] = None,
     hub_at_entry: bool = True,
@@ -611,6 +612,28 @@ def solve_cpsat(
             bS = model.new_bool_var("wc_S"); model.add(y[wc_idx] == 0).only_enforce_if(bS)
             bN = model.new_bool_var("wc_N"); model.add(y_ends[wc_idx] == BH).only_enforce_if(bN)
             model.add_bool_or([bW, bE, bS, bN])
+
+    # Knee-wall v2 (S29): strefy niskiej ścianki kolankowej poddasza (low_zones,
+    # bbox-relative metry). Żaden pokój nie może być W CAŁOŚCI w strefie (wysokość
+    # < ~1.9 m wszędzie = pokój bezużyteczny) — musi wystawać poza nią z DOWOLNEJ
+    # z 4 stron. WYJĄTEK: pokój schodów (stair_idx) — po schodach wchodzi się
+    # stopniowo, dolne stopnie nie potrzebują pełnej wysokości (decyzja Dawida S29).
+    if low_zones:
+        for zi, (zx0, zy0, zx1, zy1) in enumerate(low_zones):
+            zx0c, zy0c = round(zx0 * SCALE), round(zy0 * SCALE)
+            zx1c, zy1c = round(zx1 * SCALE), round(zy1 * SCALE)
+            for i in range(n):
+                if i == stair_idx:
+                    continue
+                esc_l = model.new_bool_var(f"lz{zi}_{i}_l")
+                model.add(x[i] <= zx0c - 1).only_enforce_if(esc_l)
+                esc_r = model.new_bool_var(f"lz{zi}_{i}_r")
+                model.add(x_ends[i] >= zx1c + 1).only_enforce_if(esc_r)
+                esc_b = model.new_bool_var(f"lz{zi}_{i}_b")
+                model.add(y[i] <= zy0c - 1).only_enforce_if(esc_b)
+                esc_t = model.new_bool_var(f"lz{zi}_{i}_t")
+                model.add(y_ends[i] >= zy1c + 1).only_enforce_if(esc_t)
+                model.add_bool_or([esc_l, esc_r, esc_b, esc_t])
 
     # ====================================================================
     # Stage C: Facade constraints — pokoje z oknami na fasadzie

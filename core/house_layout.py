@@ -10,7 +10,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field, replace
 from typing import Optional
 
-from shapely.geometry import Point, Polygon, box
+from shapely.geometry import Polygon, box
 
 from core.boundary_analyzer import analyze_boundary
 from core.cpsat_solver import solve_cpsat
@@ -77,15 +77,16 @@ STAIR_FRONT_SETBACK = 1.8   # (Approach B) głębokość HOLU przed schodami (m)
                             # wejścia a schodami. 1.8 daje feasible na 7×9..10×7 (1.5/1.6 zawieszał
                             # 10×7 straight-core); schody przy ścianie bocznej przeciwnej wejściu.
 
-# Knee-wall (S26): poddasze UŻYTKOWE = pas przy kalenicy, nie pełny obrys.
-# Pełna długość wzdłuż dłuższej osi obrysu (kalenica) × ATTIC_BAND_FACTOR
-# krótszej osi (zakres decyzji Dawida: 0.55-0.65), wycentrowany; MUSI zawierać
-# rdzeń schodów (piony zachowane).
-ATTIC_BAND_FACTOR = 0.60
-# Szczelina pas↔rdzeń wzdłuż osi pasa musi być 0 ALBO ≥ ten próg: węższej nic nie
-# pokryje (F1 == + min_szerokosc pokoi ≥1.0; prostokąt nad szczeliną blokują pinned
-# schody) → solver INFEASIBLE. Mniejsze szczeliny dosnapowujemy do krawędzi rdzenia.
-ATTIC_CORE_SNAP = 1.5
+# Knee-wall v2 (S29, decyzja Dawida po przeglądzie rzutów S27/28): poddasze ma
+# PEŁNY footprint parteru (powierzchnia jak parter), ale wzdłuż DŁUŻSZYCH krawędzi
+# (okapy; kalenica = dłuższa oś) biegną strefy NISKIEJ ścianki kolankowej:
+#   - układ: żaden pokój piętra nie może być W CAŁOŚCI w strefie (solver, low_zones);
+#     WYJĄTEK: schody — wchodzi się stopniowo, dolne stopnie nie potrzebują wysokości;
+#   - meble: wysokie (szafa/regały/kocioł) poza strefą; niskie (łóżko, WC, wanna) mogą.
+# Głębokość strefy = ATTIC_LOW_STRIP_FACTOR · krótsza oś (2×0.20 = komplement pasa
+# 0.60 z S27; realna użyteczna szerokość wg korpusu wzorców 0.43-0.78 — kalibracja
+# benchmarkiem).
+ATTIC_LOW_STRIP_FACTOR = 0.20
 
 
 def _stair_core_dims(W: float, H: float, force_straight: bool = False) -> tuple[float, float, str]:
@@ -132,9 +133,10 @@ class TwoStoreyLayout:
     pietro_rooms: list[Room] = field(default_factory=list)
     stair_core: tuple[float, float, float, float] = (0.0, 0.0, STAIR_W, STAIR_H)
     boundary: object = None
-    # Knee-wall (S26): boundary PODDASZA (pas przy kalenicy) — mniejszy niż parter.
-    # None = kondygnacje o tym samym footprincie (parterowiec / stare ścieżki).
+    # (S27, wycofane w S29) boundary pasa poddasza — zostaje dla back-compat, zawsze None.
     attic_boundary: object = None
+    # Knee-wall v2 (S29): strefy niskiej ścianki kolankowej poddasza (world coords).
+    attic_low_strips: list = field(default_factory=list)
 
 
 def _template(tid: str):
@@ -183,48 +185,16 @@ def _reserve_core(bbox, entry_point, force_straight: bool = False) -> tuple[floa
     return (round(cx, 3), round(cy, 3), round(sw, 3), round(sh, 3))
 
 
-def _attic_band_polygon(polygon: Polygon, core: tuple[float, float, float, float]) -> Polygon:
-    """Pas poddasza użytkowego (KNEE-WALL, S26). core = rdzeń schodów bbox-relative.
-
-    Pas o pełnej długości wzdłuż kalenicy (dłuższa oś bboxa) i głębokości
-    ATTIC_BAND_FACTOR krótszej osi, wycentrowany na krótszej osi; przesunięty
-    minimalnie tak, by zawierał rdzeń schodów (rdzeń ≤0.4 krótszej osi < pas,
-    więc zawsze się mieści); przycięty do obrysu (L/U-footprinty).
-    """
+def attic_low_strips(polygon: Polygon) -> list[Polygon]:
+    """Strefy niskiej ścianki kolankowej poddasza (world coords): dwa pasy wzdłuż
+    DŁUŻSZYCH krawędzi bboxa (okapy), głębokość ATTIC_LOW_STRIP_FACTOR · krótsza oś."""
     minx, miny, maxx, maxy = polygon.bounds
     W, H = maxx - minx, maxy - miny
-    cx, cy, cw, ch = core
-
-    def _place(axis_lo, axis_hi, depth, core_lo, core_hi):
-        """Pozycja pasa na krótszej osi: wycentrowany → zawiera rdzeń → bez szczelin
-        pas↔rdzeń węższych niż ATTIC_CORE_SNAP (niepokrywalne przy F1)."""
-        lo = axis_lo + (axis_hi - axis_lo - depth) / 2.0
-        lo = min(max(lo, core_hi - depth), core_lo)       # zawieraj rdzeń schodów
-        lo = min(max(lo, axis_lo), axis_hi - depth)       # zostań w obrysie
-        gap_lo = core_lo - lo
-        gap_hi = (lo + depth) - core_hi
-        if 0 < gap_lo < ATTIC_CORE_SNAP and core_lo + depth <= axis_hi + 1e-9:
-            return core_lo                                # krawędź pasa na krawędzi rdzenia
-        if 0 < gap_hi < ATTIC_CORE_SNAP and core_hi - depth >= axis_lo - 1e-9:
-            return core_hi - depth
-        return lo
-
-    if W >= H:                       # kalenica wzdłuż X → pas ogranicza Y
-        depth = ATTIC_BAND_FACTOR * H
-        lo = _place(miny, maxy, depth, miny + cy, miny + cy + ch)
-        band = box(minx, lo, maxx, lo + depth)
-    else:                            # kalenica wzdłuż Y → pas ogranicza X
-        depth = ATTIC_BAND_FACTOR * W
-        lo = _place(minx, maxx, depth, minx + cx, minx + cx + cw)
-        band = box(lo, miny, lo + depth, maxy)
-    attic = band.intersection(polygon)
-    if attic.geom_type == "MultiPolygon":
-        # Egzotyczny obrys rozciął pas: bierz płat ZAWIERAJĄCY rdzeń schodów (bez niego
-        # piętro nie ma klatki = zawsze INFEASIBLE); fallback — największy płat.
-        core_box = box(minx + cx, miny + cy, minx + cx + cw, miny + cy + ch)
-        with_core = [g for g in attic.geoms if g.contains(core_box.buffer(-1e-9))]
-        attic = with_core[0] if with_core else max(attic.geoms, key=lambda g: g.area)
-    return attic
+    if W >= H:                       # kalenica wzdłuż X → strefy przy y=min i y=max
+        d = ATTIC_LOW_STRIP_FACTOR * H
+        return [box(minx, miny, maxx, miny + d), box(minx, maxy - d, maxx, maxy)]
+    d = ATTIC_LOW_STRIP_FACTOR * W   # kalenica wzdłuż Y → strefy przy x=min i x=max
+    return [box(minx, miny, minx + d, maxy), box(maxx - d, miny, maxx, maxy)]
 
 
 def suggest_storeys(area_m2: float) -> int:
@@ -276,47 +246,28 @@ def generate_house(polygon: Polygon, entry_point: tuple[float, float],
     pietro_cfg = default_house_config(storey="poddasze", master_id="sypialnia_1")
     # Faza 2b: hol parteru L-capable — owija wiatrołap (przy wejściu) + WC (przy ścianie)
     # ramieniem o minimalnym polu, więc korytarz zostaje mały mimo poprawnego ich położenia.
-    # Knee-wall (S26): poddasze użytkowe = pas przy kalenicy, NIE pełny obrys
-    # (skos dachu zabiera pasy przy okapach). Piętro solvujemy na pasie.
-    attic_poly = _attic_band_polygon(polygon, core)
-    # Suma minów piętra z PRZYPIĘTYM polem schodów (pin > min szablonowy schodów).
-    attic_min = (sum(p.min_powierzchnia for p in pietro_tpl.pokoje if p.id != "schody")
-                 + core[2] * core[3]) * _PACK_MARGIN
-    if attic_poly.area < attic_min:
-        return TwoStoreyLayout(ok=False,
-            message=(f"Poddasze uzytkowe (pas {attic_poly.area:.0f} m2 przy kalenicy) za male "
-                     f"na program pietra (min ~{attic_min:.0f} m2) — powieksz obrys "
-                     f"albo wybierz parterowiec."),
-            stair_core=core, boundary=boundary)
-    # entry_point zrzutowany na obrys pasa — piętro i tak go nie używa (hub_at_entry=False),
-    # ale analyze_boundary wymaga sensownego punktu na obrysie. Jawne wall_types=FACADE:
-    # poddasze NIE ma drzwi zewnętrznych, więc domyślna heurystyka „krawędź z entry =
-    # INTERNAL" gasiłaby okna na całej ściance kolankowej/szczycie pod pseudo-entry.
-    from core.models import WallType
-    ep = attic_poly.exterior.interpolate(attic_poly.exterior.project(Point(entry_point)))
-    n_edges = len(attic_poly.exterior.coords) - 1
-    attic_boundary = analyze_boundary(attic_poly, entry_point=(ep.x, ep.y),
-                                      wall_types=[WallType.FACADE] * n_edges)
-    # rdzeń w układzie bbox PASA — ta sama pozycja świata co na parterze (piony schodów).
+    # Knee-wall v2 (S29): poddasze na PEŁNYM obrysie (powierzchnia jak parter);
+    # strefy niskiej ścianki kolankowej wzdłuż dłuższych krawędzi przekazujemy
+    # solverowi (bbox-relative) — żaden pokój piętra nie może być w nich W CAŁOŚCI.
+    # Schody ZWOLNIONE (Dawid: wchodzi się stopniowo, dolne stopnie nie potrzebują
+    # wysokości) — solver i tak pomija pokój przypięty (stair_idx).
+    strips = attic_low_strips(polygon)
     bx0, by0 = boundary.bbox[0], boundary.bbox[1]
-    ax0, ay0 = attic_boundary.bbox[0], attic_boundary.bbox[1]
-    attic_core = (round(core[0] + bx0 - ax0, 3), round(core[1] + by0 - ay0, 3),
-                  core[2], core[3])
+    low_rel = [(s.bounds[0] - bx0, s.bounds[1] - by0,
+                s.bounds[2] - bx0, s.bounds[3] - by0) for s in strips]
     r_parter = solve_cpsat(parter_tpl, boundary, time_limit_s=time_limit_s,
                            reserved_core=core, program_config=parter_cfg,
                            stair_room_id="schody", hub_at_entry=True,
                            l_capable_ids={"hub"}, entry_room_id="wiatrolap")
-    # Piętro NIE ma drzwi zewnętrznych — podest łączy się ze schodami, nie z fasadą wejścia.
-    # Podest L-capable: w wąskim pasie poddasza prostokątny podest nie domknie gwiazdy
-    # F5 (hub ≤0.8 głębokości pasa + pinned schody ⇒ presolve INFEASIBLE); cienki L
-    # opasuje klatkę — ta sama mechanika co „mini-korytarz" wąskich mieszkań (S26).
-    r_pietro = solve_cpsat(pietro_tpl, attic_boundary, time_limit_s=time_limit_s,
-                           reserved_core=attic_core, program_config=pietro_cfg,
+    # Piętro NIE ma drzwi zewnętrznych — podest łączy się ze schodami, nie z fasadą
+    # wejścia. Podest L-capable (mechanika „mini-korytarza" S26) — opasuje klatkę.
+    r_pietro = solve_cpsat(pietro_tpl, boundary, time_limit_s=time_limit_s,
+                           reserved_core=core, program_config=pietro_cfg,
                            stair_room_id="schody", hub_at_entry=False,
-                           l_capable_ids={"hub"})
+                           l_capable_ids={"hub"}, low_zones=low_rel)
     if r_parter.status not in ("OPTIMAL", "FEASIBLE") or r_pietro.status not in ("OPTIMAL", "FEASIBLE"):
         return TwoStoreyLayout(ok=False,
             message=f"Solver nie znalazl ukladu (parter={r_parter.status}, pietro={r_pietro.status}).",
-            stair_core=core, boundary=boundary, attic_boundary=attic_boundary)
+            stair_core=core, boundary=boundary, attic_low_strips=strips)
     return TwoStoreyLayout(ok=True, parter_rooms=r_parter.rooms, pietro_rooms=r_pietro.rooms,
-                           stair_core=core, boundary=boundary, attic_boundary=attic_boundary)
+                           stair_core=core, boundary=boundary, attic_low_strips=strips)

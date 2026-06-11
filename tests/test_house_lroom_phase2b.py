@@ -115,11 +115,11 @@ def test_f1_coverage_exact_and_no_overlap_with_l_hub():
     W, H = 11.0, 8.0
     lay = _layout(W, H, "south")
     assert lay.ok, lay.message
-    # knee-wall (S26): usable PIĘTRA = pas poddasza, parter = pełny obrys
-    usable_per = {"parter": W * H, "pietro": lay.attic_boundary.polygon.area}
+    # knee-wall v2 (S29): OBIE kondygnacje na pełnym obrysie (strefy niskie to
+    # ograniczenie pozycji pokoi, nie powierzchni)
+    usable = W * H
     for label, rooms in (("parter", lay.parter_rooms), ("pietro", lay.pietro_rooms)):
         total = sum(r.polygon.area for r in rooms)
-        usable = usable_per[label]
         assert abs(total - usable) < 1e-3, f"{label}: pokrycie {total:.4f} != usable {usable}"
         for i in range(len(rooms)):
             for j in range(i + 1, len(rooms)):

@@ -23,10 +23,11 @@ def furnish_layout(layout: TwoStoreyLayout, with_furniture: bool) -> tuple[list,
     if not with_furniture:
         return [], []
     b = getattr(layout, "boundary", None)
-    # Knee-wall (S26): meble poddasza liczone na PASIE (własne fasady/okna pasa).
-    ab = getattr(layout, "attic_boundary", None) or b
+    # Knee-wall v2 (S29): meble WYSOKIE poddasza omijają strefy niskiej ścianki
+    # kolankowej (łóżko/WC/wanna mogą stać pod skosem).
+    strips = getattr(layout, "attic_low_strips", None) or []
     return (place_furniture(layout.parter_rooms, b),
-            place_furniture(layout.pietro_rooms, ab))
+            place_furniture(layout.pietro_rooms, b, low_zones=strips))
 
 
 def house_details_text(layout: TwoStoreyLayout) -> str:
@@ -34,15 +35,14 @@ def house_details_text(layout: TwoStoreyLayout) -> str:
     area = getattr(getattr(layout, "boundary", None), "area", None)
     if area is None:
         area = sum(r.area for r in layout.parter_rooms)
-    attic = getattr(layout, "attic_boundary", None)
-    lines = ["Dom jednorodzinny 2-kondygnacyjny"]
-    if attic is not None:  # knee-wall: kondygnacje mają RÓŻNE powierzchnie
-        lines.append(f"Obrys parteru: {area:.1f} m²")
-        lines.append(f"Poddasze użytkowe (pas przy kalenicy): {attic.area:.1f} m²")
-    else:
-        lines.append(f"Obrys/kondygnacja: {area:.1f} m²")
+    strips = getattr(layout, "attic_low_strips", None) or []
+    lines = ["Dom jednorodzinny 2-kondygnacyjny", f"Obrys/kondygnacja: {area:.1f} m²"]
+    if strips:  # knee-wall v2: pełny footprint + strefy niskiej ścianki kolankowej
+        low = sum(s.area for s in strips)
+        lines.append(f"Poddasze: strefy niskiej ścianki kolankowej {low:.1f} m² "
+                     f"(wzdłuż dłuższych krawędzi)")
     for storey_title, rooms in (("PARTER", layout.parter_rooms),
-                                ("PODDASZE" if attic is not None else "PIĘTRO",
+                                ("PODDASZE" if strips else "PIĘTRO",
                                  layout.pietro_rooms)):
         lines.append("")
         lines.append(f"{storey_title}:")

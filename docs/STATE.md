@@ -3,8 +3,31 @@
 > Updated after every working session. If it doesn't reflect reality —
 > Claude updates immediately.
 >
-> **Last update:** 2026-06-11 (Session 28 — branch `feat/sfh-open-plan-day-zone`: **solver perf NAPRAWIONY (~15×)
-> + benchmark do wzorców Dawida + tri-scenariusze**). **PERF (ablacja → fix, `notebooks/parter_perf_probe.py`):**
+> **Last update:** 2026-06-11 (Session 29 — branch `feat/sfh-open-plan-day-zone`: **KNEE-WALL v2 — poddasze na
+> PEŁNYM footprincie + strefy niskiej ścianki kolankowej**). Decyzja Dawida po przeglądzie rzutów S27/28:
+> poddasze ma powierzchnię JAK PARTER; wzdłuż DŁUŻSZYCH krawędzi (okapy) strefy niskie
+> (`ATTIC_LOW_STRIP_FACTOR=0.20`/strona, `attic_low_strips()` w `core/house_layout.py`). Reguły: **(układ)**
+> żaden pokój piętra nie może być W CAŁOŚCI w strefie (`solve_cpsat(..., low_zones=)` — dyzjunkcja 4 ucieczek
+> per pokój×strefa; **WYJĄTEK schody** — Dawid: po schodach wchodzi się stopniowo, dolne stopnie nie potrzebują
+> wysokości); **(meble)** wysokie (`furniture.TALL_TYPES` = szafa/regały/półki/kocioł) omijają strefy
+> (`furnish_rooms(..., low_zones=)`), niskie — łóżko/WC/wanna — MOGĄ pod skosem (klasyka poddasza).
+> WYCOFANE z S27: pas poddasza (`attic_boundary` zostaje w dataclass jako None — back-compat), bramka minimum
+> ~76 m² (**domy 60-76 m² z poddaszem wracają** — `test_two_storey_63m2_generates_again`), duch pełnego obrysu
+> w rendererze (zamiast: przyciemnienie stref + przerywana linia ścianki). ZOSTAJE z S27/28: bieg prosty wzdłuż
+> kalenicy + L-podest + cały perf-fix. Kontrakt: `poddasze.meta.attic_low_strips`. Testy: rewrite
+> `test_house_attic_shrink.py` (10, RED-first; geometria stref + nie-zawieranie + meble + kontrakt + 63 m²);
+> batch 106/108 → po fixach (fake `low_zones` w preview-teście; próg sypialni → ≤30% kondygnacji z odnośnikiem
+> do kolejki) zielono. **BENCHMARK: A01_70 (dom 68.7 m² z poddaszem) GENERUJE SIĘ — 2/3 wzorców, średnia
+> 52.2/100** (A01_70=53.7, A01_120=50.7; spadek A01_120 z 56.7 = bloat sypialni na pełnym poddaszu — dokładnie
+> mierzy kolejkowy room-set scaling). Render `rzuty/renders_mvp/1_dwukondygnacyjny.png`: łóżka pod skosem,
+> szafy w strefie wysokiej, schody przecinają linię ścianki (wyjątek), piony OK; master 24.9 = znany GAP.
+> **NEXT (kolejność wg benchmarku):** (1) room-set scaling 2-kond. (4. sypialnia zamiast pompowania masteru —
+> naprawia MAPE obu wzorców i Trację 3≠4 syp) + day-zone-overflow cap parteru (salon 40-61 > 35); (2) skala
+> ekstrakcji wzorców (44 PDF + dataset_raw ~120 dok.); (3) micro-35 parterowiec (A01_35 FAIL na bramce 45 m²);
+> (4) L-footprinty. Pamięć: [[project_layout_optimization_archon]].
+>
+> **Previously — Session 28 (2026-06-11)** — branch `feat/sfh-open-plan-day-zone`: **solver perf NAPRAWIONY (~15×)
+> + benchmark do wzorców Dawida + tri-scenariusze**. **PERF (ablacja → fix, `notebooks/parter_perf_probe.py`):**
 > parter był feasible ale wolny (13×10: pierwsze rozwiązanie 79 s, OPTIMAL 285 s; Tracja-6 479 s; żaden pojedynczy
 > pin nie był winowajcą — bez L-holu wręcz GORZEJ). Fix w `core/cpsat_solver.py` (semantyka nietknięta):
 > **(1) `use_energetic_reasoning/timetabling/area_energetic_in_no_overlap_2d=True`** (główna dźwignia),

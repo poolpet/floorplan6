@@ -19,12 +19,11 @@ OUT.mkdir(parents=True, exist_ok=True)
 
 
 def house_2storey():
-    # 11×8 (88 m²): knee-wall (S26) — pas poddasza musi pomieścić program piętra (9×8 za małe)
     poly = Polygon([(0, 0), (11, 0), (11, 8), (0, 8)])
     lay = generate_house(poly, entry_point=(5.5, 0.0), num_storeys=2, time_limit_s=45.0)
     assert lay.ok, lay.message
     render_house_figure(lay, with_furniture=True,
-                        title="Dom 11×8 — MVP (poddasze = pas przy kalenicy)",
+                        title="Dom 11×8 — MVP (poddasze: strefy niskiej ścianki kolankowej)",
                         save_path=OUT / "1_dwukondygnacyjny.png", show=False)
     print("OK 1_dwukondygnacyjny.png")
 

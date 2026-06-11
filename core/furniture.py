@@ -27,6 +27,12 @@ STEP = 0.10         # krok przesuwania mebla wzdłuż ściany
 
 CIRCULATION_KEYS = {"hub", "wiatrolap"}
 
+# Knee-wall v2 (S29): meble WYSOKIE nie mogą stać w strefie niskiej ścianki
+# kolankowej poddasza (szafa/regały/kocioł ~2 m). Niskie — łóżko, WC, wanna
+# ('bathtub' renderujemy jako wannę; kabina prysznicowa = wysoka, ale nie mamy
+# osobnego typu), komody — mogą stać pod skosem (decyzja Dawida).
+TALL_TYPES = {"wardrobe", "shelving", "shelves", "boiler"}
+
 # Piece: type=klucz maszynowy, label=PL etykieta, a×b=wymiary (m),
 # linear=True → ciąg pod ścianę o stałej głębokości a i długości do b (cap).
 Piece = namedtuple("Piece", "type label a b linear")
@@ -86,9 +92,11 @@ class FurnishResult:
     warnings: list   # list[str]
 
 
-def furnish_rooms(rooms: list[Room], boundary=None) -> FurnishResult:
+def furnish_rooms(rooms: list[Room], boundary=None, low_zones=None) -> FurnishResult:
     """Rozstaw meble (spec phase 4). boundary=None → bez świadomości okien (back-compat).
 
+    low_zones: strefy niskiej ścianki kolankowej poddasza (list[Polygon], world coords)
+    — meble WYSOKIE (TALL_TYPES) ich unikają; niskie (łóżko/WC/wanna) mogą tam stać.
     Pokoje komunikacyjne i pokoje bez zdefiniowanego zestawu nie dostają mebli.
     """
     door_zones = _infer_door_zones(rooms)
@@ -117,8 +125,12 @@ def furnish_rooms(rooms: list[Room], boundary=None) -> FurnishResult:
             if not cavity.is_empty:
                 door_zones.setdefault(room.spec.id, []).append(cavity)
         rzones = door_zones.get(room.spec.id, [])
+        # strefy niskie przycięte do pokoju — keep-out TYLKO dla mebli wysokich
+        tall_zones = [z.intersection(room.polygon) for z in (low_zones or [])
+                      if z.intersects(room.polygon)]
         if key == "sypialnia":
-            f, w = _furnish_bedroom(room, windows, rzones, _room_shared_walls(room, night_rooms))
+            f, w = _furnish_bedroom(room, windows, rzones, _room_shared_walls(room, night_rooms),
+                                    tall_zones=tall_zones)
         elif key == "kuchnia":
             f, w = _furnish_kitchen(room, windows, rzones)
         elif key == "salon":
@@ -132,7 +144,7 @@ def furnish_rooms(rooms: list[Room], boundary=None) -> FurnishResult:
         elif key in ("lazienka", "wc"):
             f, w = _furnish_bathroom(room, windows, rzones)
         else:
-            f, w = _furnish_room(room, key, rzones), []
+            f, w = _furnish_room(room, key, rzones, tall_zones=tall_zones), []
         furniture.extend(f)
         warnings.extend(w)
     # stół jadalny w otwartej strefie dziennej (styk salon↔kuchnia) — po pokojach
@@ -140,9 +152,9 @@ def furnish_rooms(rooms: list[Room], boundary=None) -> FurnishResult:
     return FurnishResult(furniture=furniture, warnings=warnings)
 
 
-def place_furniture(rooms: list[Room], boundary=None) -> list[Furniture]:
+def place_furniture(rooms: list[Room], boundary=None, low_zones=None) -> list[Furniture]:
     """Back-compat: płaska lista mebli (bez ostrzeżeń). Patrz furnish_rooms."""
-    return furnish_rooms(rooms, boundary).furniture
+    return furnish_rooms(rooms, boundary, low_zones=low_zones).furniture
 
 
 def _room_window_walls(room: Room, boundary) -> set:
@@ -175,16 +187,19 @@ def _room_window_walls(room: Room, boundary) -> set:
     return walls
 
 
-def _furnish_room(room: Room, key: str, zones: list[Polygon]) -> list[Furniture]:
+def _furnish_room(room: Room, key: str, zones: list[Polygon],
+                  tall_zones=()) -> list[Furniture]:
     minx, miny, maxx, maxy = room.polygon.bounds
     region = (minx + INSET, miny + INSET, maxx - INSET, maxy - INSET)
     placed: list[Polygon] = []
     out: list[Furniture] = []
     for piece in FURNITURE_SETS[key]:
+        # meble wysokie dodatkowo omijają strefę niskiej ścianki kolankowej (S29)
+        zeff = list(zones) + list(tall_zones) if piece.type in TALL_TYPES else zones
         if piece.linear:
-            rect = _place_linear(region, piece.a, piece.b, placed, zones)
+            rect = _place_linear(region, piece.a, piece.b, placed, zeff)
         else:
-            rect = _place_fixed(region, piece.a, piece.b, placed, zones)
+            rect = _place_fixed(region, piece.a, piece.b, placed, zeff)
         if rect is not None:
             placed.append(rect)
             out.append(Furniture(piece.type, rect, room.spec.id, piece.label))
@@ -248,7 +263,8 @@ def _flank_nightstands(bed_rect, bed_wall, region, placed, zones, room_id):
     return out
 
 
-def _furnish_bedroom(room: Room, windows: set, zones, shared: set = frozenset()):
+def _furnish_bedroom(room: Room, windows: set, zones, shared: set = frozenset(),
+                     tall_zones=()):
     """Łóżko na najdłuższej ścianie bez okna (wezgłowie do ściany) + szafki nocne + szafa.
 
     `shared` = ściany działowe z inną sypialnią — szafa ich unika (nie chowa się na
@@ -285,10 +301,12 @@ def _furnish_bedroom(room: Room, windows: set, zones, shared: set = frozenset())
     # najpierw ściany nie-wspólne, POTEM wspólne (nie porzucaj szafy gdy nie-wspólna nie mieści się)
     walls_for_ward = ([w for w in cand if w != bed_wall and w not in shared]
                       + [w for w in cand if w != bed_wall and w in shared])
+    # szafa = mebel WYSOKI → omija strefę niskiej ścianki kolankowej (S29)
+    ward_zones = list(zones) + list(tall_zones)
     done_ward = False
     for length in (ward.b, 1.6, 1.2):
         for wall in walls_for_ward:
-            wr = _place_on_wall(region, length, ward.a, wall, placed, zones)
+            wr = _place_on_wall(region, length, ward.a, wall, placed, ward_zones)
             if wr is not None:
                 placed.append(wr)
                 out.append(Furniture("wardrobe", wr, room.spec.id, ward.label))

@@ -165,15 +165,15 @@ def render_two_storey(
     sx, sy, sw, sh = layout.stair_core
     core_abs = (sx + bx0, sy + by0, sw, sh)
 
-    # Knee-wall (S26): poddasze ma WŁASNY, mniejszy obrys (pas przy kalenicy);
-    # pełny footprint parteru rysowany na panelu poddasza jako "duch" (skos dachu).
-    attic_b = getattr(layout, "attic_boundary", None)
+    # Knee-wall v2 (S29): poddasze = pełny footprint; na panelu PODDASZE rysujemy
+    # strefy niskiej ścianki kolankowej (przyciemnienie + linia ścianki).
+    strips = getattr(layout, "attic_low_strips", None) or []
     _draw_storey(ax_p, layout.parter_rooms, layout.boundary, core_abs,
                  parter_furniture or [], "PARTER")
-    _draw_storey(ax_g, layout.pietro_rooms, attic_b or layout.boundary, core_abs,
+    _draw_storey(ax_g, layout.pietro_rooms, layout.boundary, core_abs,
                  pietro_furniture or [],
-                 "PODDASZE" if attic_b is not None else "PIĘTRO",
-                 ghost_boundary=layout.boundary if attic_b is not None else None)
+                 "PODDASZE" if strips else "PIĘTRO",
+                 low_strips=strips)
 
     if title is None:
         title = "Dom jednorodzinny 2-kondygnacyjny"
@@ -199,7 +199,7 @@ def _frame_origin(layout) -> tuple[float, float]:
     return 0.0, 0.0
 
 
-def _draw_storey(ax, rooms, boundary, core_abs, furniture, title, ghost_boundary=None):
+def _draw_storey(ax, rooms, boundary, core_abs, furniture, title, low_strips=None):
     # obrys
     if boundary is not None and getattr(boundary, "polygon", None) is not None:
         bx, by = boundary.polygon.exterior.xy
@@ -209,12 +209,22 @@ def _draw_storey(ax, rooms, boundary, core_abs, furniture, title, ghost_boundary
         xs = [c for r in rooms if r.polygon for c in (r.polygon.bounds[0], r.polygon.bounds[2])]
         ys = [c for r in rooms if r.polygon for c in (r.polygon.bounds[1], r.polygon.bounds[3])]
         bnds = (min(xs), min(ys), max(xs), max(ys)) if xs else (0, 0, 1, 1)
-    # Knee-wall: duch pełnego footprintu pod pasem poddasza + wspólne limity osi
-    # z parterem (panele wizualnie wyrównane, widać cofnięcie ścianki kolankowej).
-    if ghost_boundary is not None and getattr(ghost_boundary, "polygon", None) is not None:
-        gx, gy = ghost_boundary.polygon.exterior.xy
-        ax.plot(gx, gy, color="#9E9E9E", linewidth=1.2, linestyle="--", zorder=1)
-        bnds = ghost_boundary.polygon.bounds
+    # Knee-wall v2 (S29): strefy niskiej ścianki kolankowej — delikatne przyciemnienie
+    # + przerywana LINIA ŚCIANKI (wewnętrzna krawędź strefy, h≈1.9 m).
+    for s in (low_strips or []):
+        sx0, sy0, sx1, sy1 = s.bounds
+        ax.add_patch(mpatches.Rectangle((sx0, sy0), sx1 - sx0, sy1 - sy0,
+                                        facecolor="black", alpha=0.07,
+                                        edgecolor="none", zorder=3.5))
+        eps = 1e-6
+        if abs(sy0 - bnds[1]) < eps and sy1 < bnds[3] - eps:      # strefa przy dolnym okapie
+            ax.plot([sx0, sx1], [sy1, sy1], color="#616161", lw=1.0, ls="--", zorder=3.6)
+        elif abs(sy1 - bnds[3]) < eps and sy0 > bnds[1] + eps:    # przy górnym okapie
+            ax.plot([sx0, sx1], [sy0, sy0], color="#616161", lw=1.0, ls="--", zorder=3.6)
+        elif abs(sx0 - bnds[0]) < eps and sx1 < bnds[2] - eps:    # przy lewym okapie
+            ax.plot([sx1, sx1], [sy0, sy1], color="#616161", lw=1.0, ls="--", zorder=3.6)
+        elif abs(sx1 - bnds[2]) < eps and sx0 > bnds[0] + eps:    # przy prawym okapie
+            ax.plot([sx0, sx0], [sy0, sy1], color="#616161", lw=1.0, ls="--", zorder=3.6)
 
     # Open-plan day-zone (faza 1): pokoje DZIENNA (salon+kuchnia) to JEDNA otwarta
     # przestrzeń — rysuj je bez krawędzi wewnętrznych, a potem jeden obrys ich unii

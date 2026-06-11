@@ -46,7 +46,7 @@ def test_furnish_layout_forwards_boundary(monkeypatch):
     import viz.house_preview as hp
     captured = []
 
-    def fake_place(rooms, boundary=None):
+    def fake_place(rooms, boundary=None, low_zones=None):
         captured.append(boundary)
         return []
 
