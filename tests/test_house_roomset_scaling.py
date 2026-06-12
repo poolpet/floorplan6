@@ -79,13 +79,19 @@ def test_parter_gets_gabinet_when_roomy():
 
 @pytest.fixture(scope="module")
 def lay_tracja():
-    # KRAWĘDŹ SOLVERA (S29): parter ≥120 m² z garażem+gabinetem (10 pokoi) = UNKNOWN
-    # @120 s niezależnie od formulacji balansu (max/min-equality, ub-only, pasma).
-    # Testy niżej = SPECYFIKACJA AKCEPTACJI dla kolejkowanego „solver perf II"
-    # (solution hints z targetów). Zakres modalny (≤~110 m²) pokryty testem 11×8;
-    # selektory pokoi — unit-testami wyżej.
-    pytest.skip("Tracja-gross 157 m² (parter 10 pokoi) — krawędź solvera; "
-                "odblokuje solver perf II (hinty) z kolejki S29")
+    # KRAWĘDŹ SOLVERA (S29, diagnoza domknięta w S30 — sondy notebooks/
+    # parter_hints_probe*.py + parter_adjacency_probe.py): parter 157 m² GROSS
+    # z 10 pokojami siedzi w strefie LOTERII pierwszego rozwiązania (ta sama
+    # konfiguracja raz FEASIBLE @22 s, raz UNKNOWN @120 s). Wykluczone dźwignie:
+    # hinty z targetów (pogarszają), warm-start sat-only, pola ±8% (region bez
+    # rozwiązań — realne układy mają kuchnię ~0.6·t), wymuszony L-hol; prostokątny
+    # hol = INFEASIBLE (dowód 0.3 s) → L-hol obowiązkowy. Sąsiedztwa korpusowe
+    # (hol 4-5 pokoi, garaż przez wiatrołap) dają 1/3 @60 s — kierunek jakościowy,
+    # nie niezawodność. ROOT CAUSE programowy: Tracja realnie NIE MA garażu
+    # (parter ~69 m² NETTO vs nasze 157 brutto → room-set przeprogramowany).
+    # Odblokuje NETTO/BRUTTO z kolejki (selekcja pokoi wg netto), nie tuning solvera.
+    pytest.skip("Tracja-gross 157 m² (parter 10 pokoi) — loteria pierwszego "
+                "rozwiązania; root cause = room-set z brutto (kolejka netto/brutto)")
 
 
 def test_tracja_poddasze_has_4_bedrooms(lay_tracja):

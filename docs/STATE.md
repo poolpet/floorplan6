@@ -3,7 +3,32 @@
 > Updated after every working session. If it doesn't reflect reality —
 > Claude updates immediately.
 >
-> **Last update:** 2026-06-11 (Session 29 — branch `feat/sfh-open-plan-day-zone`: **KNEE-WALL v2 — poddasze na
+> **Last update:** 2026-06-12 (Session 30 — branch `feat/sfh-open-plan-day-zone`: **diagnoza krawędzi parteru
+> ≥120 m² DOMKNIĘTA — to nie „wolny solver", tylko LOTERIA pierwszego rozwiązania + room-set przeprogramowany
+> z BRUTTO; zero zmian w core (wycofane po sondach)**). Sondy na Tracja-parter 157 m² gross / 10 pokoi
+> (`notebooks/parter_hints_probe{,2,3}.py`, `parter_adjacency_probe.py`): baseline @120 s NIEDETERMINISTYCZNY
+> (raz FEASIBLE, raz UNKNOWN z 0 incumbentów; inny bieg FEASIBLE @22 s) → wariancja czasu-do-pierwszego-układu
+> dominuje nad każdym budżetem. **Wykluczone dźwignie (każda zmierzona):** (1) solution hints z targetów
+> (hipoteza kolejki S29) — POGARSZAJĄ (zły szkic = zły kierunek naprawy, UNKNOWN); (2) dwuetapowy warm-start
+> (etap 1 = sat bez funkcji celu, stop-po-pierwszym) — etap 1 SAM jest UNKNOWN @30 s; (3) pola przypięte do
+> targetów ±8% (assumptions) — UNKNOWN, a jedyny znaleziony układ ma kuchnię 0.60·t i gabinet 0.83·t → region
+> ±8% prawdopodobnie PUSTY; (4) wymuszony L-hol — UNKNOWN 3/3. **DOWÓD twardy: hol prostokątny (+±8%) =
+> INFEASIBLE w 0.3 s** → na tym programie L-hol jest OBOWIĄZKOWY; propagacja jest świetna gdy przestrzeń mała —
+> eksploduje gałąź L. **Sąsiedztwa wg KORPUSU** (AR.02.1 = realny parter 121 m²: hol 3.2 m² dotyka 4 pokoi,
+> garaż przez PRZEDSIONEK, schowek/kuchnia przez salon — nasz szablon każe holowi dotykać 7) — sonda 1/3
+> FEASIBLE @60 s: dobry kierunek JAKOŚCIOWY (benchmark adj 0.21), solo nie daje niezawodności. **ROOT CAUSE
+> programowy: selekcja pokoi z powierzchni BRUTTO** — Tracja 6 realnie NIE MA garażu (122.88 m² użytkowej
+> całości, parter ~69 NETTO vs nasze 157 brutto → 10 pokoi z garażem+gabinetem). Naprawa = kolejkowe
+> **NETTO/BRUTTO** (selektory wg netto), nie tuning solvera. Testy Tracji zostają skip-as-spec (przyczyna
+> zaktualizowana w fixture `lay_tracja`); `test_house_roomset_scaling` 6 passed / 3 skipped; core bajt-w-bajt
+> = `7f021db`. **TAKŻE S30: ekstrakcja korpusu wznowiona** (`wf_f8cab93b`, cross-session resume DZIAŁA —
+> re-spawnuje tylko brakujących) — **21/36 kompletnych** zabezpieczone w `notebooks/reference_plans_raw_partial.json`
+> (w tym AR.02.1 121 m² high-conf z sąsiedztwami); 15 plików + parowanie czeka na reset limitu subagentów
+> (19:50). **NEXT:** (1) **netto/brutto = root fix** (odblokuje Tracja/A01_120 + zejście salonu do capu 45);
+> (2) sąsiedztwa korpusowe dla dużych parterów (decyzja architektoniczna — mniejsza gwiazda holu, garaż-śluza);
+> (3) dokończyć ekstrakcję (resume po 19:50); (4) micro-35, L-footprinty. Pamięć: [[project_layout_optimization_archon]].
+>
+> **Previously — Session 29 (2026-06-11)** — branch `feat/sfh-open-plan-day-zone`: **KNEE-WALL v2 — poddasze na
 > PEŁNYM footprincie + strefy niskiej ścianki kolankowej**). Decyzja Dawida po przeglądzie rzutów S27/28:
 > poddasze ma powierzchnię JAK PARTER; wzdłuż DŁUŻSZYCH krawędzi (okapy) strefy niskie
 > (`ATTIC_LOW_STRIP_FACTOR=0.20`/strona, `attic_low_strips()` w `core/house_layout.py`). Reguły: **(układ)**
