@@ -127,5 +127,7 @@ def test_smaller_house_unchanged_program():
     lay = generate_house(_rect(11, 8), entry_point=(5.5, 0.0), time_limit_s=60.0)
     assert lay.ok, lay.message
     assert "gabinet" not in _ids(lay.parter_rooms)
-    beds = [i for i in _ids(lay.pietro_rooms) if i.startswith("sypialnia")]
-    assert len(beds) >= 3
+    parter_beds = [i for i in _ids(lay.parter_rooms) if i.startswith("sypialnia")]
+    pietro_beds = [i for i in _ids(lay.pietro_rooms) if i.startswith("sypialnia")]
+    assert len(parter_beds) == 1, "1 sypialnia na parterze (S30c)"
+    assert len(parter_beds) + len(pietro_beds) >= 3, "łącznie ≥3 sypialnie (total zachowany)"

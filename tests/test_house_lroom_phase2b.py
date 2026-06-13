@@ -66,10 +66,10 @@ def test_wc_external_and_parter_hol_compact(side):
     W, H = 11.0, 8.0
     lay = _layout(W, H, side)
     assert lay.ok, f"{W}x{H} {side}: {lay.message}"
-    wc = _room(lay.parter_rooms, "wc")
-    assert wc is not None
-    assert _touches_any_wall(wc.polygon.bounds, W, H), \
-        f"WC landlocked ({side}): bounds={wc.polygon.bounds}"
+    laz = _room(lay.parter_rooms, "lazienka")
+    assert laz is not None
+    assert _touches_any_wall(laz.polygon.bounds, W, H), \
+        f"łazienka landlocked ({side}): bounds={laz.polygon.bounds}"
     hub = _room(lay.parter_rooms, "hub")
     usable = W * H
     assert hub.area <= 0.15 * usable + 1.0, \

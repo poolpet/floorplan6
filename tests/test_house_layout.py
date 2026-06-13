@@ -17,8 +17,9 @@ def test_generates_both_storeys_with_full_program():
     assert layout.ok, layout.message
     parter_ids = {r.spec.id for r in layout.parter_rooms}
     pietro_ids = {r.spec.id for r in layout.pietro_rooms}
-    assert {"salon", "kuchnia", "wc", "kotlownia"} <= parter_ids
-    assert {"sypialnia_1", "sypialnia_2", "sypialnia_3", "lazienka"} <= pietro_ids
+    assert {"salon", "kuchnia", "lazienka", "sypialnia_parter", "kotlownia"} <= parter_ids
+    assert "wc" not in parter_ids
+    assert {"sypialnia_1", "sypialnia_2", "lazienka"} <= pietro_ids
 
 
 def test_staircase_core_identical_on_both_storeys():

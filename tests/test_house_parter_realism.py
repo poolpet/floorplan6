@@ -58,3 +58,34 @@ def test_parter_selector_always_bedroom_bathroom_spizarnia_gated():
     assert "spizarnia" in big
     no_bed = parter_room_ids(tpl.pokoje, net_area(110.0), with_parter_bedroom=False)
     assert "sypialnia_parter" not in no_bed
+
+
+def test_pietro_bedroom_offset_drops_one_keeps_min_one():
+    tpl = _template("house_pietro")
+    base = pietro_room_ids(tpl.pokoje, 70.0, bedroom_offset=0)
+    off1 = pietro_room_ids(tpl.pokoje, 70.0, bedroom_offset=1)
+    n_base = sum(1 for r in base if r.startswith("sypialnia"))
+    n_off1 = sum(1 for r in off1 if r.startswith("sypialnia"))
+    assert n_off1 == n_base - 1, f"offset=1 ma zdjąć 1 sypialnię ({n_base}→{n_off1})"
+    assert n_off1 >= 1, "min 1 sypialnia zostaje na piętrze"
+
+
+def test_bedroom_count_conserved_house_level():
+    poly = Polygon([(0, 0), (11, 0), (11, 8), (0, 8)])  # 88 m²
+    lay = generate_house(poly, entry_point=(5.5, 0.0), num_storeys=2, time_limit_s=60.0)
+    assert lay.ok, lay.message
+    parter_beds = sum(1 for r in lay.parter_rooms if r.spec.id.startswith("sypialnia"))
+    pietro_beds = sum(1 for r in lay.pietro_rooms if r.spec.id.startswith("sypialnia"))
+    old = pietro_room_ids(_template("house_pietro").pokoje, attic_effective_area(poly), bedroom_offset=0)
+    old_beds = sum(1 for r in old if r.startswith("sypialnia"))
+    assert parter_beds == 1, "1 sypialnia na parterze"
+    assert parter_beds + pietro_beds == old_beds, f"total {parter_beds}+{pietro_beds} != stary {old_beds}"
+
+
+def test_generate_2storey_parter_has_bedroom_bathroom():
+    poly = Polygon([(0, 0), (11, 0), (11, 8), (0, 8)])
+    lay = generate_house(poly, entry_point=(5.5, 0.0), num_storeys=2, time_limit_s=60.0)
+    assert lay.ok, lay.message
+    pids = [r.spec.id for r in lay.parter_rooms]
+    assert sum(1 for i in pids if i.startswith("sypialnia")) == 1
+    assert "lazienka" in pids and "wc" not in pids

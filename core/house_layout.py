@@ -243,9 +243,10 @@ def attic_effective_area(polygon: Polygon) -> float:
     return polygon.area - 0.5 * sum(s.area for s in attic_low_strips(polygon))
 
 
-def pietro_room_ids(specs: list, eff_area_m2: float) -> list[str]:
-    """Zestaw pokoi poddasza wg powierzchni efektywnej (greedy po sumie minów,
-    jak single_storey_room_ids; sypialnie PRZED luksusami, 2. łazienka bramkowana)."""
+def pietro_room_ids(specs: list, eff_area_m2: float, bedroom_offset: int = 0) -> list[str]:
+    """Zestaw pokoi poddasza wg powierzchni efektywnej (greedy po sumie minów).
+    bedroom_offset (S30c): tyle sypialni schodzi na parter — poddasze dostaje o tyle
+    mniej (od najwyższego numeru), min 1 sypialnia zostaje (strefa nocna na górze)."""
     by_id = {s.id: s for s in specs}
     chosen = [r for r in _PIETRO_CORE if r in by_id]
     cum = sum(by_id[r].min_powierzchnia for r in chosen)
@@ -260,6 +261,11 @@ def pietro_room_ids(specs: list, eff_area_m2: float) -> list[str]:
         if (cum + m) * _PACK_MARGIN <= eff_area_m2:
             chosen.append(rid)
             cum += m
+    if bedroom_offset > 0:
+        beds = [r for r in chosen if r.startswith("sypialnia")]
+        n_drop = min(bedroom_offset, max(0, len(beds) - 1))   # zostaw ≥1
+        drop = set(beds[len(beds) - n_drop:]) if n_drop else set()
+        chosen = [r for r in chosen if r not in drop]
     return chosen
 
 
@@ -376,15 +382,22 @@ def generate_house(polygon: Polygon, entry_point: tuple[float, float],
     # S30: notch-aware — dla L rdzeń ląduje przy wklęsłym narożniku, nie w wcięciu.
     core = _reserve_core(boundary.bbox, entry_point, force_straight=True,
                          notch=boundary.notch)
-    parter_tpl = parter_template_for(polygon.area)
-    pietro_tpl = _template("house_pietro")
-    if parter_tpl is None or pietro_tpl is None:
-        return TwoStoreyLayout(ok=False, message="Brak szablonow domu (house_parter/house_pietro).")
-    # Room-set scaling (S29/S30): poddasze wg powierzchni EFEKTYWNEJ (pełna −
-    # 0.5·stref niskich ≈ netto-norma PL), parter wg NETTO (brutto·NET_FACTOR)
-    # + sąsiedztwa korpusowe gdy jest garaż — patrz parter_template_for.
+    pietro_tpl0 = _template("house_pietro")
+    if pietro_tpl0 is None:
+        return TwoStoreyLayout(ok=False, message="Brak szablonu house_pietro.")
+    # Budżet sypialni na poziomie DOMU (S30c): jedna sypialnia schodzi na parter,
+    # poddasze dostaje o 1 mniej → łączna liczba bez zmian. Fallback: gdy stary
+    # model dałby <2 sypialni na piętrze, zostaw je na górze (parter bez sypialni).
     eff = attic_effective_area(polygon)
-    pietro_tpl = _filter_template(pietro_tpl, set(pietro_room_ids(pietro_tpl.pokoje, eff)))
+    old_beds = sum(1 for r in pietro_room_ids(pietro_tpl0.pokoje, eff, bedroom_offset=0)
+                   if r.startswith("sypialnia"))
+    parter_bedroom = old_beds >= 2
+    offset = 1 if parter_bedroom else 0
+    parter_tpl = parter_template_for(polygon.area, with_parter_bedroom=parter_bedroom)
+    pietro_tpl = _filter_template(
+        pietro_tpl0, set(pietro_room_ids(pietro_tpl0.pokoje, eff, bedroom_offset=offset)))
+    if parter_tpl is None:
+        return TwoStoreyLayout(ok=False, message="Brak szablonu house_parter.")
     # Program domu (capy ARCHON są NETTO-we) egzekwowany na brutto: _gross_config.
     parter_cfg = _gross_config(default_house_config(storey="parter"))
     pietro_cfg = _gross_config(default_house_config(storey="poddasze", master_id="sypialnia_1"))
@@ -402,7 +415,8 @@ def generate_house(polygon: Polygon, entry_point: tuple[float, float],
     r_parter = solve_cpsat(parter_tpl, boundary, time_limit_s=time_limit_s,
                            reserved_core=core, program_config=parter_cfg,
                            stair_room_id="schody", hub_at_entry=True,
-                           l_capable_ids={"hub"}, entry_room_id="wiatrolap")
+                           l_capable_ids={"hub"}, entry_room_id="wiatrolap",
+                           external_bathroom_id="lazienka")
     # Piętro NIE ma drzwi zewnętrznych — podest łączy się ze schodami, nie z fasadą
     # wejścia. Podest L-capable (mechanika „mini-korytarza" S26) — opasuje klatkę.
     r_pietro = solve_cpsat(pietro_tpl, boundary, time_limit_s=time_limit_s,
