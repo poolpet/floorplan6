@@ -43,7 +43,14 @@
 > `_gen` ma już 60 s), (b) gdy ok, hol≈12.95 waha się DOKŁADNIE na progu testu 12.48 (13%; F4=15% — hol
 > architektonicznie OK). Dowód nie-regresji: ten test przeszedł w batchu `4b783f3` (netto/brutto już wdrożone),
 > a ścieżka prostokątna jest odtąd niezmieniona. Do decyzji Dawida: poluzować próg 13%→15% (F4) lub zostawić
-> jako znany flak; perf-fix = kolejka.
+> jako znany flak; perf-fix = kolejka. ZROBIONE (decyzja Dawida): próg 13%→15% (F4), `4b783f3`→test fix.
+>
+> **BENCHMARK BASELINE S30c (7 prostokątnych wzorców high-conf, `notebooks/reference_plans_rect7.json`):
+> średnia 53.5/100, 5/7 wygenerowanych** (osobie 57.8, tropie 53.3, pab2 52.6, a2-6 52.1, pb 51.6;
+> kudowe+modlnica FAIL parter=UNKNOWN). **Wniosek: PARTER to słaby punkt** (F1 0.33-0.75, MAPE 26-58%),
+> **poddasze dobre** (F1 0.77-1.0, MAPE 16-42%) → następny lever realizmu = dobór pokoi + proporcje PARTERU.
+> 2/7 FAIL: modlnica (90 m² realny perf-timeout), kudowe (BLIŹNIAK — benchmark generuje na pełnym 146 m²
+> obrysie bliźniaka, nie na segmencie 56 m² → artefakt danych; do higieny: pomijać bliźniaki/piwnice).
 > **Poza zakresem (kolejka):** poddasze dużych L ≥120 m² (room-count edge), różnoboczne/T, day-zone overflow
 > (salon 40.3/11×8), micro-35, entry-aware wybór rogu rdzenia. Pamięć: [[project_layout_optimization_archon]]
 > [[feedback_model_delegation]].
