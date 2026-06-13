@@ -45,3 +45,16 @@ def test_solver_external_bathroom_param_targets_given_room():
     touches = (abs(bnds[0]) < 0.05 or abs(bnds[2] - 10) < 0.05 or
                abs(bnds[1]) < 0.05 or abs(bnds[3] - 9) < 0.05)
     assert touches, f"lazienka landlocked: {bnds}"
+
+
+def test_parter_selector_always_bedroom_bathroom_spizarnia_gated():
+    tpl = _template("house_parter")
+    small = parter_room_ids(tpl.pokoje, net_area(63.0))    # ~51 netto
+    big = parter_room_ids(tpl.pokoje, net_area(110.0))     # ~89 netto
+    for s in (small, big):
+        assert "sypialnia_parter" in s and "lazienka" in s
+        assert "wc" not in s
+    assert "spizarnia" not in small, "spiżarnia dopiero ≥60 netto"
+    assert "spizarnia" in big
+    no_bed = parter_room_ids(tpl.pokoje, net_area(110.0), with_parter_bedroom=False)
+    assert "sypialnia_parter" not in no_bed

@@ -227,6 +227,8 @@ _PARTER_GABINET_MIN_NET = 93.0  # gabinet od ~93 m² NETTO (= dawne 115 gross; n
                                 # 9-pokojowy parter spowalniał solver na macierzy 96-108)
 _PARTER_GARAZ_MIN_NET = 97.0    # garaż od 97 m² NETTO (= korpusowe A01_120: parter
                                 # 97 netto Z garażem; ≈ dawne 120 gross)
+_PARTER_SPIZARNIA_MIN_NET = 60.0  # korpus: spiżarnia tylko ≥~60 netto (osobie 65/a2-6 83 mają;
+                                  # tropie 48/pb 51/pab2 44 nie) — bufor perf małego parteru
 
 
 def net_area(gross_m2: float) -> float:
@@ -261,13 +263,17 @@ def pietro_room_ids(specs: list, eff_area_m2: float) -> list[str]:
     return chosen
 
 
-def parter_room_ids(specs: list, net_m2: float) -> list[str]:
-    """Zestaw pokoi parteru wg powierzchni NETTO (S30 — progi korpusowe są
-    netto-we): pełny program; gabinet i garaż (absorbery nadmiaru, korpus
-    A01_120) dopiero na przestronnych obrysach. Caller przelicza brutto
-    obrysu przez net_area()."""
+def parter_room_ids(specs: list, net_m2: float, with_parter_bedroom: bool = True) -> list[str]:
+    """Zestaw pokoi parteru wg powierzchni NETTO (S30 — progi korpusowe netto-we).
+    sypialnia_parter (S30c: pokój na parterze) zawsze gdy with_parter_bedroom;
+    spiżarnia/gabinet/garaż bramkowane powierzchnią. Caller przelicza brutto przez net_area()."""
     by_id = {s.id for s in specs}
-    ids = [s.id for s in specs if s.id not in ("gabinet", "garaz")]
+    gated = ("gabinet", "garaz", "spizarnia", "sypialnia_parter")
+    ids = [s.id for s in specs if s.id not in gated]
+    if with_parter_bedroom and "sypialnia_parter" in by_id:
+        ids.append("sypialnia_parter")
+    if net_m2 >= _PARTER_SPIZARNIA_MIN_NET and "spizarnia" in by_id:
+        ids.append("spizarnia")
     if net_m2 >= _PARTER_GABINET_MIN_NET and "gabinet" in by_id:
         ids.append("gabinet")
     if net_m2 >= _PARTER_GARAZ_MIN_NET and "garaz" in by_id:
@@ -297,13 +303,14 @@ def _corpus_parter_adjacency(tpl):
     return replace(tpl, sasiedztwo=rules)
 
 
-def parter_template_for(gross_area_m2: float):
-    """Szablon parteru dla obrysu BRUTTO: zestaw pokoi wg netto + sąsiedztwa
-    korpusowe (gdy jest garaż). None gdy brak szablonu house_parter."""
+def parter_template_for(gross_area_m2: float, with_parter_bedroom: bool = True):
+    """Szablon parteru dla obrysu BRUTTO: zestaw pokoi wg netto (+sypialnia_parter
+    gdy with_parter_bedroom) + sąsiedztwa korpusowe (gdy garaż). None gdy brak szablonu."""
     tpl = _template("house_parter")
     if tpl is None:
         return None
-    tpl = _filter_template(tpl, set(parter_room_ids(tpl.pokoje, net_area(gross_area_m2))))
+    keep = set(parter_room_ids(tpl.pokoje, net_area(gross_area_m2), with_parter_bedroom))
+    tpl = _filter_template(tpl, keep)
     return _corpus_parter_adjacency(tpl)
 
 
