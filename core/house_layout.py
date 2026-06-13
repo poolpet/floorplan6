@@ -151,7 +151,8 @@ def _entry_side(bbox, entry_point) -> str:
     return min(d, key=d.get)
 
 
-def _reserve_core(bbox, entry_point, force_straight: bool = False) -> tuple[float, float, float, float]:
+def _reserve_core(bbox, entry_point, force_straight: bool = False,
+                  notch=None) -> tuple[float, float, float, float]:
     """Rdzeń klatki schodowej (x, y, w, h), bbox-relative — Approach B.
 
     Geometria adaptacyjna (`_stair_core_dims`; force_straight → bieg prosty wzdłuż
@@ -160,11 +161,36 @@ def _reserve_core(bbox, entry_point, force_straight: bool = False) -> tuple[floa
     stronie niż drzwi). Dzięki temu HOL może zająć strefę wejścia (zawiera drzwi,
     dotyka ściany wejścia) i dotknąć schodów od ich strony holowej — schody NIE
     leżą na osi wejścia, więc nie blokują huba.
+
+    notch (S30): gdy obrys jest L-kształtny, rdzeń kotwiczony przy WKLĘSŁYM
+    narożniku skrzydeł (w litej części po przekątnej od wcięcia) — inaczej
+    przypięta klatka ląduje w wcięciu (przeszkoda solvera) → INFEASIBLE.
+    notch=None → logika prostokąta bajt-w-bajt jak dawniej (zero regresji M-domów).
     """
     minx, miny, maxx, maxy = bbox
     W = maxx - minx
     H = maxy - miny
     sw, sh, _kind = _stair_core_dims(W, H, force_straight=force_straight)
+
+    if notch is not None:
+        # Wklęsły wierzchołek L = róg notcha WEWNĄTRZ bbox (nie na krawędzi).
+        # Notch przylega do jednej krawędzi poziomej i jednej pionowej bbox.
+        eps = 1e-6
+        nx, ny, nw, nh = notch.x, notch.y, notch.width, notch.height
+        on_left = nx < eps             # wcięcie przy lewej krawędzi bbox
+        on_bottom = ny < eps           # wcięcie przy dolnej krawędzi bbox
+        inner_x = (nx + nw) if on_left else nx
+        inner_y = (ny + nh) if on_bottom else ny
+        # Rozciągnij rdzeń w stronę litej części (po przekątnej od wcięcia):
+        cx = inner_x if on_left else inner_x - sw
+        cy = inner_y if on_bottom else inner_y - sh
+        # Fallback: clamp do bbox (wąskie skrzydło). Kotwienie narożne jest
+        # styczne do notcha (nie nachodzi), więc clamp wystarcza; degenerację
+        # (lita część < program) i tak złapie solver (ok=False).
+        cx = min(max(cx, 0.0), max(0.0, W - sw))
+        cy = min(max(cy, 0.0), max(0.0, H - sh))
+        return (round(cx, 3), round(cy, 3), round(sw, 3), round(sh, 3))
+
     ex = entry_point[0] - minx
     ey = entry_point[1] - miny
     side = _entry_side(bbox, entry_point)
