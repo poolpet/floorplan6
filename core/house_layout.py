@@ -162,9 +162,13 @@ def _reserve_core(bbox, entry_point, force_straight: bool = False,
     dotyka ściany wejścia) i dotknąć schodów od ich strony holowej — schody NIE
     leżą na osi wejścia, więc nie blokują huba.
 
-    notch (S30): gdy obrys jest L-kształtny, rdzeń kotwiczony przy WKLĘSŁYM
-    narożniku skrzydeł (w litej części po przekątnej od wcięcia) — inaczej
-    przypięta klatka ląduje w wcięciu (przeszkoda solvera) → INFEASIBLE.
+    notch (S30): gdy obrys jest L-kształtny, rdzeń kotwiczony w litej GŁÓWNEJ
+    BRYLE — w rogu bbox DIAGONALNIE PRZECIWNYM do wcięcia (zawsze lity dla
+    pojedynczego notcha L). WKLĘSŁY narożnik (zgięcie skrzydeł) byłby gardłem
+    cyrkulacji: przypięta tam klatka + notch zatykają jedyne przejście między
+    skrzydłami → INFEASIBLE (dowód: notebooks/lcore_placement_probe.py — narożnik
+    flush/pionowy/+offset = INFEASIBLE, róg przeciwny = OPTIMAL). Centralność daje
+    hol L-capable owijający zgięcie; schody siedzą w bryle skrzydła (jak realne L).
     notch=None → logika prostokąta bajt-w-bajt jak dawniej (zero regresji M-domów).
     """
     minx, miny, maxx, maxy = bbox
@@ -173,22 +177,14 @@ def _reserve_core(bbox, entry_point, force_straight: bool = False,
     sw, sh, _kind = _stair_core_dims(W, H, force_straight=force_straight)
 
     if notch is not None:
-        # Wklęsły wierzchołek L = róg notcha WEWNĄTRZ bbox (nie na krawędzi).
-        # Notch przylega do jednej krawędzi poziomej i jednej pionowej bbox.
+        # Notch zajmuje jeden róg bbox (L). Rdzeń → róg diagonalnie przeciwny:
+        # zawsze lity, z dala od gardła zgięcia. on_left/on_bottom = którą
+        # krawędź bbox dotyka notch (przylega do jednej poziomej i jednej pionowej).
         eps = 1e-6
-        nx, ny, nw, nh = notch.x, notch.y, notch.width, notch.height
-        on_left = nx < eps             # wcięcie przy lewej krawędzi bbox
-        on_bottom = ny < eps           # wcięcie przy dolnej krawędzi bbox
-        inner_x = (nx + nw) if on_left else nx
-        inner_y = (ny + nh) if on_bottom else ny
-        # Rozciągnij rdzeń w stronę litej części (po przekątnej od wcięcia):
-        cx = inner_x if on_left else inner_x - sw
-        cy = inner_y if on_bottom else inner_y - sh
-        # Fallback: clamp do bbox (wąskie skrzydło). Kotwienie narożne jest
-        # styczne do notcha (nie nachodzi), więc clamp wystarcza; degenerację
-        # (lita część < program) i tak złapie solver (ok=False).
-        cx = min(max(cx, 0.0), max(0.0, W - sw))
-        cy = min(max(cy, 0.0), max(0.0, H - sh))
+        on_left = notch.x < eps                 # wcięcie przy lewej krawędzi
+        on_bottom = notch.y < eps               # wcięcie przy dolnej krawędzi
+        cx = (W - sw) if on_left else 0.0        # notch lewy → rdzeń prawy (i odwrotnie)
+        cy = (H - sh) if on_bottom else 0.0      # notch dolny → rdzeń górny (i odwrotnie)
         return (round(cx, 3), round(cy, 3), round(sw, 3), round(sh, 3))
 
     ex = entry_point[0] - minx
@@ -370,7 +366,9 @@ def generate_house(polygon: Polygon, entry_point: tuple[float, float],
             message=f"Obrys {polygon.area:.0f} m2 za maly na program domu (min ~{MIN_STOREY_AREA:.0f} m2/kondygnacje).")
     boundary = analyze_boundary(polygon, entry_point=entry_point)
     # Knee-wall (S26): bieg prosty wzdłuż kalenicy — patrz _stair_core_dims(force_straight).
-    core = _reserve_core(boundary.bbox, entry_point, force_straight=True)
+    # S30: notch-aware — dla L rdzeń ląduje przy wklęsłym narożniku, nie w wcięciu.
+    core = _reserve_core(boundary.bbox, entry_point, force_straight=True,
+                         notch=boundary.notch)
     parter_tpl = parter_template_for(polygon.area)
     pietro_tpl = _template("house_pietro")
     if parter_tpl is None or pietro_tpl is None:

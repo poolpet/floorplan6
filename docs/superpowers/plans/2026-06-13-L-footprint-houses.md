@@ -12,7 +12,15 @@
 
 ---
 
-### Task 1: notch-aware `_reserve_core` (geometria wklęsłego narożnika)
+> ⚠️ **REWIZJA wykonawcza 2026-06-13:** pierwotne „kotwiczenie na WKLĘSŁYM narożniku"
+> okazało się INFEASIBLE (sonda `notebooks/lcore_placement_probe.py`: narożnik flush/
+> pionowy/+offset = INFEASIBLE, róg przeciwny = OPTIMAL). Zaimplementowano **róg bbox
+> DIAGONALNIE PRZECIWNY do notcha** (decyzja Dawida). Aktualna geometria + test
+> `test_core_anchored_opposite_notch` — patrz zrewidowany spec (sekcja Geometria) i
+> `core/house_layout._reserve_core`. Kroki niżej zachowane jako zapis intencji; kod
+> faktyczny = wersja „róg przeciwny".
+
+### Task 1: notch-aware `_reserve_core` (rdzeń w rogu przeciwnym do notcha)
 
 **Files:**
 - Modify: `core/house_layout.py` (funkcja `_reserve_core`, ok. linie 154-185)

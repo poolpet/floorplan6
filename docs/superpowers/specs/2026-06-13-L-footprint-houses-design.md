@@ -2,7 +2,8 @@
 
 > Data: 2026-06-13 · Branch: `feat/sfh-open-plan-day-zone` · Stage 4 (FloorPlan6)
 > Decyzje Dawida (2026-06-13): zacząć od L (różnoboczne osobnym etapem później);
-> klatka na **wewnętrznym narożniku skrzydeł**; zakres v1 = **tylko rdzeń
+> klatka na **wewnętrznym narożniku** → ZREWIDOWANE na **róg diagonalnie przeciwny do
+> notcha** (wewnętrzny narożnik = INFEASIBLE, sonda; sekcja Geometria); zakres v1 = **tylko rdzeń
 > notch-aware** (poddasze dużych L jako osobny krok).
 
 ## Problem
@@ -26,8 +27,8 @@ warunek wiarygodności dla domów garażowych.
 ## Zakres
 
 **W zakresie (v1):**
-- `_reserve_core` świadomy notcha → rdzeń w litej części L, zakotwiony przy
-  **wewnętrznym (wklęsłym) narożniku** skrzydeł.
+- `_reserve_core` świadomy notcha → rdzeń w litej GŁÓWNEJ BRYLE L, zakotwiony w
+  **rogu bbox diagonalnie przeciwnym** do wcięcia (zob. sekcja Geometria — rewizja).
 - Wszystkie 4 położenia notcha (każdy róg bbox) × strony wejścia.
 - Test regresji parterowca L (już działa — zablokować).
 - Gwarancja braku regresji: notch=None → `_reserve_core` bajt-w-bajt jak dziś.
@@ -47,28 +48,35 @@ Sygnatura rozszerzona o `notch: Optional[NotchInfo] = None`. Wymiary rdzenia
 (`sw, sh` z `_stair_core_dims`, bieg prosty wzdłuż kalenicy) **bez zmian** — zmienia
 się tylko **pozycja** gdy notch jest obecny.
 
-**Geometria wklęsłego narożnika.** Notch to prostokąt `(nx, ny, nw, nh)` wycięty z
-rogu bbox `(0,0,W,H)`. Wklęsły wierzchołek L = róg notcha leżący WEWNĄTRZ bbox
-(nie na krawędzi). Lita część przylegająca do niego = kwadrant po przekątnej od
-notcha. Formuła per położenie notcha (który róg bbox zajmuje):
+**Geometria — róg DIAGONALNIE PRZECIWNY do notcha.** ⚠️ REWIZJA 2026-06-13 (sonda
+`notebooks/lcore_placement_probe.py`): pierwotny wybór „wewnętrzny narożnik" okazał
+się **geometrycznie INFEASIBLE** — wklęsły wierzchołek to gardło cyrkulacji między
+skrzydłami; przypięta tam klatka + notch (dwie przeszkdy) zatykają jedyne przejście
+→ solver nie ułoży 8-pokojowego programu parteru. Zmierzone (L 102 m²): narożnik
+flush = INFEASIBLE 0.6 s, narożnik pionowy = INFEASIBLE 2.5 s, narożnik +offset 0.5 m
+= INFEASIBLE 3.0 s, **róg przeciwny = OPTIMAL 11.5 s**. Decyzja Dawida 2026-06-13:
+przejść na róg przeciwny.
 
-| Notch w rogu | Wklęsły wierzchołek | Rdzeń kotwiczony (lita strona) |
-|---|---|---|
-| dolny-lewy `(0,0)` | `(nw, nh)` | x ≥ nw przy dole **lub** y ≥ nh przy lewej |
-| dolny-prawy `(W−nw,0)` | `(W−nw, nh)` | x+sw ≤ W−nw przy dole **lub** y ≥ nh przy prawej |
-| górny-lewy `(0,H−nh)` | `(nw, H−nh)` | analogicznie |
-| górny-prawy `(W−nw,H−nh)` | `(W−nw, H−nh)` | analogicznie |
+Notch zajmuje jeden róg bbox (pojedyncze wcięcie L). Rdzeń kotwiczony w rogu bbox
+**diagonalnie przeciwnym** — zawsze lity, z dala od zgięcia:
 
-Rdzeń sadzimy tak, by jeden jego **róg dotykał wklęsłego wierzchołka** od litej
-strony, a orientacja biegu szła wzdłuż dłuższej osi litej bryły (kalenica). Hol
-(L-capable, mechanika S26/27) zajmie zgięcie i sięgnie obu skrzydeł.
+| Notch dotyka | Rdzeń kotwiczony |
+|---|---|
+| lewej + dolnej (dolny-lewy) | prawy-górny `(W−sw, H−sh)` |
+| prawej + dolnej (dolny-prawy) | lewy-górny `(0, H−sh)` |
+| lewej + górnej (górny-lewy) | prawy-dolny `(W−sw, 0)` |
+| prawej + górnej (górny-prawy) | lewy-dolny `(0, 0)` |
 
-**Fallback (skrzydło za wąskie).** Jeśli rdzeń `sw×sh` nie mieści się w litym pasie
-przy narożniku (wąskie skrzydło), dosnap rdzeń do najbliższej krawędzi litej części
-(analogia `ATTIC_CORE_SNAP=1.5`, S27) — byle CAŁY rdzeń był poza notchem. Gdy nawet
-to nie daje rady (degeneracja) → zostaw przy zewnętrznej ścianie litej bryły
-(stara logika ograniczona do solid-bbox); generate_house i tak zwróci `ok=False`
-z czytelnym komunikatem zamiast śmieciowego układu.
+Formuła: `on_left = notch.x < eps`, `on_bottom = notch.y < eps`;
+`cx = (W−sw) if on_left else 0.0`; `cy = (H−sh) if on_bottom else 0.0`. Wymiary
+`sw, sh` z `_stair_core_dims` bez zmian (bieg prosty wzdłuż kalenicy). Centralność
+zapewnia hol L-capable owijający zgięcie; schody siedzą w bryle skrzydła — jak
+realne L-domy (korpus: schody przy holu, w bryle, nie w samym zgięciu).
+
+**Fallback / degeneracja.** Róg przeciwny jest zawsze lity dla pojedynczego notcha,
+więc rdzeń nie nachodzi na wcięcie z definicji. Gdy lita bryła < program parteru
+(notch za duży) → solver zwróci `ok=False` z czytelnym komunikatem (jak dziś dla za
+małych obrysów) — bez śmieciowego układu.
 
 ### Integracja w `generate_house`
 
@@ -100,8 +108,8 @@ core w litej części → solve_cpsat(reserved_core=core) ×2 → TwoStoreyLayou
 Nowy `tests/test_house_lfootprint.py`:
 1. **`test_l_2storey_generates`** — L 102 m² 2-kond. → `lay.ok` (dziś UNKNOWN). RED.
 2. **`test_core_not_in_notch`** — rdzeń (`stair_core`) nie przecina notcha (geom).
-3. **`test_core_at_inner_corner`** — róg rdzenia styka się z wklęsłym wierzchołkiem
-   (tolerancja snap), dla ≥2 położeń notcha.
+3. **`test_core_anchored_opposite_notch`** — rdzeń przy rogu bbox diagonalnie
+   przeciwnym do notcha (lewy-górny dla notcha dolny-prawy itd.), ≥2 położenia.
 4. **`test_stairs_vertically_aligned_on_L`** — `schody` parteru i poddasza mają ten
    sam bbox (piony).
 5. **`test_single_storey_L_still_ok`** — parterowiec L generuje 4-syp (regression-lock).
@@ -113,8 +121,9 @@ piony, hol na zgięciu, garaż w skrzydle.
 
 ## Ryzyka
 
-- **Wklęsły narożnik vs strona wejścia** mogą się „bić" (wejście na skrzydle
-  przeciwnym do narożnika) → rdzeń daleko od wejścia. Mitigacja: orientacja biegu z
-  litej osi, hol L-capable nadrabia dystans (jak na wąskich mieszkaniach S26).
+- **Róg przeciwny vs strona wejścia** mogą się „bić" (wejście blisko rogu rdzenia).
+  v1: rdzeń bezwarunkowo w rogu przeciwnym do notcha; hol L-capable nadrabia routing
+  (zweryfikowane: entry=north + rdzeń lewy-górny = OPTIMAL). Entry-aware wybór rogu
+  (gdy >1 lity róg pasuje) = ewentualny refinement, gdy któraś strona wejścia padnie.
 - **Poddasze dużych L** może zostać UNKNOWN (poza zakresem) — wtedy `ok=False`,
   uczciwy komunikat, nie udajemy sukcesu; kolejkujemy room-count poddasza.
