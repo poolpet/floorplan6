@@ -272,13 +272,16 @@ def pietro_room_ids(specs: list, eff_area_m2: float, bedroom_offset: int = 0) ->
 def parter_room_ids(specs: list, net_m2: float, with_parter_bedroom: bool = True) -> list[str]:
     """Zestaw pokoi parteru wg powierzchni NETTO (S30 — progi korpusowe netto-we).
     sypialnia_parter (S30c: pokój na parterze) zawsze gdy with_parter_bedroom;
-    spiżarnia/gabinet/garaż bramkowane powierzchnią. Caller przelicza brutto przez net_area()."""
+    gabinet/garaż bramkowane powierzchnią. Caller przelicza brutto przez net_area()."""
     by_id = {s.id for s in specs}
     gated = ("gabinet", "garaz", "spizarnia", "sypialnia_parter")
     ids = [s.id for s in specs if s.id not in gated]
     if with_parter_bedroom and "sypialnia_parter" in by_id:
         ids.append("sypialnia_parter")
-    if net_m2 >= _PARTER_SPIZARNIA_MIN_NET and "spizarnia" in by_id:
+    # Spiżarnia TYLKO w programie BEZ sypialni parteru (fallback). Z sypialnią parter
+    # zostaje 8-pokojowy — perf (sonda parter8_bedroom_probe: 9 pokoi = loteria @60s,
+    # 8 = niezawodne na obrysach ≥~100 m²). Sypialnia ma priorytet nad spiżarnią (S30c).
+    if not with_parter_bedroom and net_m2 >= _PARTER_SPIZARNIA_MIN_NET and "spizarnia" in by_id:
         ids.append("spizarnia")
     if net_m2 >= _PARTER_GABINET_MIN_NET and "gabinet" in by_id:
         ids.append("gabinet")
@@ -417,6 +420,21 @@ def generate_house(polygon: Polygon, entry_point: tuple[float, float],
                            stair_room_id="schody", hub_at_entry=True,
                            l_capable_ids={"hub"}, entry_room_id="wiatrolap",
                            external_bathroom_id="lazienka")
+    # Best-effort sypialni parteru (S30c, decyzja Dawida): na CIASNYM modalnym obrysie
+    # (~88 m²) parter 8-pok z sypialnią to loteria perf (sonda parter8_bedroom_probe:
+    # ~50% @60s; obrysy ≥~100 m² = 4/4 niezawodne). Gdy parter z sypialnią =
+    # UNKNOWN/INFEASIBLE → FALLBACK na niezawodny program BEZ sypialni parteru
+    # (poddasze odzyskuje wszystkie sypialnie, total zachowany). KAŻDY dom się generuje;
+    # sypialnia parteru pojawia się gdy wykonalna.
+    if parter_bedroom and r_parter.status not in ("OPTIMAL", "FEASIBLE"):
+        parter_tpl = parter_template_for(polygon.area, with_parter_bedroom=False)
+        pietro_tpl = _filter_template(
+            pietro_tpl0, set(pietro_room_ids(pietro_tpl0.pokoje, eff, bedroom_offset=0)))
+        r_parter = solve_cpsat(parter_tpl, boundary, time_limit_s=time_limit_s,
+                               reserved_core=core, program_config=parter_cfg,
+                               stair_room_id="schody", hub_at_entry=True,
+                               l_capable_ids={"hub"}, entry_room_id="wiatrolap",
+                               external_bathroom_id="lazienka")
     # Piętro NIE ma drzwi zewnętrznych — podest łączy się ze schodami, nie z fasadą
     # wejścia. Podest L-capable (mechanika „mini-korytarza" S26) — opasuje klatkę.
     r_pietro = solve_cpsat(pietro_tpl, boundary, time_limit_s=time_limit_s,

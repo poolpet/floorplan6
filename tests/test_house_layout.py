@@ -12,8 +12,11 @@ _F2_MAX_AREA = {"lazienka": 5.0, "wc": 3.0}
 
 
 def test_generates_both_storeys_with_full_program():
-    poly = Polygon([(0, 0), (11, 0), (11, 9), (0, 9)])
-    layout = generate_house(poly, entry_point=(5.5, 0.0), num_storeys=2, time_limit_s=60.0)
+    # 12.9×8.7 (112 m²): czysty 8-pokojowy parter (net 90.7 < 93 gabinet) — sypialnia
+    # parteru mieści się niezawodnie (sonda parter8_bedroom_probe 4/4). NIE 13×9=117
+    # (net 94.8 ≥93 → dorzuca gabinet → 9-pok loteria → fallback bez sypialni).
+    poly = Polygon([(0, 0), (12.9, 0), (12.9, 8.7), (0, 8.7)])
+    layout = generate_house(poly, entry_point=(6.45, 0.0), num_storeys=2, time_limit_s=90.0)
     assert layout.ok, layout.message
     parter_ids = {r.spec.id for r in layout.parter_rooms}
     pietro_ids = {r.spec.id for r in layout.pietro_rooms}

@@ -47,17 +47,21 @@ def test_solver_external_bathroom_param_targets_given_room():
     assert touches, f"lazienka landlocked: {bnds}"
 
 
-def test_parter_selector_always_bedroom_bathroom_spizarnia_gated():
+# Obrys z NIEZAWODNĄ sypialnią parteru (sonda parter8_bedroom_probe: 12.9×8.7=112 m²
+# = 4/4 @60s; modalny 11×8=88 m² to loteria ~50% → fallback). Asercje „parter ma
+# sypialnię" muszą iść na ten obrys, by nie flaczeć na best-effort fallbacku.
+_RELIABLE = Polygon([(0, 0), (12.9, 0), (12.9, 8.7), (0, 8.7)])  # 112 m²
+_RELIABLE_ENTRY = (6.45, 0.0)
+
+
+def test_parter_selector_bedroom_replaces_spizarnia():
+    """S30c: z sypialnią parter 8-pok BEZ spiżarni (perf); spiżarnia tylko w fallbacku."""
     tpl = _template("house_parter")
-    small = parter_room_ids(tpl.pokoje, net_area(63.0))    # ~51 netto
-    big = parter_room_ids(tpl.pokoje, net_area(110.0))     # ~89 netto
-    for s in (small, big):
-        assert "sypialnia_parter" in s and "lazienka" in s
-        assert "wc" not in s
-    assert "spizarnia" not in small, "spiżarnia dopiero ≥60 netto"
-    assert "spizarnia" in big
-    no_bed = parter_room_ids(tpl.pokoje, net_area(110.0), with_parter_bedroom=False)
-    assert "sypialnia_parter" not in no_bed
+    big = parter_room_ids(tpl.pokoje, net_area(110.0))                           # z sypialnią
+    fb = parter_room_ids(tpl.pokoje, net_area(110.0), with_parter_bedroom=False)  # fallback
+    assert "sypialnia_parter" in big and "lazienka" in big and "wc" not in big
+    assert "spizarnia" not in big, "z sypialnią parter 8-pok (spiżarnia wypada — perf)"
+    assert "spizarnia" in fb and "sypialnia_parter" not in fb, "fallback: spiżarnia, bez sypialni"
 
 
 def test_pietro_bedroom_offset_drops_one_keeps_min_one():
@@ -71,21 +75,36 @@ def test_pietro_bedroom_offset_drops_one_keeps_min_one():
 
 
 def test_bedroom_count_conserved_house_level():
-    poly = Polygon([(0, 0), (11, 0), (11, 8), (0, 8)])  # 88 m²
-    lay = generate_house(poly, entry_point=(5.5, 0.0), num_storeys=2, time_limit_s=60.0)
+    # Niezawodny obrys 112 m² (sypialnia parteru się mieści) → total zachowany.
+    lay = generate_house(_RELIABLE, entry_point=_RELIABLE_ENTRY, num_storeys=2, time_limit_s=90.0)
     assert lay.ok, lay.message
     parter_beds = sum(1 for r in lay.parter_rooms if r.spec.id.startswith("sypialnia"))
     pietro_beds = sum(1 for r in lay.pietro_rooms if r.spec.id.startswith("sypialnia"))
-    old = pietro_room_ids(_template("house_pietro").pokoje, attic_effective_area(poly), bedroom_offset=0)
+    old = pietro_room_ids(_template("house_pietro").pokoje, attic_effective_area(_RELIABLE), bedroom_offset=0)
     old_beds = sum(1 for r in old if r.startswith("sypialnia"))
     assert parter_beds == 1, "1 sypialnia na parterze"
     assert parter_beds + pietro_beds == old_beds, f"total {parter_beds}+{pietro_beds} != stary {old_beds}"
 
 
 def test_generate_2storey_parter_has_bedroom_bathroom():
-    poly = Polygon([(0, 0), (11, 0), (11, 8), (0, 8)])
-    lay = generate_house(poly, entry_point=(5.5, 0.0), num_storeys=2, time_limit_s=60.0)
+    lay = generate_house(_RELIABLE, entry_point=_RELIABLE_ENTRY, num_storeys=2, time_limit_s=90.0)
     assert lay.ok, lay.message
     pids = [r.spec.id for r in lay.parter_rooms]
     assert sum(1 for i in pids if i.startswith("sypialnia")) == 1
+    assert "lazienka" in pids and "wc" not in pids
+
+
+def test_best_effort_fallback_house_always_ok():
+    """Best-effort (S30c): ciasny modalny 11×8 (88 m²) — sypialnia parteru to loteria
+    perf, ale fallback (bez sypialni) gwarantuje, że dom ZAWSZE się generuje, z pełną
+    liczbą sypialni (total zachowany niezależnie od ścieżki)."""
+    poly = Polygon([(0, 0), (11, 0), (11, 8), (0, 8)])  # 88 m² — loteria/fallback
+    lay = generate_house(poly, entry_point=(5.5, 0.0), num_storeys=2, time_limit_s=90.0)
+    assert lay.ok, lay.message
+    parter_beds = sum(1 for r in lay.parter_rooms if r.spec.id.startswith("sypialnia"))
+    pietro_beds = sum(1 for r in lay.pietro_rooms if r.spec.id.startswith("sypialnia"))
+    assert parter_beds in (0, 1), "0 (fallback) lub 1 (sypialnia parteru)"
+    assert parter_beds + pietro_beds >= 3, "total sypialni zachowany (≥3)"
+    # łazienka parteru w obu ścieżkach (nie wc)
+    pids = [r.spec.id for r in lay.parter_rooms]
     assert "lazienka" in pids and "wc" not in pids
