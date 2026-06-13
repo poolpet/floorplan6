@@ -24,10 +24,29 @@
 > najlepiej); WSZYSTKIE duże ≥110 m² są L/T (pt 166 L, ar02-1b 121 L, a2-2 111 L), nigdy prostokątne** →
 > garażowy parter ≥120 m² „loteria na prostokącie" to walka z kształtem, którego w realu nie ma. **DECYZJA
 > DAWIDA 2026-06-13: następne = L-FOOTPRINTY DOMÓW** (różnoboczne/dowolne wielokąty osobnym etapem później).
-> Bloker namierzony: `_reserve_core` liczy na bbox i IGNORUJE notch → klatka ląduje w wcięciu L → INFEASIBLE
-> (fix: rdzeń świadomy notcha, przy wewnętrznym narożniku skrzydeł). Też w kolejce: poddasze-edge dużych domów,
-> day-zone overflow (salon 40.3 na 11×8), micro-35. **NEXT = brainstorm + plan L-footprintów (gdzie klatka w L)
-> → implementacja RED-first.** Pamięć: [[project_layout_optimization_archon]] [[feedback_model_delegation]].
+> Bloker namierzony: `_reserve_core` liczy na bbox i IGNORUJE notch → klatka ląduje w wcięciu L → INFEASIBLE.
+>
+> **Session 30c (2026-06-13) — L-FOOTPRINTY domów 2-kond. WDROŻONE** (subagent-driven, Opus impl + Fable review;
+> spec/plan `docs/superpowers/{specs,plans}/2026-06-13-L-footprint-houses*`). `_reserve_core` notch-aware: gdy
+> obrys L → rdzeń klatki w rogu bbox **DIAGONALNIE PRZECIWNYM** do wcięcia (zawsze lity). **WAŻNE — pierwotny
+> wybór „wewnętrzny narożnik" (commit 6728c95) okazał się INFEASIBLE** (sonda `notebooks/lcore_placement_probe.py`:
+> wklęsły wierzchołek = gardło cyrkulacji, przypięta klatka + notch zatykają przejście między skrzydłami;
+> narożnik flush/pionowy/+offset = INFEASIBLE, róg przeciwny = OPTIMAL 11.5 s → decyzja Dawida na róg przeciwny,
+> commit 37996cc). `generate_house` przekazuje `notch=boundary.notch`; centralność daje hol L-capable; schody w
+> bryle skrzydła (jak realne L). **L 102 m² 2-kond.: oba piętra pokrywają L (102/102), 0 m² w notchu, piony
+> wyrównane** (dotąd parter+pietro=UNKNOWN). `tests/test_house_lfootprint.py` 7/7 (geometria + integracja +
+> regression-lock parterowca L + `notch=None` bajt-w-bajt). Render `rzuty/renders_mvp/s30_L_2storey.png` (drobna
+> kosmetyka: etykieta sypialni na duchu notcha). Prostokątne domy bez regresji (`notch=None` → ścieżka
+> bajt-w-bajt, `test_reserve_core_rectangle_unchanged` ✓). **Regresja skupiona 24 passed / 1 fail =
+> `test_house_staircase_b::test_parter_hol_is_compact` — PRE-EXISTING podwójny flak na 12×8 (96 m²),
+> NIE od L-footprintów:** (a) parter=UNKNOWN 2/3 biegów (timeout — udokumentowana krawędź perf parteru S26,
+> `_gen` ma już 60 s), (b) gdy ok, hol≈12.95 waha się DOKŁADNIE na progu testu 12.48 (13%; F4=15% — hol
+> architektonicznie OK). Dowód nie-regresji: ten test przeszedł w batchu `4b783f3` (netto/brutto już wdrożone),
+> a ścieżka prostokątna jest odtąd niezmieniona. Do decyzji Dawida: poluzować próg 13%→15% (F4) lub zostawić
+> jako znany flak; perf-fix = kolejka.
+> **Poza zakresem (kolejka):** poddasze dużych L ≥120 m² (room-count edge), różnoboczne/T, day-zone overflow
+> (salon 40.3/11×8), micro-35, entry-aware wybór rogu rdzenia. Pamięć: [[project_layout_optimization_archon]]
+> [[feedback_model_delegation]].
 >
 > **Previously — Session 30 cz.1 (2026-06-12) — diagnoza:** „solver perf II" ZAMKNIĘTE diagnozą; krawędź
 > parteru ≥120 m² to LOTERIA pierwszego rozwiązania + room-set z BRUTTO (root cause). Sondy na Tracja-parter 157 m² gross / 10 pokoi
