@@ -176,14 +176,19 @@ def score_project(project: dict, time_limit: float) -> dict:
     pairs = [("parter", ref_p, lay.parter_rooms)]
     if ref_g:
         pairs.append(("poddasze", ref_g, lay.pietro_rooms))
+    # Master = największa sypialnia w CAŁYM domu (nie per-kondygnacja): inaczej
+    # jedyna sypialnia_parter parteru fałszywie stałaby się 'master' (S30c).
+    all_rooms = lay.parter_rooms + (lay.pietro_rooms if ref_g else [])
+    all_syp = [r for r in all_rooms if r.spec.id.startswith("sypialnia")]
+    master_id = max(all_syp, key=lambda r: r.area).spec.id if all_syp else None
     f1s, mapes, jacs = [], [], []
     for storey, ref, rooms in pairs:
-        syp = [r for r in rooms if r.spec.id.startswith("sypialnia")]
-        master_id = max(syp, key=lambda r: r.area).spec.id if syp else None
         gen_typed = [(_gen_room_type(r.spec.id, r.spec.id == master_id), r.area) for r in rooms]
         ref_typed = _storey_rooms(ref)
-        f1 = room_set_f1(_room_multiset([t for t, _ in gen_typed]),
-                         _room_multiset([t for t, _ in ref_typed]))
+        # schody wykluczone z F1 (ekstrakcja wzorców nie listuje ich jako pokój,
+        # jak garaz/other) — inaczej nasz pokój schody zaniża precyzję.
+        f1 = room_set_f1(_room_multiset([t for t, _ in gen_typed if t != "schody"]),
+                         _room_multiset([t for t, _ in ref_typed if t != "schody"]))
         mape, nm = area_deviation(gen_typed, ref_typed)
         jac = adjacency_jaccard(_gen_edges(rooms), _ref_edges(ref["rooms"]))
         res[storey] = {"room_f1": round(f1, 3), "area_mape_pct": round(mape, 1),

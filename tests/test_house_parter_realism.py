@@ -108,3 +108,19 @@ def test_best_effort_fallback_house_always_ok():
     # łazienka parteru w obu ścieżkach (nie wc)
     pids = [r.spec.id for r in lay.parter_rooms]
     assert "lazienka" in pids and "wc" not in pids
+
+
+def test_benchmark_room_f1_excludes_schody():
+    from notebooks.reference_benchmark import room_set_f1, _room_multiset
+    gen = [t for t in ["salon", "hol", "schody"] if t != "schody"]
+    ref = ["salon", "hol"]
+    assert room_set_f1(_room_multiset(gen), _room_multiset(ref)) == 1.0
+
+
+def test_benchmark_master_is_house_level():
+    from notebooks.reference_benchmark import _gen_room_type
+    all_areas = {"sypialnia_parter": 9.0, "sypialnia_1": 16.0, "sypialnia_2": 11.0}
+    master_id = max(all_areas, key=all_areas.get)
+    assert master_id == "sypialnia_1"
+    assert _gen_room_type("sypialnia_parter", "sypialnia_parter" == master_id) == "sypialnia"
+    assert _gen_room_type("sypialnia_1", "sypialnia_1" == master_id) == "master_sypialnia"
