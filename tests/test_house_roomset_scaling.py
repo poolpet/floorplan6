@@ -66,9 +66,10 @@ def test_pietro_large_attic_gets_second_bathroom():
 
 
 def test_parter_gets_gabinet_when_roomy():
+    # S30 netto/brutto: selektor parteru dostaje NETTO (progi korpusowe netto-we)
     tpl = _template("house_parter")
-    small = parter_room_ids(tpl.pokoje, 63.0)
-    big = parter_room_ids(tpl.pokoje, 120.0)  # wzorzec A01_120: 97 NETTO ≈ ~120 gross
+    small = parter_room_ids(tpl.pokoje, 51.0)  # ~63 gross
+    big = parter_room_ids(tpl.pokoje, 97.0)    # wzorzec A01_120: 97 NETTO (≈ 120 gross)
     assert "gabinet" not in small
     assert "gabinet" in big and "garaz" in big
 

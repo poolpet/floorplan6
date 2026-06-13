@@ -194,11 +194,22 @@ _PIETRO_OPTIONAL = ["sypialnia_3", "sypialnia_4", "lazienka_2", "garderoba"]
 _PIETRO_LAZ2_MIN_EFF = 70.0     # 2. łazienka od ~70 m² efektywnych (korpus: 54→1, 86→2)
 _PIETRO_GARDEROBA_MIN_EFF = 95.0  # garderoba = rzadki luksus: ŻADEN wzorcowy poddasze
                                   # (A01_70 i A01_120) jej nie ma; 9. pokój spowalniał piętro
-_PARTER_GABINET_MIN_AREA = 115.0  # gabinet od ~115 m² GROSS (korpus: 97 NETTO ≈ ~115-120
-                                  # gross; niżej 9-pokojowy parter spowalniał solver na
-                                  # rozmiarach macierzy 96-108)
-_PARTER_GARAZ_MIN_AREA = 120.0    # garaż w obrysie od ~120 m² gross (korpus A01_120:
-                                  # garaż 20; suite L-140 = klasa garage-driven)
+# --- NETTO/BRUTTO (S30, decyzja Dawida 2026-06-12) ---
+# Obrys wejściowy to BRUTTO; liczby korpusowe (capy ARCHON, progi, tabele rzutów)
+# to NETTO. Kotwica przelicznika: A01_120 = 97 m² netto przy ~120 brutto → 0.81.
+# Rekalibracja po pełnej ekstrakcji 36 PDF (wf_f8cab93b). Pokoje MOKRE (F2/WT)
+# NIGDY nie są skalowane — to twarde capy prawne.
+NET_FACTOR = 0.81
+
+_PARTER_GABINET_MIN_NET = 93.0  # gabinet od ~93 m² NETTO (= dawne 115 gross; niżej
+                                # 9-pokojowy parter spowalniał solver na macierzy 96-108)
+_PARTER_GARAZ_MIN_NET = 97.0    # garaż od 97 m² NETTO (= korpusowe A01_120: parter
+                                # 97 netto Z garażem; ≈ dawne 120 gross)
+
+
+def net_area(gross_m2: float) -> float:
+    """Powierzchnia NETTO z brutto obrysu (ściany ~19%; kotwica A01_120 97/120)."""
+    return NET_FACTOR * gross_m2
 
 
 def attic_effective_area(polygon: Polygon) -> float:
@@ -228,16 +239,58 @@ def pietro_room_ids(specs: list, eff_area_m2: float) -> list[str]:
     return chosen
 
 
-def parter_room_ids(specs: list, area_m2: float) -> list[str]:
-    """Zestaw pokoi parteru: pełny program; gabinet i garaż (absorbery nadmiaru,
-    korpus A01_120) dopiero na przestronnych obrysach."""
+def parter_room_ids(specs: list, net_m2: float) -> list[str]:
+    """Zestaw pokoi parteru wg powierzchni NETTO (S30 — progi korpusowe są
+    netto-we): pełny program; gabinet i garaż (absorbery nadmiaru, korpus
+    A01_120) dopiero na przestronnych obrysach. Caller przelicza brutto
+    obrysu przez net_area()."""
     by_id = {s.id for s in specs}
     ids = [s.id for s in specs if s.id not in ("gabinet", "garaz")]
-    if area_m2 >= _PARTER_GABINET_MIN_AREA and "gabinet" in by_id:
+    if net_m2 >= _PARTER_GABINET_MIN_NET and "gabinet" in by_id:
         ids.append("gabinet")
-    if area_m2 >= _PARTER_GARAZ_MIN_AREA and "garaz" in by_id:
+    if net_m2 >= _PARTER_GARAZ_MIN_NET and "garaz" in by_id:
         ids.append("garaz")
     return ids
+
+
+def _corpus_parter_adjacency(tpl):
+    """Sąsiedztwa dużych parterów wg KORPUSU (S30, AR.02.1 — decyzja Dawida
+    2026-06-12): hol NIE musi dotykać garażu ani kotłowni — garaż wchodzi przez
+    wiatrołap (śluzę), kotłownia przez garaż (śluza techniczna). Hol zostaje
+    przy: wiatrołap/schody/salon/WC/gabinet. Bez garażu w zestawie — identyczność
+    (kotłownia przy holu to jej jedyne wejście). Mniejsza gwiazda holu = realniejsze
+    plany (benchmark adjacency) i lżejsza wykonalność (sonda parter_adjacency_probe)."""
+    ids = {p.id for p in tpl.pokoje}
+    if "garaz" not in ids:
+        return tpl
+    rules = []
+    for r in tpl.sasiedztwo:
+        pair = {r.room_a, r.room_b}
+        if pair == {"hub", "garaz"} and "wiatrolap" in ids:
+            rules.append(replace(r, room_a="garaz", room_b="wiatrolap"))
+        elif pair == {"hub", "kotlownia"}:
+            rules.append(replace(r, room_a="kotlownia", room_b="garaz"))
+        else:
+            rules.append(r)
+    return replace(tpl, sasiedztwo=rules)
+
+
+def parter_template_for(gross_area_m2: float):
+    """Szablon parteru dla obrysu BRUTTO: zestaw pokoi wg netto + sąsiedztwa
+    korpusowe (gdy jest garaż). None gdy brak szablonu house_parter."""
+    tpl = _template("house_parter")
+    if tpl is None:
+        return None
+    tpl = _filter_template(tpl, set(parter_room_ids(tpl.pokoje, net_area(gross_area_m2))))
+    return _corpus_parter_adjacency(tpl)
+
+
+def _gross_config(cfg):
+    """Program domu egzekwowany na obrysie BRUTTO: capy netto-we (ARCHON) dzielone
+    przez NET_FACTOR — z wyjątkiem pokoi MOKRYCH (wc w caps; łazienki w polach
+    bathroom_*), których capy to twarde limity prawne F2/WT (B3: nie skalować)."""
+    caps = {k: (v if k == "wc" else v / NET_FACTOR) for k, v in cfg.caps.items()}
+    return replace(cfg, caps=caps, day_zone_cap_max=cfg.day_zone_cap_max / NET_FACTOR)
 
 
 def attic_low_strips(polygon: Polygon) -> list[Polygon]:
@@ -292,18 +345,18 @@ def generate_house(polygon: Polygon, entry_point: tuple[float, float],
     boundary = analyze_boundary(polygon, entry_point=entry_point)
     # Knee-wall (S26): bieg prosty wzdłuż kalenicy — patrz _stair_core_dims(force_straight).
     core = _reserve_core(boundary.bbox, entry_point, force_straight=True)
-    parter_tpl = _template("house_parter")
+    parter_tpl = parter_template_for(polygon.area)
     pietro_tpl = _template("house_pietro")
     if parter_tpl is None or pietro_tpl is None:
         return TwoStoreyLayout(ok=False, message="Brak szablonow domu (house_parter/house_pietro).")
-    # Room-set scaling (S29, korpus wzorców): zestaw pokoi wg powierzchni —
-    # poddasze wg EFEKTYWNEJ (pełna − 0.5·stref niskich), parter wg pełnej.
+    # Room-set scaling (S29/S30): poddasze wg powierzchni EFEKTYWNEJ (pełna −
+    # 0.5·stref niskich ≈ netto-norma PL), parter wg NETTO (brutto·NET_FACTOR)
+    # + sąsiedztwa korpusowe gdy jest garaż — patrz parter_template_for.
     eff = attic_effective_area(polygon)
     pietro_tpl = _filter_template(pietro_tpl, set(pietro_room_ids(pietro_tpl.pokoje, eff)))
-    parter_tpl = _filter_template(parter_tpl, set(parter_room_ids(parter_tpl.pokoje, polygon.area)))
-    # Konfigurowalny program domu (cap-y ARCHON) — parter vs poddasze; master = sypialnia_1.
-    parter_cfg = default_house_config(storey="parter")
-    pietro_cfg = default_house_config(storey="poddasze", master_id="sypialnia_1")
+    # Program domu (capy ARCHON są NETTO-we) egzekwowany na brutto: _gross_config.
+    parter_cfg = _gross_config(default_house_config(storey="parter"))
+    pietro_cfg = _gross_config(default_house_config(storey="poddasze", master_id="sypialnia_1"))
     # Faza 2b: hol parteru L-capable — owija wiatrołap (przy wejściu) + WC (przy ścianie)
     # ramieniem o minimalnym polu, więc korytarz zostaje mały mimo poprawnego ich położenia.
     # Knee-wall v2 (S29): poddasze na PEŁNYM obrysie (powierzchnia jak parter);

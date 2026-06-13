@@ -486,3 +486,39 @@ def test_infer_door_openings_dayzone_is_opening():
                polygon=box(0, 0, 4, 3)); syp.update_metrics()
     d2 = infer_door_openings([syp, hub])[0]
     assert d2.is_opening is False, "sypialnia↔hol powinna być drzwiami"
+
+
+def test_infer_door_openings_service_sluice_fallback():
+    """S30 (sąsiedztwa korpusowe): pokój USŁUGOWY bez styku z komunikacją
+    (kotłownia za garażem, spiżarnia za kuchnią) dostaje drzwi do sąsiada
+    z najdłuższą wspólną krawędzią — każde pomieszczenie musi mieć wejście.
+    Sypialnie bez zmian (fallback tylko dla strefy usługowej)."""
+    from core.door_extractor import infer_door_openings
+    from core.models import Room, RoomSpec, Strefa
+    from shapely.geometry import box
+
+    def mk(rid, strefa, x0, y0, x1, y1):
+        r = Room(spec=RoomSpec(id=rid, nazwa=rid, strefa=strefa,
+                               wymaga_okna=False, priorytet_fasady=None),
+                 polygon=box(x0, y0, x1, y1)); r.update_metrics()
+        return r
+
+    kot = mk("kotlownia", Strefa.USLUGOWA, 0, 0, 2, 3)
+    gar = mk("garaz", Strefa.USLUGOWA, 2, 0, 6, 3)   # styk pionowy x=2, dł. 3 m
+    doors = infer_door_openings([kot, gar])
+    assert len(doors) == 1, doors
+    assert {doors[0].room_a, doors[0].room_b} == {"kotlownia", "garaz"}
+    assert doors[0].is_opening is False
+
+    # gdy kotłownia MA styk z komunikacją → zwykłe drzwi od holu, BEZ fallbacku
+    hub = mk("hub", Strefa.KOMUNIKACJA, 0, 3, 6, 5)
+    doors2 = infer_door_openings([kot, gar, hub])
+    pairs = {frozenset((d.room_a, d.room_b)) for d in doors2}
+    assert frozenset(("kotlownia", "hub")) in pairs
+    assert frozenset(("kotlownia", "garaz")) not in pairs
+
+    # spiżarnia za kuchnią (DZIENNA) — fallback daje drzwi od kuchni
+    spz = mk("spizarnia", Strefa.USLUGOWA, 0, 0, 2, 2)
+    kuch = mk("kuchnia", Strefa.DZIENNA, 2, 0, 6, 4)
+    d3 = infer_door_openings([spz, kuch])
+    assert len(d3) == 1 and {d3[0].room_a, d3[0].room_b} == {"spizarnia", "kuchnia"}

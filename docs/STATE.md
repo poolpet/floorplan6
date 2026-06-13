@@ -3,9 +3,34 @@
 > Updated after every working session. If it doesn't reflect reality —
 > Claude updates immediately.
 >
-> **Last update:** 2026-06-12 (Session 30 — branch `feat/sfh-open-plan-day-zone`: **diagnoza krawędzi parteru
-> ≥120 m² DOMKNIĘTA — to nie „wolny solver", tylko LOTERIA pierwszego rozwiązania + room-set przeprogramowany
-> z BRUTTO; zero zmian w core (wycofane po sondach)**). Sondy na Tracja-parter 157 m² gross / 10 pokoi
+> **Last update:** 2026-06-13 (Session 30 cz.2 — branch `feat/sfh-open-plan-day-zone`: **NETTO/BRUTTO +
+> SĄSIEDZTWA KORPUSOWE WDROŻONE (root fix krawędzi parteru) + pełna ekstrakcja korpusu 36/36 + rozszerzony
+> benchmark**). Po diagnozie (niżej) wdrożone RED-first: **(1) NETTO/BRUTTO** (`core/house_layout.NET_FACTOR=0.81`,
+> kotwica A01_120 97/120): obrys = BRUTTO, liczby korpusowe = NETTO. `parter_room_ids` dobiera pokoje wg netto
+> (progi gabinet ≥93 / garaż ≥97 netto = dawne 115/120 gross); `_gross_config` egzekwuje capy ARCHON na brutto
+> jako `cap/0.81` (salon 35→43.2, day-zone 45→55.6), **pokoje MOKRE (wc/łazienki F2/WT) NIGDY nie skalowane**
+> (B3). **(2) SĄSIEDZTWA KORPUSOWE** (`_corpus_parter_adjacency`, AR.02.1 realny 121 m²): na parterze Z GARAŻEM
+> hol dotyka 5 pokoi (wiatrołap/schody/salon/wc/gabinet) zamiast 7 — garaż wchodzi przez wiatrołap-śluzę,
+> kotłownia przez garaż; bez garażu = identyczność (kotłownia przy holu). **(3) DRZWI-ŚLUZY**
+> (`door_extractor.infer_door_openings` fallback): usługowy pokój bez styku z komunikacją dostaje drzwi do
+> sąsiada z najdłuższą krawędzią. **EFEKT (sonda `parter_reliability_probe`): wąskie gardło PRZESUNĘŁO SIĘ —
+> parter Tracji/13×10 teraz FEASIBLE (sąsiedztwa pomogły!), nieść loterię zaczęło PODDASZE** (13×10 → eff ~104
+> → 9 pokoi z garderobą = nowa krawędź); to i tak klasa, która w korpusie jest L-kształtna. **Batch regresji:
+> 166 passed / 3 skip / 1 xpass; 3 fail = FLAKI kontencji `lroom_phase2b[north]` (potwierdzone 3/3 ZIELONE
+> w izolacji @90 s).** Core house path bez regresji. **EKSTRAKCJA KORPUSU 36/36 DOMKNIĘTA** (3 biegi `wf_f8cab93b`,
+> ostatni Opusem bez fail-i; unia best-confidence → `notebooks/reference_plans_raw_partial.json`) + **parowanie
+> w 16 projektów** → rozszerzony benchmark `notebooks/reference_plans_full.json` (z 3 do 16 realnych domów).
+> **ODKRYCIE Z KORPUSU (rozstrzyga benchmark-vs-L): małe domy 47-90 m² są PROSTOKĄTNE (modalne — robimy je
+> najlepiej); WSZYSTKIE duże ≥110 m² są L/T (pt 166 L, ar02-1b 121 L, a2-2 111 L), nigdy prostokątne** →
+> garażowy parter ≥120 m² „loteria na prostokącie" to walka z kształtem, którego w realu nie ma. **DECYZJA
+> DAWIDA 2026-06-13: następne = L-FOOTPRINTY DOMÓW** (różnoboczne/dowolne wielokąty osobnym etapem później).
+> Bloker namierzony: `_reserve_core` liczy na bbox i IGNORUJE notch → klatka ląduje w wcięciu L → INFEASIBLE
+> (fix: rdzeń świadomy notcha, przy wewnętrznym narożniku skrzydeł). Też w kolejce: poddasze-edge dużych domów,
+> day-zone overflow (salon 40.3 na 11×8), micro-35. **NEXT = brainstorm + plan L-footprintów (gdzie klatka w L)
+> → implementacja RED-first.** Pamięć: [[project_layout_optimization_archon]] [[feedback_model_delegation]].
+>
+> **Previously — Session 30 cz.1 (2026-06-12) — diagnoza:** „solver perf II" ZAMKNIĘTE diagnozą; krawędź
+> parteru ≥120 m² to LOTERIA pierwszego rozwiązania + room-set z BRUTTO (root cause). Sondy na Tracja-parter 157 m² gross / 10 pokoi
 > (`notebooks/parter_hints_probe{,2,3}.py`, `parter_adjacency_probe.py`): baseline @120 s NIEDETERMINISTYCZNY
 > (raz FEASIBLE, raz UNKNOWN z 0 incumbentów; inny bieg FEASIBLE @22 s) → wariancja czasu-do-pierwszego-układu
 > dominuje nad każdym budżetem. **Wykluczone dźwignie (każda zmierzona):** (1) solution hints z targetów

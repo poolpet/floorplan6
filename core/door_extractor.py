@@ -151,7 +151,10 @@ def infer_door_openings(rooms) -> list[DoorOpening]:
 
     F5: pokoje łączą się przez hol → drzwi są na styku z komunikacją. SCHODY pomijane (routing
     przez hol), para KOMUNIKACJA↔KOMUNIKACJA też (otwarta przestrzeń, bez drzwi). Strefa dzienna↔hol
-    oznaczana jako otwarcie (`is_opening`). AC-agnostyczne; drzwi raz na parę."""
+    oznaczana jako otwarcie (`is_opening`). Pokój USŁUGOWY bez żadnego styku z komunikacją
+    (śluzy z sąsiedztw korpusowych S30: kotłownia za garażem, spiżarnia za kuchnią) dostaje
+    drzwi do sąsiada z najdłuższą wspólną krawędzią — każde pomieszczenie musi mieć wejście.
+    AC-agnostyczne; drzwi raz na parę."""
     valid = [r for r in rooms if r.polygon is not None]
     seen: set = set()
     out: list[DoorOpening] = []
@@ -172,6 +175,31 @@ def infer_door_openings(rooms) -> list[DoorOpening]:
             c = a.polygon.centroid
             out.append(DoorOpening(a.spec.id, b.spec.id, center, axis, width, (c.x, c.y),
                                    is_opening=(a.spec.strefa == Strefa.DZIENNA)))
+
+    # Fallback śluzy (S30): usługowy pokój bez drzwi od komunikacji → drzwi do
+    # sąsiada z najdłuższą wspólną krawędzią (kotłownia↔garaż, spiżarnia↔kuchnia).
+    doored = {d.room_a for d in out}
+    pair_done = {frozenset((d.room_a, d.room_b)) for d in out}
+    for a in valid:
+        if a.spec.strefa != Strefa.USLUGOWA or a.spec.id in doored:
+            continue
+        best = None
+        for b in valid:
+            if b is a or b.spec.id == "schody":
+                continue
+            edge_len = a.polygon.intersection(b.polygon).length
+            if edge_len > (best[0] if best else 0.0):
+                best = (edge_len, b)
+        if best is None or frozenset((a.spec.id, best[1].spec.id)) in pair_done:
+            continue
+        res = _shared_edge_door(a, best[1])
+        if res is None:
+            continue
+        center, axis, width = res
+        c = a.polygon.centroid
+        pair_done.add(frozenset((a.spec.id, best[1].spec.id)))
+        out.append(DoorOpening(a.spec.id, best[1].spec.id, center, axis, width,
+                               (c.x, c.y), is_opening=False))
     return out
 
 
