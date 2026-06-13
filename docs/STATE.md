@@ -51,6 +51,25 @@
 > **poddasze dobre** (F1 0.77-1.0, MAPE 16-42%) → następny lever realizmu = dobór pokoi + proporcje PARTERU.
 > 2/7 FAIL: modlnica (90 m² realny perf-timeout), kudowe (BLIŹNIAK — benchmark generuje na pełnym 146 m²
 > obrysie bliźniaka, nie na segmencie 56 m² → artefakt danych; do higieny: pomijać bliźniaki/piwnice).
+>
+> **Session 30c cz.2 (2026-06-13) — REALIZM PARTERU 2-kond. WDROŻONY** (brainstorm→spec→plan→subagent-driven,
+> Opus impl + Fable review/diagnoza; spec/plan `docs/superpowers/{specs,plans}/2026-06-13-parter-realism*`).
+> Diagnoza (`notebooks/parter_realism_diag.py`, 5 wzorców): parter pomijał to, co realne rzuty mają — pełną
+> łazienkę (5/5) i sypialnię (4/5); salon za duży. **Wdrożone:** house_parter `wc→lazienka` + `sypialnia_parter`;
+> solver `external_bathroom_id` (łazienka parteru nie-landlocked, sparametryzowane z domyślnym "wc"); **budżet
+> sypialni na poziomie DOMU** (1 na parter, poddasze −1 via `pietro_room_ids(bedroom_offset)`, total zachowany);
+> uczciwszy benchmark (schody poza F1, master house-level). **KRAWĘDŹ PERF (zdiagnozowana sondami parter9/
+> parter8_probe): sypialnia parteru → 9-pok solve = loteria** (L-hol OBOWIĄZKOWY — bez = INFEASIBLE; okno nie
+> jest gardłem; 9 pokoi @60s loteria, 8 niezawodne na ≥~100 m²). **Decyzja Dawida: drop spiżarni (8-pok;
+> spiżarnia tylko w fallbacku) + BEST-EFFORT** — parter z sypialnią=UNKNOWN → fallback na program BEZ sypialni
+> (poddasze odzyskuje sypialnie, total zachowany). **KAŻDY dom się generuje; sypialnia gdy wykonalna.**
+> **EFEKT BENCHMARK rect7: 53.5 → 60.4/100, 5/7 → 6/7 wygenerowanych; parter F1 0.33-0.75 → 0.46-0.93**
+> (osobie 57.8→70.3, pb 51.6→66.5, tropie 53.3→65.9; kudowe FAIL→52.3 generuje; modlnica parter teraz FEASIBLE,
+> wąskie gardło przeszło na poddasze). Testy: `test_house_parter_realism` (asercje sypialni na niezawodnym
+> 112 m², always-ok na 88, robust na fallback) + zaktualizowane house_layout/lroom_phase2b/roomset_scaling/
+> corpus_adjacency. Commity `fe4bea7`→`b86edd68` (+`e7d5203` fallback). Parterowce/M1-M5 nietknięte.
+> **NEXT (kolejka):** poddasze-perf dużych domów (modlnica — nowe gardło), salon-overflow cap (proporcje
+> parteru dalej za duże), poddasze dużych L, różnoboczne/T, micro-35.
 > **Poza zakresem (kolejka):** poddasze dużych L ≥120 m² (room-count edge), różnoboczne/T, day-zone overflow
 > (salon 40.3/11×8), micro-35, entry-aware wybór rogu rdzenia. Pamięć: [[project_layout_optimization_archon]]
 > [[feedback_model_delegation]].

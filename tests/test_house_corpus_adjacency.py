@@ -43,9 +43,11 @@ def test_big_parter_hub_keeps_core_star():
     pairs = _pairs(_big_parter_tpl())
     for rid in ("wiatrolap", "schody", "salon", "lazienka", "gabinet"):
         assert frozenset(("hub", rid)) in pairs, f"hol musi dotykać {rid}"
-    # otwarta strefa dzienna + spiżarnia przy kuchni — bez zmian
+    # hol dotyka też sypialni parteru (S30c: pokój gościnny na parterze)
+    assert frozenset(("hub", "sypialnia_parter")) in pairs
+    # otwarta strefa dzienna — bez zmian. (spiżarnia WYPADA gdy parter ma sypialnię,
+    # S30c bufor perf — kuchnia↔spiżarnia tylko w fallbacku bez sypialni parteru)
     assert frozenset(("salon", "kuchnia")) in pairs
-    assert frozenset(("kuchnia", "spizarnia")) in pairs
     # wejście do budynku bez zmian
     assert frozenset(("wiatrolap", "_outside")) in pairs
 
