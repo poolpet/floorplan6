@@ -79,6 +79,7 @@
       "max_proporcja": 2.0,
       "procent_powierzchni": [0.08, 0.14]
     },
+    {"id": "sypialnia_parter", "nazwa": "Sypialnia (parter)", "strefa": "NOCNA", "wymaga_okna": true, "priorytet_fasady": 3, "preferowana_orientacja": [], "min_powierzchnia": 9.0, "opt_powierzchnia": 12.0, "min_szerokosc": 2.5, "max_proporcja": 2.0, "procent_powierzchni": [0.10, 0.18]},
     {
       "id": "kuchnia",
       "nazwa": "Kuchnia",
@@ -104,18 +105,7 @@
       "max_proporcja": 2.5,
       "procent_powierzchni": [0.02, 0.05]
     },
-    {
-      "id": "wc",
-      "nazwa": "WC",
-      "strefa": "USŁUGOWA",
-      "wymaga_okna": false,
-      "priorytet_fasady": null,
-      "min_powierzchnia": 1.5,
-      "opt_powierzchnia": 2.2,
-      "min_szerokosc": 1.0,
-      "max_proporcja": 2.0,
-      "procent_powierzchni": [0.01, 0.04]
-    },
+    {"id": "lazienka", "nazwa": "Łazienka", "strefa": "USŁUGOWA", "wymaga_okna": false, "priorytet_fasady": null, "min_powierzchnia": 2.5, "opt_powierzchnia": 4.8, "min_szerokosc": 1.5, "max_proporcja": 2.0, "procent_powierzchni": [0.06, 0.12]},
     {
       "id": "kotlownia",
       "nazwa": "Kotłownia",
@@ -162,7 +152,12 @@
     },
     {
       "room_a": "hub",
-      "room_b": "wc",
+      "room_b": "lazienka",
+      "connection_type": "door"
+    },
+    {
+      "room_a": "hub",
+      "room_b": "sypialnia_parter",
       "connection_type": "door"
     },
     {

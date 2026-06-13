@@ -41,7 +41,7 @@ def test_big_parter_kotlownia_via_garage():
 
 def test_big_parter_hub_keeps_core_star():
     pairs = _pairs(_big_parter_tpl())
-    for rid in ("wiatrolap", "schody", "salon", "wc", "gabinet"):
+    for rid in ("wiatrolap", "schody", "salon", "lazienka", "gabinet"):
         assert frozenset(("hub", rid)) in pairs, f"hol musi dotykać {rid}"
     # otwarta strefa dzienna + spiżarnia przy kuchni — bez zmian
     assert frozenset(("salon", "kuchnia")) in pairs
@@ -61,5 +61,5 @@ def test_small_parter_unchanged():
 def test_rewrite_is_identity_without_garage():
     base = _template("house_parter")
     small = _filter_template(base, {"hub", "schody", "wiatrolap", "salon",
-                                    "kuchnia", "spizarnia", "wc", "kotlownia"})
+                                    "kuchnia", "spizarnia", "lazienka", "kotlownia"})
     assert _pairs(_corpus_parter_adjacency(small)) == _pairs(small)
