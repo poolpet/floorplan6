@@ -1,0 +1,1253 @@
+{
+ "time_limit_s": 60.0,
+ "note": "S30c: 7 prostokątnych wzorców high-conf z korpusu (benchmark realizmu tam gdzie generator działa najlepiej)",
+ "projects": [
+  {
+   "name": "tropie",
+   "pair_confidence": "high",
+   "parter": {
+    "file": "A.02 RZUT PARTERU.pdf",
+    "storey_label": "parter",
+    "outline": {
+     "shape": "rectangle",
+     "width_m": 9.57,
+     "height_m": 6.47,
+     "area_m2": 47.84,
+     "notes": "Wymiary zewnetrzne z lancuchow (cm): szerokosc 37+302+25+556+37=957; wysokosc wg wymiaru ogolnego 647 (lancuch 37+231+20+120+25+178+37=648 — rozbieznosc 1 cm w rysunku). area_m2 = suma policzonych powierzchni netto 6.98+3.62+5.38+31.86=47.84 m² (tabelka pomieszczen na arkuszu jest PUSTA — brak wydrukowanych powierzchni). Taras po stronie wschodniej (poza obrysem, niezwymiarowany) nie wliczony."
+    },
+    "entry": {
+     "side": "west",
+     "note": "Drzwi wejsciowe w scianie zachodniej (lewa krawedz arkusza), otwierane na zewnatrz, prowadza bezposrednio do holu — brak wiatrolapu. Orientacja wg konwencji arkusza (dol = poludnie), brak rozy wiatrow na rysunku. Dodatkowo drzwi/okno tarasowe w scianie wschodniej z salonu na taras."
+    },
+    "stairs": {
+     "present": true,
+     "kind": "u_winder"
+    },
+    "open_plan_day_zone": true,
+    "rooms": [
+     {
+      "name_pl": "Sypialnia",
+      "mapped_id": "sypialnia",
+      "area_m2": 6.98,
+      "on_facade": true,
+      "adjacent_rooms": [
+       "hol"
+      ]
+     },
+     {
+      "name_pl": "Hol",
+      "mapped_id": "hol",
+      "area_m2": 3.62,
+      "on_facade": true,
+      "adjacent_rooms": [
+       "sypialnia",
+       "lazienka",
+       "salon"
+      ]
+     },
+     {
+      "name_pl": "Lazienka",
+      "mapped_id": "lazienka",
+      "area_m2": 5.38,
+      "on_facade": true,
+      "adjacent_rooms": [
+       "hol"
+      ]
+     },
+     {
+      "name_pl": "Salon + kuchnia + jadalnia (otwarta strefa dzienna, aneks kuchenny)",
+      "mapped_id": "salon",
+      "area_m2": 31.86,
+      "on_facade": true,
+      "adjacent_rooms": [
+       "hol",
+       "taras",
+       "schody"
+      ]
+     }
+    ],
+    "confidence": "medium",
+    "caveats": "KLUCZOWE: tabelka pomieszczen na arkuszu jest narysowana, ale CALKOWICIE PUSTA (potwierdzone i w renderze, i w warstwie tekstowej PDF) — zadne nazwy pomieszczen ani powierzchnie m² NIE sa wydrukowane. Powierzchnie w polu rooms sa POLICZONE z wydrukowanych lancuchow wymiarowych (cm, skala 1:50): sypialnia 3.02x2.31=6.98; hol 3.02x1.20=3.62; lazienka 3.02x1.78=5.38; strefa dzienna 5.56x5.73=31.86 (5.73 = 647-2x37; lancuch pionowy sumuje sie do 648 vs ogolny 647 — rozbieznosc 1 cm). Strefa dzienna liczona brutto wlacznie z rzutem schodow zabiegowych (15R x 19 cm / 14G x 25 cm, oznaczenia UP i DOWN — schody w obrysie strefy dziennej; DOWN moze sugerowac kondygnacje ponizej, ale w zestawie pasuje A.03 PODDASZE jako gorna kondygnacja). Nazwy pomieszczen wywnioskowane z umeblowania (lozko+szafa / wanna+WC+umywalka / blat kuchenny+stol+sofa). Tylko 1 sypialnia, wiec mapowana jako sypialnia (nie master_sypialnia). Taras (wschod, stolik okragly) pominiety w rooms — brak wymiarow i brak w tabeli. Brak rozy wiatrow — strony swiata wg konwencji dol-arkusza=poludnie. Confidence: medium wylacznie z powodu pustej tabelki; geometria i wymiary sa pewne (high)."
+   },
+   "poddasze": {
+    "file": "A.03 PODDASZE.pdf",
+    "storey_label": "poddasze",
+    "outline": {
+     "shape": "rectangle",
+     "width_m": 9.57,
+     "height_m": 6.47,
+     "area_m2": 47.34,
+     "notes": "Korpus murowany 9.57x6.47 m (suma łańcuchów wymiarowych: 37+307+20+181+20+355+37 = 957 cm; 37+298+20+255+37 = 647 cm). area_m2 = suma powierzchni pomieszczeń POLICZONYCH z wymiarów (tabelka w PDF jest PUSTA — sam szkielet bez tekstu). Po wschodniej stronie balkon/loggia poza korpusem (słupki narożne + balustrada, drzwi balkonowe z master sypialni) — niezwymiarowany, pominięty w sumie. Linia przerywana wokół = obrys dachu."
+    },
+    "entry": {
+     "side": "unknown",
+     "note": "Kondygnacja poddasza — brak drzwi wejściowych/wiatrołapu; wejście schodami z parteru (klatka w środkowym paśmie planu). Brak róży wiatrów na arkuszu."
+    },
+    "stairs": {
+     "present": true,
+     "kind": "u_winder",
+     "note_omitted": null
+    },
+    "open_plan_day_zone": false,
+    "rooms": [
+     {
+      "name_pl": "Sypialnia 1 (płn.-zach.)",
+      "mapped_id": "sypialnia",
+      "area_m2": 9.15,
+      "on_facade": true,
+      "adjacent_rooms": [
+       "hol"
+      ]
+     },
+     {
+      "name_pl": "Sypialnia 2 (płd.-zach.)",
+      "mapped_id": "sypialnia",
+      "area_m2": 7.83,
+      "on_facade": true,
+      "adjacent_rooms": [
+       "hol"
+      ]
+     },
+     {
+      "name_pl": "Łazienka",
+      "mapped_id": "lazienka",
+      "area_m2": 4.18,
+      "on_facade": true,
+      "adjacent_rooms": [
+       "hol"
+      ]
+     },
+     {
+      "name_pl": "Sypialnia (master, wsch.)",
+      "mapped_id": "master_sypialnia",
+      "area_m2": 20.34,
+      "on_facade": true,
+      "adjacent_rooms": [
+       "hol",
+       "taras"
+      ]
+     },
+     {
+      "name_pl": "Hol / podest",
+      "mapped_id": "hol",
+      "area_m2": 2.17,
+      "on_facade": false,
+      "adjacent_rooms": [
+       "sypialnia",
+       "lazienka",
+       "master_sypialnia",
+       "schody"
+      ]
+     },
+     {
+      "name_pl": "Schody (klatka)",
+      "mapped_id": "schody",
+      "area_m2": 3.67,
+      "on_facade": true,
+      "adjacent_rooms": [
+       "hol"
+      ]
+     }
+    ],
+    "confidence": "low",
+    "caveats": "KRYTYCZNE: tabelka pomieszczeń w tym PDF jest PUSTA (sprawdzone: warstwa tekstu zawiera tylko 24 spany — liczby wymiarowe + tytuł '1. Poddasze 1:50'; wszystkie 9 warstw OCG włączone; render 6x pokazuje pusty szkielet tabeli). ŻADNA powierzchnia nie jest skopiowana z tabeli — wszystkie POLICZONE z drukowanych łańcuchów wymiarowych (cm, skala 1:50): syp.1 = 3.07x2.98; syp.2 = 3.07x2.55 (szerokość 307 przyjęta z górnego łańcucha — pasmo lewe wspólne dla obu sypialni); łazienka = 1.81x2.31; master = 3.55x5.73; hol = 1.81x1.20; schody = 1.81x2.03. Hol i schody to jedna otwarta przestrzeń (brak ściany między segmentami 120 i 203 w łańcuchu) — rozdzielone umownie. Środkowy łańcuch pionowy sumuje się do 648 vs 647 (1 cm zaokrąglenia druku). Wschodni balkon/loggia niezwymiarowany — wykluczony z rooms (wejście drzwiami balkonowymi z master). Typ schodów: zabiegowe z wachlarzem stopni przy dolnym zwrocie w paśmie 181 cm — klasyfikacja u_winder z rysunku. Drzwi/sąsiedztwa odczytane z łuków drzwiowych (best effort). Powierzchnie netto liczone w świetle ścian — bez uwzględnienia skosów poddasza (powierzchnia podłogi, nie powierzchnia liczona wg normy przy h>=1.9 m). Strona wejścia nieokreślona — to poddasze."
+   }
+  },
+  {
+   "name": "kudowe",
+   "pair_confidence": "high",
+   "parter": {
+    "file": "A.1 Parter.pdf",
+    "storey_label": "parter",
+    "outline": {
+     "shape": "rectangle",
+     "width_m": 16.46,
+     "height_m": 8.86,
+     "area_m2": 56.27,
+     "notes": "Budynek BLIŹNIAK (2 lustrzane lokale). Wymiary 1646x886 cm to CAŁY korpus obu segmentów; jeden segment ~8.23 x 8.86 m. area_m2 = suma tabeli RZUT PARTERU dla JEDNEGO segmentu: 5.70+10.45+32.19+2.85+5.08 = 56.27 m2 netto. Tabela podaje też RZUT PODDASZA (Korytarz 5.21, Schowek 1.90, Sypialnia 11.23, Sypialnia 11.95, Sypialnia 12.00, Łazienka 6.60) i sumę lokalu 105.16 m2 (parter+poddasze)."
+    },
+    "entry": {
+     "side": "south",
+     "note": "Drzwi wejściowe 90/205 w dolnej (południowej wg orientacji arkusza, brak róży wiatrów) ścianie każdego segmentu, prowadzą do korytarza; przed wejściem zewnętrzne schody/podest narysowane poniżej obrysu."
+    },
+    "stairs": {
+     "present": true,
+     "kind": "straight",
+     "note_omitted": ""
+    },
+    "open_plan_day_zone": true,
+    "rooms": [
+     {
+      "name_pl": "Korytarz",
+      "mapped_id": "hol",
+      "area_m2": 5.7,
+      "on_facade": true,
+      "adjacent_rooms": [
+       "wejście (zewnątrz)",
+       "kuchnia",
+       "wc",
+       "pom. gosp.",
+       "pokój dzienny",
+       "schody"
+      ]
+     },
+     {
+      "name_pl": "Kuchnia",
+      "mapped_id": "kuchnia",
+      "area_m2": 10.45,
+      "on_facade": true,
+      "adjacent_rooms": [
+       "korytarz",
+       "pokój dzienny (otwarte przejście)"
+      ]
+     },
+     {
+      "name_pl": "Pokój dzienny",
+      "mapped_id": "salon",
+      "area_m2": 32.19,
+      "on_facade": true,
+      "adjacent_rooms": [
+       "korytarz",
+       "kuchnia (otwarte przejście)",
+       "schody"
+      ]
+     },
+     {
+      "name_pl": "Pom. gosp.",
+      "mapped_id": "other",
+      "area_m2": 2.85,
+      "on_facade": true,
+      "adjacent_rooms": [
+       "korytarz"
+      ]
+     },
+     {
+      "name_pl": "WC",
+      "mapped_id": "wc",
+      "area_m2": 5.08,
+      "on_facade": false,
+      "adjacent_rooms": [
+       "korytarz"
+      ]
+     }
+    ],
+    "confidence": "high",
+    "caveats": "1) Bliźniak: tabelka i pokoje dotyczą JEDNEGO segmentu (oba identyczne, lustrzane); width_m/height_m = cały korpus dwusegmentowy (dokładnie wydrukowane 1646 i 886 cm). 2) WC 5.08 m2 ma pełne wyposażenie łazienkowe (umywalka, miska, wanna/prysznic) — etykieta w tabeli to 'WC', skopiowano dosłownie i zmapowano na 'wc'. 3) 'Pom. gosp.' = pomieszczenie gospodarcze (brak dedykowanego mapped_id — użyto 'other'); pełni rolę kotłowni/składziku. 4) Schody: bieg prosty 16x19/26 wzdłuż ściany rozdzielającej segmenty, z podestem 'P' — start z korytarza, bieg wzdłuż pokoju dziennego. 5) Sąsiedztwa i on_facade dla Pom. gosp. odczytane best-effort z rysunku (mała skala renderu); kuchnia↔salon otwarte przejście bez symbolu drzwi. 6) Brak róży wiatrów — strona wejścia wg konwencji arkusza (dół=południe). 7) Suma 105.16 m2 w tabeli to parter+poddasze łącznie, nie sam parter."
+   },
+   "poddasze": {
+    "file": "A.2 Poddasze.pdf",
+    "storey_label": "poddasze",
+    "outline": {
+     "shape": "rectangle",
+     "area_m2": 48.89,
+     "width_m": 16.46,
+     "height_m": 8.86,
+     "notes": "Wymiary 16,46 x 8,86 m (1646 x 886 cm z linii wymiarowych) to CAŁY budynek bliźniaczy = dwa lustrzane segmenty; jeden segment ~8,23 m szerokości (oś ściany wspólnej, łańcuch 52 cm trzon centralny). Głębokość wewnętrzna 794 cm. area_m2 = suma tabeli RZUT PODDASZA dla jednego segmentu (5,21+1,90+11,23+11,95+12,00+6,60 = 48,89). Tabela podaje też RZUT PARTERU (Korytarz 5,70 / Kuchnia 10,45 / Pokój dzienny 32,19 / Pom. gosp. 2,85 / WC 5,08) i sumę 105,16 m² netto za oba poziomy segmentu."
+    },
+    "entry": {
+     "side": "unknown",
+     "note": "Brak drzwi wejściowych na tej kondygnacji (to poddasze); wejście na kondygnację przez schody z parteru, lądowanie w Korytarzu (11). Brak róży wiatrów na arkuszu."
+    },
+    "stairs": {
+     "present": true,
+     "kind": "straight"
+    },
+    "rooms": [
+     {
+      "name_pl": "Korytarz",
+      "mapped_id": "hol",
+      "area_m2": 5.21,
+      "on_facade": false,
+      "adjacent_rooms": [
+       "Sypialnia 06",
+       "Sypialnia 07",
+       "Sypialnia 08",
+       "Łazienka 09",
+       "Schowek 10",
+       "schody"
+      ]
+     },
+     {
+      "name_pl": "Schowek",
+      "mapped_id": "other",
+      "area_m2": 1.9,
+      "on_facade": true,
+      "adjacent_rooms": [
+       "Korytarz"
+      ]
+     },
+     {
+      "name_pl": "Sypialnia",
+      "mapped_id": "sypialnia",
+      "area_m2": 11.23,
+      "on_facade": true,
+      "adjacent_rooms": [
+       "Korytarz"
+      ]
+     },
+     {
+      "name_pl": "Sypialnia",
+      "mapped_id": "sypialnia",
+      "area_m2": 11.95,
+      "on_facade": true,
+      "adjacent_rooms": [
+       "Korytarz"
+      ]
+     },
+     {
+      "name_pl": "Sypialnia",
+      "mapped_id": "master_sypialnia",
+      "area_m2": 12,
+      "on_facade": true,
+      "adjacent_rooms": [
+       "Korytarz"
+      ]
+     },
+     {
+      "name_pl": "Łazienka",
+      "mapped_id": "lazienka",
+      "area_m2": 6.6,
+      "on_facade": true,
+      "adjacent_rooms": [
+       "Korytarz"
+      ]
+     }
+    ],
+    "open_plan_day_zone": false,
+    "confidence": "high",
+    "caveats": "1) Arkusz przedstawia DWA lustrzane segmenty bliźniaka — dane wyekstrahowane dla JEDNEGO segmentu; tabela pomieszczeń (RZUT PODDASZA) jest identyczna dla obu. 2) Suma 105,16 m² z tabeli to parter+poddasze jednego segmentu (parter 56,27 + poddasze 48,89), NIE powierzchnia tej kondygnacji. 3) Typ schodów (straight, 16x19/26 wzdłuż ściany wspólnej) odczytany z rysunku — pewność średnia. 4) on_facade dla Schowka (1,90 m²) niepewne — leży w dolnym paśmie przy Sypialni 08, prawdopodobnie dotyka ściany zewnętrznej, ale bez okna. 5) Master = Sypialnia 12,00 m² (07) wg reguły 'największa sypialnia'; różnice 12,00 vs 11,95 minimalne. 6) Numeracja pomieszczeń na rzucie: 06-11. 7) Sąsiedztwa = otwarcia drzwiowe (best effort z rysunku): układ gwiaździsty, wszystko przez Korytarz."
+   }
+  },
+  {
+   "name": "modlnica",
+   "pair_confidence": "high",
+   "parter": {
+    "file": "PA-B.1.2 RZUT PARTERU.pdf",
+    "storey_label": "parter",
+    "outline": {
+     "shape": "rectangle",
+     "area_m2": 89.5,
+     "width_m": 12.6,
+     "height_m": 9.44,
+     "notes": "Wymiary z linii wymiarowych: szerokosc gora 1260 cm (12,60 m), wysokosc lewa/prawa 944 cm (9,44 m). Footprint zblizony do prostokata; garaz (0.05, 34,10 m2) zajmuje prawa strone rzutu. area_m2 = suma Pow. uzytkowa Parter z tabeli = 89,50 m2."
+    },
+    "entry": {
+     "side": "south",
+     "note": "Przedsionek/wiatrolap 0.01 (7,80 m2) jako wejscie. Roza wiatrow 'Pn' (polnoc) w prawym dolnym rogu. Wejscie/przedsionek w dolnej czesci rzutu -> strona poludniowa wg orientacji arkusza (dol=poludnie)."
+    },
+    "stairs": {
+     "present": true,
+     "kind": "u_winder"
+    },
+    "open_plan_day_zone": true,
+    "rooms": [
+     {
+      "name_pl": "Przedsionek",
+      "mapped_id": "wiatrolap",
+      "area_m2": 7.8,
+      "on_facade": true,
+      "adjacent_rooms": [
+       "Pokoj dzienny",
+       "Schody",
+       "Lazienka"
+      ]
+     },
+     {
+      "name_pl": "Kuchnia",
+      "mapped_id": "kuchnia",
+      "area_m2": 7.09,
+      "on_facade": true,
+      "adjacent_rooms": [
+       "Pokoj dzienny"
+      ]
+     },
+     {
+      "name_pl": "Pokoj dzienny",
+      "mapped_id": "salon",
+      "area_m2": 24.29,
+      "on_facade": true,
+      "adjacent_rooms": [
+       "Kuchnia",
+       "Przedsionek",
+       "Schody"
+      ]
+     },
+     {
+      "name_pl": "Schody",
+      "mapped_id": "schody",
+      "area_m2": 4.08,
+      "on_facade": false,
+      "adjacent_rooms": [
+       "Przedsionek",
+       "Pokoj dzienny"
+      ]
+     },
+     {
+      "name_pl": "Garaz",
+      "mapped_id": "garaz",
+      "area_m2": 34.1,
+      "on_facade": true,
+      "adjacent_rooms": [
+       "Przedsionek"
+      ]
+     },
+     {
+      "name_pl": "Pokoj",
+      "mapped_id": "sypialnia",
+      "area_m2": 8.84,
+      "on_facade": true,
+      "adjacent_rooms": [
+       "Przedsionek"
+      ]
+     },
+     {
+      "name_pl": "Lazienka",
+      "mapped_id": "lazienka",
+      "area_m2": 3.3,
+      "on_facade": false,
+      "adjacent_rooms": [
+       "Przedsionek"
+      ]
+     }
+    ],
+    "confidence": "medium",
+    "caveats": "Tabela 'Zestawienie powierzchni' jest autorytatywna - przepisano DOKLADNIE wiersze sekcji Parter (0.01-0.07), Pow. uzytkowa = Pow. podlogi dla wszystkich. Suma Parter 89,50 m2. UWAGA: tabela zawiera tez Piwnica (91,28 m2: -1.01 Kotlownia 15,95 / -1.02 Pom.gosp. 29,12 / -1.02a Pom.gosp. 11,53 / -1.03 Pom.gosp. 34,68) i Poddasze (83,48/93,64 m2), ale ten arkusz to RZUT PARTERU - rooms ograniczone do Parteru. Wymiary outline odczytane z linii wymiarowych (1260 x 944 cm) - przyblizone. Sasiedztwa (adjacent_rooms) i on_facade to best-effort z geometrii rzutu (drobny druk, niska rozdzielczosc niektorych etykiet) - moga byc niedokladne. Open-plan day zone: Pokoj dzienny + Kuchnia po lewej stronie wygladaja na polaczone (brak wyraznej sciany dzialowej miedzy nimi). Schody (0.04) symbol pokazuje bieg z podestem/zawrotem -> u_winder (mozliwe ze straight z podestem). Brak osobnej sypialni master na parterze - 'Pokoj' (8,84) zmapowany jako sypialnia (parterowa sypialnia/gabinet); nie ma >=2 sypialni na parterze wiec brak master_sypialnia. Garaz wbudowany w bryle, dostepny przez Przedsionek.\""
+   },
+   "poddasze": {
+    "file": "PA-B.1.3 RZUT PODDASZA.pdf",
+    "storey_label": "poddasze",
+    "outline": {
+     "shape": "rectangle",
+     "area_m2": 83.48,
+     "width_m": 12.6,
+     "height_m": 9.44,
+     "height_m_note": "inner span",
+     "notes": "Obrys prostokatny. Wymiary z linii wymiarowych: szerokosc wewnetrzna 1260 cm (12,60 m); glowny pas wysokosci miedzy osiami A-C = 944 cm (9,44 m). Dachowe scianki kolankowe (poddasze uzytkowe) - wys. sufitu 190 cm na obrzezach, pelna wysokosc w centrum (+2.06). area_m2 = SUMA Pow. uzytkowa pokoi poddasza z tabeli = 83,48 m2 (Pow. podlogi 93,64 m2)."
+    },
+    "entry": {
+     "side": "unknown",
+     "note": "Poddasze - brak drzwi wejsciowych zewnetrznych. Dostep wylacznie przez schody (1.01 Schody) z parteru. Wejscie do budynku jest na parterze (Przedsionek 0.01). Klatka schodowa/korytarz w centralnej czesci rzutu."
+    },
+    "stairs": {
+     "present": true,
+     "kind": "u_winder"
+    },
+    "open_plan_day_zone": false,
+    "rooms": [
+     {
+      "name_pl": "Schody",
+      "mapped_id": "schody",
+      "area_m2": 5.6,
+      "on_facade": false,
+      "adjacent_rooms": [
+       "Korytarz"
+      ]
+     },
+     {
+      "name_pl": "Korytarz",
+      "mapped_id": "hol",
+      "area_m2": 10.17,
+      "on_facade": false,
+      "adjacent_rooms": [
+       "Schody",
+       "Sypialnia (1.03)",
+       "Sypialnia (1.04)",
+       "Sypialnia (1.09)",
+       "Lazienka (1.05)",
+       "Lazienka (1.07)",
+       "Pralnia"
+      ]
+     },
+     {
+      "name_pl": "Sypialnia",
+      "mapped_id": "master_sypialnia",
+      "area_m2": 16.4,
+      "on_facade": true,
+      "adjacent_rooms": [
+       "Korytarz"
+      ]
+     },
+     {
+      "name_pl": "Sypialnia",
+      "mapped_id": "sypialnia",
+      "area_m2": 16.4,
+      "on_facade": true,
+      "adjacent_rooms": [
+       "Korytarz",
+       "Lazienka (1.05)"
+      ]
+     },
+     {
+      "name_pl": "Lazienka",
+      "mapped_id": "lazienka",
+      "area_m2": 4.84,
+      "on_facade": false,
+      "adjacent_rooms": [
+       "Korytarz",
+       "Sypialnia (1.04)"
+      ]
+     },
+     {
+      "name_pl": "Pralnia",
+      "mapped_id": "pralnia",
+      "area_m2": 4.07,
+      "on_facade": false,
+      "adjacent_rooms": [
+       "Korytarz"
+      ]
+     },
+     {
+      "name_pl": "Lazienka",
+      "mapped_id": "lazienka",
+      "area_m2": 7.8,
+      "on_facade": true,
+      "adjacent_rooms": [
+       "Korytarz"
+      ]
+     },
+     {
+      "name_pl": "Sypialnia",
+      "mapped_id": "sypialnia",
+      "area_m2": 12.5,
+      "on_facade": true,
+      "adjacent_rooms": [
+       "Korytarz",
+       "Garderoba"
+      ]
+     },
+     {
+      "name_pl": "Garderoba",
+      "mapped_id": "garderoba",
+      "area_m2": 5.7,
+      "on_facade": true,
+      "adjacent_rooms": [
+       "Sypialnia (1.09)"
+      ]
+     }
+    ],
+    "confidence": "high",
+    "caveats": "Tabela \"Zestawienie powierzchni\" jest autorytatywna - powierzchnie Pow. uzytkowa skopiowane doslownie dla sekcji Poddasze (suma 83,48 m2 zgadza sie z tabela; Pow. podlogi sumarycznie 93,64 m2 - roznica wynika ze scianek kolankowych poddasza). UWAGA NUMERACJA: tabela poddasza przeskakuje z 1.07 na 1.09 (brak pozycji 1.08 w zestawieniu). Trzy sypialnie: dwie po 16,40 (remis) + jedna 12,50; najwieksza -> master_sypialnia przypisana do jednej z 16,40 (1.03), druga 16,40 (1.04) jako sypialnia. Wejscie/orientacja: to rzut PODDASZA - brak drzwi zewnetrznych; \"entry.side\"=unknown (dostep przez schody z parteru). Sasiedztwa (adjacent_rooms) ustalone na podstawie ukladu rzutu (best-effort z pozycji pokoi wokol centralnego korytarza/klatki schodowej) - drzwi nie zawsze jednoznaczne na skanie. Schody typu U z zabiegowymi stopniami (u_winder) - widoczny ksztalt klatki w centrum. Wymiary obrysu z linii wymiarowych: szer. wewn. 1260 cm, pas osi A-C 944 cm. on_facade dla pokoi przy scianach zewnetrznych (sypialnie, garderoba, lazienka 7,80); korytarz/schody/lazienka 4,84/pralnia wewnetrzne."
+   }
+  },
+  {
+   "name": "osobie",
+   "pair_confidence": "high",
+   "parter": {
+    "file": "AB.1 RZUT PARTERU.pdf",
+    "storey_label": "parter",
+    "outline": {
+     "shape": "rectangle",
+     "width_m": 11.02,
+     "height_m": 7.92,
+     "area_m2": 65,
+     "notes": "Obrys zewnętrzny z linii wymiarowych: 1102 cm (1+15+25+710+25+15+1) x 792 cm (231+330+231); wymiary surowe bez tynków, w tym 15 cm ocieplenia. area_m2 = suma 'Powierzchnia podłogi' parteru z tabeli (65,0 m²); kolumna 'Powierzchnia użytkowa' sumuje się do 61,9 m². Mały podest/ganek wejściowy przed wejściem (poza obrysem, -0,30) i komin nie wliczone do kształtu."
+    },
+    "entry": {
+     "side": "east",
+     "note": "Drzwi wejściowe 90x215 w Przedsionku (04) na dolnej krawędzi arkusza, między osiami 2-3. Róża wiatrów obecna: strzałka 'Pn' wskazuje PRAWĄ krawędź arkusza => prawo=północ, dół=wschód, więc wejście od wschodu (wg konwencji dół=południe byłoby 'south', ale kompas jest rozstrzygający)."
+    },
+    "stairs": {
+     "present": true,
+     "kind": "u_winder",
+     "note-free": true
+    },
+    "open_plan_day_zone": true,
+    "rooms": [
+     {
+      "name_pl": "Salon",
+      "mapped_id": "salon",
+      "area_m2": 22.6,
+      "on_facade": true,
+      "adjacent_rooms": [
+       "Kuchnia",
+       "Komunikacja"
+      ]
+     },
+     {
+      "name_pl": "Kuchnia",
+      "mapped_id": "kuchnia",
+      "area_m2": 10,
+      "on_facade": true,
+      "adjacent_rooms": [
+       "Salon"
+      ]
+     },
+     {
+      "name_pl": "Przedsionek",
+      "mapped_id": "wiatrolap",
+      "area_m2": 3.5,
+      "on_facade": true,
+      "adjacent_rooms": [
+       "Komunikacja"
+      ]
+     },
+     {
+      "name_pl": "Pokój",
+      "mapped_id": "sypialnia",
+      "area_m2": 8.3,
+      "on_facade": true,
+      "adjacent_rooms": [
+       "Komunikacja"
+      ]
+     },
+     {
+      "name_pl": "Łazienka",
+      "mapped_id": "lazienka",
+      "area_m2": 4,
+      "on_facade": true,
+      "adjacent_rooms": [
+       "Komunikacja"
+      ]
+     },
+     {
+      "name_pl": "Kotłownia",
+      "mapped_id": "kotlownia",
+      "area_m2": 5.6,
+      "on_facade": true,
+      "adjacent_rooms": [
+       "Komunikacja"
+      ]
+     },
+     {
+      "name_pl": "Komunikacja",
+      "mapped_id": "hol",
+      "area_m2": 5.7,
+      "on_facade": false,
+      "adjacent_rooms": [
+       "Przedsionek",
+       "Salon",
+       "Pokój",
+       "Łazienka",
+       "Kotłownia",
+       "Spiżarka"
+      ]
+     },
+     {
+      "name_pl": "Spiżarka",
+      "mapped_id": "spizarnia",
+      "area_m2": 5.3,
+      "on_facade": true,
+      "adjacent_rooms": [
+       "Komunikacja"
+      ]
+     }
+    ],
+    "confidence": "high",
+    "caveats": "1) Tabela 'Zestawienie pomieszczeń' ma 2 kolumny: 'Powierzchnia podłogi' i 'Powierzchnia użytkowa'. Użyto kolumny PODŁOGI (geometria rzutu). Różnica tylko w Spiżarce: podłoga 5,3 vs użytkowa 2,2 (pod schodami, obniżona wysokość); sumy parteru: 65,0 m² vs 61,9 m². 2) Tabela na tym arkuszu zawiera też Poddasze (NIE ujęte w rooms, bo storey=parter): 11 Pokój 14,3/12,0; 12 Pokój 15,0/12,7; 13 Pokój 11,4/9,9; 14 Łazienka 7,2/6,0; 15 Komunikacja 6,4/6,4; 16 Garderoba 5,8/4,9; suma 60,1/51,9 m². 3) Numeracja pomieszczeń pomija 03 i 08 (brak takich wierszy w tabeli). 4) Schody: 17x18x25, dwubiegowe powrotne (U) w bloku 2x101 cm, gł. 283 cm; zwrot na górze wygląda na zabiegowy/podest ponad linią przekroju — sklasyfikowano u_winder; spiżarnia jest POD schodami, brak osobnego wiersza 'schody' w tabeli. 5) Strefa dzienna otwarta: salon+jadalnia (stół w salonie)+kuchnia połączone otworem ~279 cm bez drzwi; komunikacja (09) otwarta na salon (przejście ~90 bez drzwi). 6) Pokój 05 to jedyna sypialnia parteru => sypialnia (nie master). 7) on_facade Spiżarki = true bo klatka/spiżarka przylega do górnej ściany zewnętrznej, ale bez okna; Komunikacja oceniona jako wewnętrzna (best effort). 8) Strona wejścia wg kompasu = east; gdyby stosować regułę dół=południe, byłoby south."
+   },
+   "poddasze": {
+    "file": "AB.2 RZUT PODDASZA.pdf",
+    "storey_label": "poddasze",
+    "outline": {
+     "shape": "rectangle",
+     "width_m": 11.02,
+     "height_m": 7.92,
+     "area_m2": 60.1,
+     "notes": "Obrys zewnętrzny 1102 x 792 cm (stan surowy bez tynków). Suma 'Powierzchnia podłogi' poddasza = 60,1 m2; suma 'Powierzchnia użytkowa' (redukcja skosów) = 51,9 m2. Linie h-190cm wzdłuż obu długich elewacji (N i S) — strefy ścianki kolankowej/skosów. Wnętrze w osiach: 463 / 202 / 305 cm (3 trakty) x 710 cm głębokości."
+    },
+    "entry": {
+     "side": "unknown",
+     "note": "Poddasze — brak drzwi zewnętrznych; wejście na kondygnację schodami z parteru, wyjście schodów w centralnej Komunikacji (15), klatka przy północnej ścianie środkowego traktu. Brak róży wiatrów; orientacja arkusza: dół = południe."
+    },
+    "stairs": {
+     "present": true,
+     "kind": "u_winder",
+     "note-omitted": null
+    },
+    "open_plan_day_zone": false,
+    "rooms": [
+     {
+      "name_pl": "Pokój (11)",
+      "mapped_id": "sypialnia",
+      "area_m2": 14.3,
+      "on_facade": true,
+      "adjacent_rooms": [
+       "Komunikacja (15)"
+      ]
+     },
+     {
+      "name_pl": "Pokój (12)",
+      "mapped_id": "master_sypialnia",
+      "area_m2": 15,
+      "on_facade": true,
+      "adjacent_rooms": [
+       "Komunikacja (15)"
+      ]
+     },
+     {
+      "name_pl": "Pokój (13)",
+      "mapped_id": "sypialnia",
+      "area_m2": 11.4,
+      "on_facade": true,
+      "adjacent_rooms": [
+       "Komunikacja (15)"
+      ]
+     },
+     {
+      "name_pl": "Łazienka (14)",
+      "mapped_id": "lazienka",
+      "area_m2": 7.2,
+      "on_facade": true,
+      "adjacent_rooms": [
+       "Komunikacja (15)"
+      ]
+     },
+     {
+      "name_pl": "Komunikacja (15)",
+      "mapped_id": "podest",
+      "area_m2": 6.4,
+      "on_facade": false,
+      "adjacent_rooms": [
+       "Pokój (11)",
+       "Pokój (12)",
+       "Pokój (13)",
+       "Łazienka (14)",
+       "Garderoba (16)",
+       "schody (klatka schodowa z parteru)"
+      ]
+     },
+     {
+      "name_pl": "Garderoba (16)",
+      "mapped_id": "garderoba",
+      "area_m2": 5.8,
+      "on_facade": true,
+      "adjacent_rooms": [
+       "Komunikacja (15)"
+      ]
+     }
+    ],
+    "confidence": "high",
+    "caveats": "1) AREA COLUMN: per-room area_m2 = 'Powierzchnia podłogi' (netto po podłodze); kolumna 'Powierzchnia użytkowa' (po redukcji skosów) wynosi odpowiednio: 11 Pokój 12,0; 12 Pokój 12,7; 13 Pokój 9,9; 14 Łazienka 6,0; 15 Komunikacja 6,4; 16 Garderoba 4,9; suma 51,9 m2. 2) TABELA zawiera też rzędy PARTERU (należą do arkusza AB.1, nie ujęte w rooms): 01 Salon 22,6/22,6; 02 Kuchnia 10,0/10,0; 04 Przedsionek 3,5/3,5; 05 Pokój 8,3/8,3; 06 Łazienka 4,0/4,0; 07 Kotłownia 5,6/5,6; 09 Komunikacja 5,7/5,7; 10 Spiżarka 5,3/2,2; suma 65,0/61,9 m2 (numery 03 i 08 nie występują w tabeli). 3) master_sypialnia = Pokój 12 (największy z 3 pokoi: 15,0 m2 podłogi / 12,7 użytkowej; z łóżkiem podwójnym na rysunku). 4) Schody '17 x 18 x 25' (17 stopni, 18 cm wys., 25 cm szer.) — bieg w szachcie ~202 cm szer.; prosty bieg 16x25=400 cm nie mieści się w głębokości szachtu, więc typ = zabiegowe/U (u_winder) — wnioskowane z geometrii, nie wprost opisane. 5) Sąsiedztwa = best effort z odczytu drzwi 80/205: układ gwiaździsty, wszystkie pomieszczenia otwierają się na Komunikację (15). 6) on_facade: 11/12/13 mają okna fasadowe 110x230 hp 0 w ścianach szczytowych (W i E); Łazienka 14 dotyka elewacji N i E (okno połaciowe 78x118); Garderoba 16 dotyka elewacji S (okno połaciowe 78x118); Komunikacja 15 wewnętrzna. 7) entry.side = unknown bo to poddasze (drzwi wejściowe budynku są na rzucie parteru AB.1). 8) Wymiary obrysu w stanie surowym bez tynków (uwaga na arkuszu)."
+   }
+  },
+  {
+   "name": "pb",
+   "pair_confidence": "high",
+   "parter": {
+    "file": "PB.3 RZUT PARTERU.pdf",
+    "storey_label": "parter",
+    "outline": {
+     "shape": "rectangle",
+     "width_m": 6.95,
+     "height_m": 10.7,
+     "area_m2": 51.2,
+     "height_m_note": "From outer dimension strings: 695 cm width (top/bottom) x 1070 cm height (left/right '1 070'). area_m2 = SUMA powierzchni uzytkowej z tabelki = 51,2 m2 (netto), znacznie mniejsza niz brutto obrysu (~74 m2) z powodu grubych scian i klatki schodowej.",
+     "notes": "Obrys prostokatny 6,95 x 10,70 m (stan surowy). Suma powierzchni uzytkowej pokoi z tabeli = 51,2 m2."
+    },
+    "entry": {
+     "side": "south",
+     "note": "Brak rozy wiatrow. Wg orientacji arkusza dol = poludnie. Wejscie glowne na dole rysunku przez PRZEDSIONEK 1.01 (drzwi POZ.W.1.2 / schody zewnetrzne / taras u dolu). Przedsionek 1.01 jest w prawej-gornej czesci rzutu przy klatce schodowej; glowne wejscie do bryly nastepuje od poludnia (dol) do strefy dziennej, dalej drzwi POZ.W.1.2 na dole. Uwaga: zlokalizowanie samego 'wejscia' jest niejednoznaczne - duze drzwi balkonowe/wejsciowe POZ.W.1.2 na dole (poludnie)."
+    },
+    "stairs": {
+     "present": true,
+     "kind": "u_winder"
+    },
+    "open_plan_day_zone": true,
+    "rooms": [
+     {
+      "name_pl": "PRZEDSIONEK",
+      "mapped_id": "wiatrolap",
+      "area_m2": 3.8,
+      "on_facade": true,
+      "adjacent_rooms": [
+       "KOMUNIKACJA"
+      ]
+     },
+     {
+      "name_pl": "KOMUNIKACJA",
+      "mapped_id": "hol",
+      "area_m2": 8.1,
+      "on_facade": false,
+      "adjacent_rooms": [
+       "PRZEDSIONEK",
+       "POKOJ DZIENNY",
+       "KUCHNIA",
+       "LAZIENKA",
+       "POKOJ"
+      ]
+     },
+     {
+      "name_pl": "POKOJ DZIENNY",
+      "mapped_id": "salon",
+      "area_m2": 14.3,
+      "on_facade": true,
+      "adjacent_rooms": [
+       "KUCHNIA",
+       "KOMUNIKACJA"
+      ]
+     },
+     {
+      "name_pl": "KUCHNIA",
+      "mapped_id": "kuchnia",
+      "area_m2": 11.3,
+      "on_facade": true,
+      "adjacent_rooms": [
+       "POKOJ DZIENNY",
+       "KOMUNIKACJA"
+      ]
+     },
+     {
+      "name_pl": "LAZIENKA",
+      "mapped_id": "lazienka",
+      "area_m2": 4.8,
+      "on_facade": true,
+      "adjacent_rooms": [
+       "KOMUNIKACJA"
+      ]
+     },
+     {
+      "name_pl": "POKOJ",
+      "mapped_id": "sypialnia",
+      "area_m2": 8.9,
+      "on_facade": true,
+      "adjacent_rooms": [
+       "KOMUNIKACJA"
+      ]
+     }
+    ],
+    "confidence": "medium",
+    "caveats": "Tabelka pomieszczen jest autorytatywna i skopiowana doslownie (1.01 PRZEDSIONEK 3,8; 1.02 KOMUNIKACJA 8,1; 1.04 POKOJ DZIENNY 14,3; 1.05 KUCHNIA 11,3; 1.06 LAZIENKA 4,8; 1.07 POKOJ 8,9; suma 51,2 m2). Powierzchnia podlogi = powierzchnia uzytkowa dla kazdego pokoju (identyczne wartosci). UWAGA: w tabeli brak numeru 1.03 (numeracja przeskakuje z 1.02 na 1.04) - prawdopodobnie 1.03 to klatka schodowa/podest nieujety w powierzchni uzytkowej. Obrys 6,95 x 10,70 m odczytany z zewnetrznych ciagow wymiarowych (695 / 1 070 cm). area_m2 obrysu = suma powierzchni z tabeli (51,2 netto), NIE brutto obrysu. Strefa dzienna otwarta: POKOJ DZIENNY 1.04 + KUCHNIA 1.05 polaczone (open-plan) w dolnej czesci rzutu. Schody: klatka U/zabiegowa przy KOMUNIKACJI 1.02 (prowadzi na poddasze - dom 2-kondygnacyjny). Mapowania: PRZEDSIONEK->wiatrolap, KOMUNIKACJA->hol, POKOJ DZIENNY->salon, POKOJ 1.07 (jedyny pokoj 'sypialny') -> sypialnia (brak >=2 sypialni, wiec brak master_sypialnia). Sasiedztwa best-effort z rzutu - wszystkie pomieszczenia dostepne przez KOMUNIKACJE (uklad hub-centryczny F5). on_facade: wszystkie pokoje z oknami dotykaja fasady; KOMUNIKACJA wewnetrzna bez okna. Strona wejscia (south) na podstawie konwencji arkusza (dol=poludnie), brak rozy wiatrow - stad confidence medium.\""
+   },
+   "poddasze": {
+    "file": "PB.4 RZUT PODDASZA.pdf",
+    "storey_label": "poddasze",
+    "outline": {
+     "shape": "rectangle",
+     "area_m2": 50.7,
+     "width_m": 6.95,
+     "height_m": 10.7,
+     "notes": "Wymiary zewnętrzne z linii wymiarowych: 695 cm (szer.) × 1070 cm (wys.); wewnętrzny obrys ~615 × 980 cm. area_m2 = suma 'Powierzchnia podłogi' z tabeli (50,7 m²). Suma 'Powierzchnia użytkowa' = 45,8 m² (redukcja ze względu na skosy dachu / poddasze)."
+    },
+    "entry": {
+     "side": "south",
+     "note": "Poddasze — brak drzwi wejściowych zewnętrznych; dostęp przez schody (SCHODY STRYCHOWE) z parteru, klatka schodowa po prawej (wschód) części centralnej. Przekrój A-A pionowo (góra=A, dół=A). Orientacja arkusza: dół = south."
+    },
+    "stairs": {
+     "present": true,
+     "kind": "u_winder"
+    },
+    "open_plan_day_zone": false,
+    "rooms": [
+     {
+      "name_pl": "KOMUNIKACJA",
+      "mapped_id": "hol",
+      "area_m2": 4.7,
+      "on_facade": false,
+      "adjacent_rooms": [
+       "schody",
+       "POKÓJ 2.02",
+       "POKÓJ 2.03",
+       "POKÓJ 2.05",
+       "ŁAZIENKA 2.04",
+       "SCHOWEK 2.06"
+      ]
+     },
+     {
+      "name_pl": "POKÓJ",
+      "mapped_id": "sypialnia",
+      "area_m2": 12.1,
+      "on_facade": true,
+      "adjacent_rooms": [
+       "KOMUNIKACJA"
+      ]
+     },
+     {
+      "name_pl": "POKÓJ",
+      "mapped_id": "master_sypialnia",
+      "area_m2": 13.5,
+      "on_facade": true,
+      "adjacent_rooms": [
+       "KOMUNIKACJA"
+      ]
+     },
+     {
+      "name_pl": "ŁAZIENKA",
+      "mapped_id": "lazienka",
+      "area_m2": 4.7,
+      "on_facade": true,
+      "adjacent_rooms": [
+       "KOMUNIKACJA"
+      ]
+     },
+     {
+      "name_pl": "POKÓJ",
+      "mapped_id": "sypialnia",
+      "area_m2": 11.3,
+      "on_facade": true,
+      "adjacent_rooms": [
+       "KOMUNIKACJA"
+      ]
+     },
+     {
+      "name_pl": "SCHOWEK",
+      "mapped_id": "spizarnia",
+      "area_m2": 4.4,
+      "on_facade": false,
+      "adjacent_rooms": [
+       "KOMUNIKACJA"
+      ]
+     }
+    ],
+    "confidence": "high",
+    "caveats": "Powierzchnie skopiowane DOKŁADNIE z tabeli (kolumna 'Powierzchnia podłogi' jako area_m2, zgodnie z konwencją SUMA = 50,7 m²). Kolumna 'Powierzchnia użytkowa' (mniejsza, ze skosami): 2.01=4,7; 2.02=11,2; 2.03=12,5; 2.04=4,7; 2.05=9,6; 2.06=3,1; suma 45,8 m². mapped_id: największy POKÓJ (2.03 = 13,5) → master_sypialnia; pozostałe dwa POKÓJ (2.02, 2.05) → sypialnia; SCHOWEK → spizarnia (storeroom, brak okna). ŁAZIENKA 4,7 m² > F2 cap 5? — nie, mieści się. Sąsiedztwa: hub-centryczne — wszystkie pomieszczenia przez KOMUNIKACJĘ (hol) + klatkę schodową. on_facade: pokoje i łazienka dotykają ścian zewnętrznych (okna w fasadzie); KOMUNIKACJA i SCHOWEK wewnętrzne. Tytuł: 'RZUT PODDASZA' (PB.4) → storey_label=poddasze.\""
+   }
+  },
+  {
+   "name": "pab2",
+   "pair_confidence": "high",
+   "parter": {
+    "file": "PAB.2.1 RZUT PARTERU.pdf",
+    "storey_label": "parter",
+    "outline": {
+     "shape": "rectangle",
+     "area_m2": 43.9,
+     "width_m": 7,
+     "height_m": 9,
+     "height_m_note": "",
+     "notes": "Wymiary zewnetrzne z linii wymiarowych: gora 700 cm (7.00 m), bok 900 cm (9.00 m). area_m2 = suma Pow. podl. pokoi PARTERU z tabeli: 3.23 + 33.28 + 3.46 + 3.93 = 43.90 m2 (netto). Powierzchnie uzytkowe (Pow. urz.) parter identyczne. Tabela laczy Parter + Poddasze; na tym arkuszu rzut PARTERU."
+    },
+    "entry": {
+     "side": "south",
+     "note": "Brak rozy kompasu z kierunkiem - jest strzalka 'Pn' (polnoc) skierowana w gore, wiec dol arkusza = poludnie. Drzwi wejsciowe na dole rzutu (poludnie), wejscie przez strefe przy Pom. gosp / w dolnej czesci budynku. Drzwi otwierane na zewnatrz."
+    },
+    "stairs": {
+     "present": true,
+     "kind": "straight"
+    },
+    "open_plan_day_zone": true,
+    "rooms": [
+     {
+      "name_pl": "Kom.",
+      "mapped_id": "garderoba",
+      "area_m2": 3.23,
+      "on_facade": false,
+      "adjacent_rooms": [
+       "Pokój dzienny aneksem",
+       "schody"
+      ]
+     },
+     {
+      "name_pl": "Pokój dzienny aneksem",
+      "mapped_id": "salon",
+      "area_m2": 33.28,
+      "on_facade": true,
+      "adjacent_rooms": [
+       "Kom.",
+       "Łazienka",
+       "Pom. gosp",
+       "schody"
+      ]
+     },
+     {
+      "name_pl": "Pom. gosp",
+      "mapped_id": "kotlownia",
+      "area_m2": 3.46,
+      "on_facade": true,
+      "adjacent_rooms": [
+       "Pokój dzienny aneksem",
+       "schody"
+      ]
+     },
+     {
+      "name_pl": "Łazienka",
+      "mapped_id": "lazienka",
+      "area_m2": 3.93,
+      "on_facade": true,
+      "adjacent_rooms": [
+       "Pokój dzienny aneksem"
+      ]
+     }
+    ],
+    "confidence": "high",
+    "caveats": "Tabela 'Zestawienie pomieszczen' obejmuje DWIE kondygnacje (Parter + Poddasze). Ten arkusz (PAB.2.1, tytul 'RZUT PARTERU - BUDYNEK 2') pokazuje rzut PARTERU, wiec do rooms wziete tylko 4 wiersze sekcji 'Parter': Kom. 3,23 / Pokoj dzienny aneksem 33,28 / Pom. gosp 3,46 / Lazienka 3,93. Wiersze sekcji 'Poddasze' (Kom. 3,18; 3x Pokoj 9,37/11,59/12,52; Lazienka 5,40) NIE sa na tym rzucie. Sumy z tabeli: 85,96 m2 (Pow. podl.) i 81,28 m2 (Pow. urz.) to suma OBU kondygnacji, nie samego parteru; suma parteru netto = 43,90 m2. Liczby przepisane doslownie z wydruku (przecinek dziesietny PL). Wymiary zewnetrzne 7.00 x 9.00 m z linii wymiarowych (700 / 900 cm). mapped_id: 'Kom.' (komunikacja/garderoba przy schodach) zmapowane jako garderoba/hol - to mala strefa komunikacyjna; 'Pom. gosp' jako kotlownia (pomieszczenie gospodarcze/techniczne). 'Pokoj dzienny z aneksem' = open-plan salon+kuchnia+jadalnia (widoczny aneks kuchenny i stol jadalniany) -> mapped salon, open_plan_day_zone=true. Brak osobnej sypialni na parterze (master/sypialnie sa na poddaszu). Schody: bieg prosty/jednobiegowy '16x17,5/25' do poddasza, present=true. Sasiedztwa best-effort z geometrii rzutu.\""
+   },
+   "poddasze": {
+    "file": "PAB.2.2 RZUT PODDASZA.pdf",
+    "storey_label": "poddasze",
+    "outline": {
+     "shape": "rectangle",
+     "width_m": 7,
+     "height_m": 9,
+     "area_m2": 37.4,
+     "height_m_unused": 0,
+     "notes": "Obrys zewnetrzny z linii wymiarowych: 700 cm (szer.) x 900 cm (wys.). Pas wewnetrzny 610 x 810. SUMA Pow. urz. poddasza = 8,17 + 10,10 + 11,12 + 4,81 + 3,18 = 37,38 m2. Tabelaryczne 'Pow. podl.' poddasza = 85,96 m2 / 'Pow. urz.' = 81,28 m2 to sumy laczne parter+poddasze."
+    },
+    "entry": {
+     "side": "south",
+     "note": "Poddasze nie ma wlasnych drzwi wejsciowych z zewnatrz; dostep przez schody (U-winder) z parteru, ladujace w Kom. (3,18 m2) w srodkowej czesci. Brak rozy wiatrow - przyjeto orientacje arkusza (dol = poludnie). Linia przekroju A po lewej (zachod)."
+    },
+    "stairs": {
+     "present": true,
+     "kind": "u_winder"
+    },
+    "open_plan_day_zone": false,
+    "rooms": [
+     {
+      "name_pl": "Kom.",
+      "mapped_id": "hol",
+      "area_m2": 3.18,
+      "on_facade": false,
+      "adjacent_rooms": [
+       "Pokój 10,10",
+       "Pokój 11,12",
+       "Pokój 8,17",
+       "Łazienka",
+       "schody"
+      ]
+     },
+     {
+      "name_pl": "Pokój",
+      "mapped_id": "sypialnia",
+      "area_m2": 10.1,
+      "on_facade": true,
+      "adjacent_rooms": [
+       "Kom."
+      ]
+     },
+     {
+      "name_pl": "Pokój",
+      "mapped_id": "sypialnia",
+      "area_m2": 8.17,
+      "on_facade": true,
+      "adjacent_rooms": [
+       "Kom."
+      ]
+     },
+     {
+      "name_pl": "Pokój",
+      "mapped_id": "master_sypialnia",
+      "area_m2": 11.12,
+      "on_facade": true,
+      "adjacent_rooms": [
+       "Kom."
+      ]
+     },
+     {
+      "name_pl": "Łazienka",
+      "mapped_id": "lazienka",
+      "area_m2": 4.81,
+      "on_facade": true,
+      "adjacent_rooms": [
+       "Kom."
+      ]
+     }
+    ],
+    "confidence": "high",
+    "caveats": "Plan to RZUT PODDASZA - BUDYNEK 2 (PAB.2.2). Tabela 'Zestawienie pomieszczen' laczy Parter i Poddasze; wyodrebniono wylacznie wiersze Poddasza. Na rysunku etykiety pokoi odpowiadaja kolumnie 'Pow. urz.' (8,17 / 10,10 / 11,12 / 4,81 / 3,18), dlatego area_m2 = wartosci 'Pow. urz.'. Odpowiadajace 'Pow. podl.' (powierzchnia podlogi pelnej wysokosci, przed potraceniem skosow): Pokoj 9,37 / 11,59 / 12,52, Lazienka 5,40, Kom. 3,18. outline.area_m2 = SUMA Pow. urz. poddasza (37,38). Master_sypialnia = najwiekszy pokoj (11,12 -> Pow.podl. 12,52). 'on_facade' dla Kom.=false (centralna, doswietlana tylko przez schody/okna pokoi). Dwa biegi schodow: U-winder (z parteru) + zaznaczone 'schody strychowe' (na strych) - sklasyfikowano jako u_winder (glowne). Brak rozy wiatrow.\""
+   }
+  },
+  {
+   "name": "a2-6",
+   "pair_confidence": "high",
+   "parter": {
+    "file": "A.2 RZUT PARTERU 6.pdf",
+    "storey_label": "parter",
+    "outline": {
+     "shape": "rectangle",
+     "width_m": 12.9,
+     "height_m": 8.7,
+     "area_m2": 82.96,
+     "notes": "Wymiary zewnętrzne z linii wymiarowych: 1290 x 870 cm (w tym styropian 15 + ściana 30 po obu stronach; chain 15+30+780+30+15=870, 15+30+393+30+325+30+422+30+15=1290). Suma z tabeli: powierzchnia podłogi 82,96 m²; powierzchnia użytkowa 52,77 m² (GARAŻ i KOTŁOWNIA liczone 0,00 w użytkowej)."
+    },
+    "entry": {
+     "side": "south",
+     "note": "Brak róży wiatrów — orientacja arkusza (dół=południe). Drzwi wejściowe 100 cm do PRZEDSIONKA (01) w dolnej (płd.) fasadzie, przed nimi schodki zewn. 3x15x30 i ±0,00/-0,30. Na tej samej fasadzie brama garażowa 300x240 z odwodnieniem liniowym. Dodatkowo: drzwi gospodarcze ~90/205 do KOTŁOWNI na ścianie zachodniej, dwuskrzydłowe drzwi tarasowe z POKOJU DZIENNEGO na ścianie północnej (schodki 3x15x30)."
+    },
+    "stairs": {
+     "present": true,
+     "kind": "other",
+     "note_omitted": "n/a"
+    },
+    "open_plan_day_zone": true,
+    "rooms": [
+     {
+      "name_pl": "PRZEDSIONEK",
+      "mapped_id": "wiatrolap",
+      "area_m2": 5.75,
+      "on_facade": true,
+      "adjacent_rooms": [
+       "KORYTARZ",
+       "GARAŻ"
+      ]
+     },
+     {
+      "name_pl": "ŁAZIENKA",
+      "mapped_id": "lazienka",
+      "area_m2": 2.91,
+      "on_facade": false,
+      "adjacent_rooms": [
+       "KORYTARZ"
+      ]
+     },
+     {
+      "name_pl": "KORYTARZ",
+      "mapped_id": "hol",
+      "area_m2": 3.99,
+      "on_facade": false,
+      "adjacent_rooms": [
+       "PRZEDSIONEK",
+       "ŁAZIENKA",
+       "POKÓJ",
+       "POKÓJ DZIENNY",
+       "KUCHNIA"
+      ]
+     },
+     {
+      "name_pl": "GARAŻ",
+      "mapped_id": "garaz",
+      "area_m2": 21.54,
+      "on_facade": true,
+      "adjacent_rooms": [
+       "KOTŁOWNIA",
+       "PRZEDSIONEK"
+      ]
+     },
+     {
+      "name_pl": "KOTŁOWNIA",
+      "mapped_id": "kotlownia",
+      "area_m2": 8.65,
+      "on_facade": true,
+      "adjacent_rooms": [
+       "GARAŻ"
+      ]
+     },
+     {
+      "name_pl": "POKÓJ",
+      "mapped_id": "sypialnia",
+      "area_m2": 7.12,
+      "on_facade": true,
+      "adjacent_rooms": [
+       "KORYTARZ"
+      ]
+     },
+     {
+      "name_pl": "POKÓJ DZIENNY",
+      "mapped_id": "salon",
+      "area_m2": 18.21,
+      "on_facade": true,
+      "adjacent_rooms": [
+       "KUCHNIA",
+       "KORYTARZ"
+      ]
+     },
+     {
+      "name_pl": "KUCHNIA",
+      "mapped_id": "kuchnia",
+      "area_m2": 12.67,
+      "on_facade": true,
+      "adjacent_rooms": [
+       "POKÓJ DZIENNY",
+       "SPIŻARKA",
+       "KORYTARZ"
+      ]
+     },
+     {
+      "name_pl": "SPIŻARKA",
+      "mapped_id": "spizarnia",
+      "area_m2": 2.12,
+      "on_facade": true,
+      "adjacent_rooms": [
+       "KUCHNIA"
+      ]
+     }
+    ],
+    "confidence": "high",
+    "caveats": "Tabela pomieszczeń i wymiary obrysu przepisane 1:1 (wysoka pewność): 9 pokoi, suma podłogi 82,96 m², użytkowa 52,77 m². area_m2 w outline = 82,96 (suma powierzchni podłogi WSZYSTKICH pokoi z tabeli; netto użytkowa = 52,77 bo garaż/kotłownia liczone 0,00). Schody: 16 x 17,5 x 26 cm — rysunek pokazuje bieg z zabiegiem (stopnie wachlarzowe na zakręcie), czyli zabiegowe typu L; enum nie ma 'l_winder', więc kind='other' (na pewno nie proste, nie pełne U) — pewność średnia. Open-plan: kuchnia (08) i pokój dzienny (07) połączone szerokim otworem (stół jadalniany na styku stref, tylko słupek + fragment ścianki 12 cm) — pewność średnio-wysoka. Sąsiedztwa (adjacent_rooms) = best-effort z odczytu skanów drzwi: drzwi PRZEDSIONEK↔GARAŻ oraz KORYTARZ↔KUCHNIA mniej pewne; ŁAZIENKA i KORYTARZ uznane za wewnętrzne (bez styku z fasadą); SPIŻARKA dotyka płd. ściany bez okna. Drzwi zewn. dodatkowe: kotłownia (zachód), taras z pokoju dziennego (północ). Kondygnacja z tabelki rysunku: 'RZUT PARTERU', skala 1:50, data MARZEC 2018. Wysokość kondygnacji nieodczytywalna z tego rzutu (pominięta)."
+   },
+   "poddasze": {
+    "file": "A.3 RZUT PODDASZA 5.pdf",
+    "storey_label": "poddasze",
+    "outline": {
+     "shape": "rectangle",
+     "width_m": 12.9,
+     "height_m": 8.7,
+     "area_m2": 83.67,
+     "notes": "Wymiary zewnętrzne z linii wymiarowych: 1290 cm (15+30+393+30+325+30+422+30+15) x 870 cm (15+30+780+30+15); 3 trakty wewnętrzne 393/325/422 cm, ściany 30 cm + 15 cm warstwa wykończeniowa. Tabela ma DWIE kolumny: powierzchnia podłogi (suma 83,67 m²) i powierzchnia użytkowa po redukcji skosów (suma 70,76 m²); area_m2 = suma podłogi (geometria pokoi). Linie h-190 (ścianka kolankowa / załamanie stropu) wzdłuż północnej i południowej krawędzi."
+    },
+    "entry": {
+     "side": "unknown",
+     "note": "Poddasze — brak drzwi wejściowych na tej kondygnacji; dostęp schodami zabiegowymi z parteru, wyjście schodów w komunikacji (14), poziom +2,80."
+    },
+    "stairs": {
+     "present": true,
+     "kind": "u_winder",
+     "note-omitted": ""
+    },
+    "rooms": [
+     {
+      "name_pl": "SYPIALNIA (11)",
+      "mapped_id": "master_sypialnia",
+      "area_m2": 21.58,
+      "on_facade": true,
+      "adjacent_rooms": [
+       "KOMUNIKACJA (14)",
+       "GARDEROBA (12)"
+      ]
+     },
+     {
+      "name_pl": "GARDEROBA (12)",
+      "mapped_id": "garderoba",
+      "area_m2": 8.61,
+      "on_facade": true,
+      "adjacent_rooms": [
+       "SYPIALNIA (11)"
+      ]
+     },
+     {
+      "name_pl": "ŁAZIENKA (13)",
+      "mapped_id": "lazienka",
+      "area_m2": 7.51,
+      "on_facade": true,
+      "adjacent_rooms": [
+       "KOMUNIKACJA (14)"
+      ]
+     },
+     {
+      "name_pl": "KOMUNIKACJA (14)",
+      "mapped_id": "hol",
+      "area_m2": 5.93,
+      "on_facade": false,
+      "adjacent_rooms": [
+       "SYPIALNIA (11)",
+       "ŁAZIENKA (13)",
+       "SYPIALNIA (15)",
+       "SYPIALNIA (16)",
+       "SYPIALNIA (17)",
+       "schody z parteru"
+      ]
+     },
+     {
+      "name_pl": "SYPIALNIA (15)",
+      "mapped_id": "sypialnia",
+      "area_m2": 7.64,
+      "on_facade": true,
+      "adjacent_rooms": [
+       "KOMUNIKACJA (14)"
+      ]
+     },
+     {
+      "name_pl": "SYPIALNIA (16)",
+      "mapped_id": "sypialnia",
+      "area_m2": 16.2,
+      "on_facade": true,
+      "adjacent_rooms": [
+       "KOMUNIKACJA (14)"
+      ]
+     },
+     {
+      "name_pl": "SYPIALNIA (17)",
+      "mapped_id": "sypialnia",
+      "area_m2": 16.2,
+      "on_facade": true,
+      "adjacent_rooms": [
+       "KOMUNIKACJA (14)"
+      ]
+     }
+    ],
+    "open_plan_day_zone": false,
+    "confidence": "high",
+    "caveats": "(1) area_m2 per pokój = kolumna \"Powierzchnia podłogi\"; kolumna \"Powierzchnia użytkowa\" (po redukcji skosów h<190): 11=18,98; 12=6,01; 13=5,36; 14=5,93; 15=7,64; 16=13,42; 17=13,42; suma 70,76 m². (2) Schody: zabiegowe 16 x 17,5 x 26 (16 stopni = +2,80 m), bieg ze zwrotem wachlarzowym — sklasyfikowane jako u_winder (najbliższy enum dla schodów zabiegowych); dodatkowo \"schody strychowe\" (składane, zaznaczone przerywaną linią w komunikacji) na strych — nieliczone jako główne. (3) Dostęp do garderoby (12) odczytany z łuku drzwi 80/205 w ściance działowej 12/11 — garderoba wchodzi się z sypialni 11 (układ master suite); pewność średnio-wysoka. (4) Okna: sypialnie 16/17 mają okna 140/205 na wschodniej ścianie szczytowej; sypialnia 11 i okno 160 cm na zachodniej; okna połaciowe 78x98 w pom. 11, 12, 13; sypialnia 15 okno od południa — stąd on_facade=true dla wszystkich poza komunikacją. (5) Brak róży wiatrów — strony świata wg orientacji arkusza (dół = południe). (6) Kondygnacja bez strefy dziennej (5 pomieszczeń sypialnych + łazienka + komunikacja) — open_plan_day_zone=false."
+   }
+  }
+ ]
+}
