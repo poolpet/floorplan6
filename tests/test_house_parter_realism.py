@@ -22,3 +22,26 @@ def test_parter_template_has_bedroom_and_bathroom():
     assert frozenset(("hub", "lazienka")) in pairs
     assert frozenset(("hub", "sypialnia_parter")) in pairs
     assert frozenset(("hub", "wc")) not in pairs
+
+
+def test_solver_external_bathroom_param_targets_given_room():
+    """Reguła 'nie landlocked' celuje w pokój `external_bathroom_id` (domyślnie wc).
+    Sprawdzamy, że lazienka jest dociśnięta do ściany zewnętrznej gdy o to poprosimy."""
+    from core.cpsat_solver import solve_cpsat
+    from core.boundary_analyzer import analyze_boundary
+    from core.house_layout import _template, _filter_template
+    from core.house_program import default_house_config, HouseProgramConfig
+    poly = Polygon([(0, 0), (10, 0), (10, 9), (0, 9)])
+    b = analyze_boundary(poly, entry_point=(5.0, 0.0))
+    tpl = _filter_template(_template("house_parter"),
+                           {"hub", "wiatrolap", "salon", "kuchnia", "lazienka", "kotlownia"})
+    cfg = default_house_config(storey="parter")
+    r = solve_cpsat(tpl, b, time_limit_s=30.0, program_config=cfg,
+                    hub_at_entry=True, entry_room_id="wiatrolap",
+                    l_capable_ids={"hub"}, external_bathroom_id="lazienka")
+    assert r.status in ("OPTIMAL", "FEASIBLE"), r.status
+    laz = next(x for x in r.rooms if x.spec.id == "lazienka")
+    bnds = laz.polygon.bounds  # (minx,miny,maxx,maxy), świat = bbox 10×9
+    touches = (abs(bnds[0]) < 0.05 or abs(bnds[2] - 10) < 0.05 or
+               abs(bnds[1]) < 0.05 or abs(bnds[3] - 9) < 0.05)
+    assert touches, f"lazienka landlocked: {bnds}"

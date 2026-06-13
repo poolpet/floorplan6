@@ -280,6 +280,7 @@ def solve_cpsat(
     hub_at_entry: bool = True,
     entry_room_id: Optional[str] = None,
     l_capable_ids: Optional[set] = None,
+    external_bathroom_id: str = "wc",
 ) -> CpsatResult:
     """Solver CP-SAT — umieszcza pokoje szablonu w obrysie.
 
@@ -605,12 +606,12 @@ def solve_cpsat(
     # (Wiatrołap-przy-ścianie-wejścia obsługuje teraz blok entry_idx: gdy entry_room_id="wiatrolap"
     # to wiatrołap zawiera punkt drzwi I dotyka ściany wejścia — drzwi SĄ w przedsionku, hol za nim.)
     if program_config is not None and notch is None:
-        wc_idx = next((i for i, s in enumerate(specs) if s.id == "wc"), None)
-        if wc_idx is not None:
-            bW = model.new_bool_var("wc_W"); model.add(x[wc_idx] == 0).only_enforce_if(bW)
-            bE = model.new_bool_var("wc_E"); model.add(x_ends[wc_idx] == BW).only_enforce_if(bE)
-            bS = model.new_bool_var("wc_S"); model.add(y[wc_idx] == 0).only_enforce_if(bS)
-            bN = model.new_bool_var("wc_N"); model.add(y_ends[wc_idx] == BH).only_enforce_if(bN)
+        bath_idx = next((i for i, s in enumerate(specs) if s.id == external_bathroom_id), None)
+        if bath_idx is not None:
+            bW = model.new_bool_var("bath_W"); model.add(x[bath_idx] == 0).only_enforce_if(bW)
+            bE = model.new_bool_var("bath_E"); model.add(x_ends[bath_idx] == BW).only_enforce_if(bE)
+            bS = model.new_bool_var("bath_S"); model.add(y[bath_idx] == 0).only_enforce_if(bS)
+            bN = model.new_bool_var("bath_N"); model.add(y_ends[bath_idx] == BH).only_enforce_if(bN)
             model.add_bool_or([bW, bE, bS, bN])
 
     # Knee-wall v2 (S29): strefy niskiej ścianki kolankowej poddasza (low_zones,
