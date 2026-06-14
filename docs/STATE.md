@@ -3,7 +3,19 @@
 > Updated after every working session. If it doesn't reflect reality —
 > Claude updates immediately.
 >
-> **Last update:** 2026-06-13 (Session 30 cz.2 — branch `feat/sfh-open-plan-day-zone`: **NETTO/BRUTTO +
+> **⮕ NEXT SESSION (Dawid 2026-06-14, koniec sesji po przeglądzie renderów):** podniesiona poprzeczka —
+> **generować rzuty DOKŁADNIE jak oryginały** (ten sam obrys, to samo wejście, te same ściany wewn.+zewn.),
+> nie tylko wysoki benchmark. Pamięć [[feedback_match_originals_exactly]]. **PUNCH-LIST z przeglądu renderów:**
+> (1) **schody → ZABIEGOWE/2-BIEGOWE domyślnie, nie jednobiegowe** — `generate_house` wymusza
+> `force_straight=True`; powód (wąski pas poddasza S27) zniknął w knee-wall v2 (pełny footprint); sonda
+> `notebooks/winder_stair_probe.py` GOTOWA (nie uruchomiona — CPU zajęte suite); jeśli U-rdzeń feasible →
+> zdjąć force_straight + nauczyć renderer rysować zabieg/dwubieg (`viz/plan_renderer._draw_stair_in_room`).
+> (2) **POLA pokoi rozdęte** — F1 dobry (zestaw pokoi), MAPE 17-46% zły (rozmiary): poddasze sypialnie 20-32 m²
+> (realne 9-16), salon 41 na dużych, mieszkanie 2. pokój ciasny 6.3. ROOT: za mało pokoi → pucha; fix = gęstszy
+> program / overflow do WIĘCEJ pokoi nie większych. (3) mieszkania ten sam problem (`rzuty/suite/`).
+> Mieszkania pokazane (M3 OK strukturalnie). **Stan: cała robota S30c scommitowana, working tree czysty.**
+>
+> **Previously — 2026-06-13 (Session 30 cz.2 — branch `feat/sfh-open-plan-day-zone`: **NETTO/BRUTTO +
 > SĄSIEDZTWA KORPUSOWE WDROŻONE (root fix krawędzi parteru) + pełna ekstrakcja korpusu 36/36 + rozszerzony
 > benchmark**). Po diagnozie (niżej) wdrożone RED-first: **(1) NETTO/BRUTTO** (`core/house_layout.NET_FACTOR=0.81`,
 > kotwica A01_120 97/120): obrys = BRUTTO, liczby korpusowe = NETTO. `parter_room_ids` dobiera pokoje wg netto
