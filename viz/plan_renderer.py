@@ -372,9 +372,59 @@ def stair_run_orientation(schody_bounds, hol_bounds):
     return ("vertical", "S" if dy > 0 else "N")
 
 
+def _draw_winder_in_room(ax, schody, hol):
+    """Glif schodów dwubiegowych/zabiegowych (U): dwa biegi rozdzielone studnią +
+    spocznik pełnej szerokości na końcu OD holu + strzałka 'w górę' jednym biegiem.
+    Orientacja z stair_run_orientation (oś biegu + zwrot odchodzący od holu)."""
+    sx, sy, ex, ey = schody.polygon.bounds
+    sw, sh = ex - sx, ey - sy
+    color = "#B71C1C"
+    hb = hol.polygon.bounds if (hol is not None and getattr(hol, "polygon", None) is not None) else None
+    axis, arrow = stair_run_orientation(schody.polygon.bounds, hb)
+    LAND = 0.30                                   # udział spocznika w głębokości biegu
+    if axis == "vertical":                        # biegi pionowe, studnia pionowa w X
+        xm = sx + sw / 2.0
+        ax.plot([xm, xm], [sy, ey], color=color, lw=1.0, zorder=5)
+        far_top = (arrow == "N")                  # 'w górę' = N → spocznik u góry
+        ly0, ly1 = (ey - sh * LAND, ey) if far_top else (sy, sy + sh * LAND)
+        ax.add_patch(mpatches.Rectangle((sx, ly0), sw, ly1 - ly0, facecolor="none",
+                                        edgecolor=color, lw=0.8, zorder=5))
+        rlo, rhi = (sy, ly0) if far_top else (ly1, ey)
+        n = max(2, int((rhi - rlo) / 0.28))
+        for k in range(1, n):
+            y = rlo + (rhi - rlo) * k / n
+            ax.plot([sx, xm], [y, y], color=color, lw=0.5, zorder=5)
+            ax.plot([xm, ex], [y, y], color=color, lw=0.5, zorder=5)
+        xL = sx + sw * 0.25
+        a0, a1 = (rlo + (rhi - rlo) * 0.1, rhi) if far_top else (rhi - (rhi - rlo) * 0.1, rlo)
+        ax.annotate("", xy=(xL, a1), xytext=(xL, a0),
+                    arrowprops=dict(arrowstyle="->", color=color, lw=1.2), zorder=6)
+    else:                                         # biegi poziome, studnia pozioma w Y
+        ym = sy + sh / 2.0
+        ax.plot([sx, ex], [ym, ym], color=color, lw=1.0, zorder=5)
+        far_right = (arrow == "E")
+        lx0, lx1 = (ex - sw * LAND, ex) if far_right else (sx, sx + sw * LAND)
+        ax.add_patch(mpatches.Rectangle((lx0, sy), lx1 - lx0, sh, facecolor="none",
+                                        edgecolor=color, lw=0.8, zorder=5))
+        rlo, rhi = (sx, lx0) if far_right else (lx1, ex)
+        n = max(2, int((rhi - rlo) / 0.28))
+        for k in range(1, n):
+            x = rlo + (rhi - rlo) * k / n
+            ax.plot([x, x], [sy, ym], color=color, lw=0.5, zorder=5)
+            ax.plot([x, x], [ym, ey], color=color, lw=0.5, zorder=5)
+        yL = sy + sh * 0.25
+        a0, a1 = (rlo + (rhi - rlo) * 0.1, rhi) if far_right else (rhi - (rhi - rlo) * 0.1, rlo)
+        ax.annotate("", xy=(a1, yL), xytext=(a0, yL),
+                    arrowprops=dict(arrowstyle="->", color=color, lw=1.2), zorder=6)
+
+
 def _draw_stair_in_room(ax, schody, hol):
     """Symbol biegu WEWNĄTRZ pokoju 'schody' — stopnie + strzałka 'w górę' (bez
-    osobnego prostokąta/etykiety; pokój jest już narysowany i podpisany 'Schody')."""
+    osobnego prostokąta/etykiety; pokój jest już narysowany i podpisany 'Schody').
+    Dla stair_kind=='u' rysuje glif dwubiegowy (zabiegowe), inaczej bieg prosty."""
+    if getattr(schody, "stair_kind", None) == "u":
+        _draw_winder_in_room(ax, schody, hol)
+        return
     sx, sy, ex, ey = schody.polygon.bounds
     sw, sh = ex - sx, ey - sy
     color = "#B71C1C"
