@@ -159,15 +159,17 @@ def compute_house_targets(
                     targets[k] += add * (h / total_head)
                 leftover = usable_area_m2 - sum(targets.values())
         if leftover > 1e-9:
-            # 2b) RESZTĘ do SYPIALNI (ponad capy — reguła Dawida: korytarz minimalny,
-            # nadmiar zyskują pokoje nocne; dzień trzyma ŁĄCZNY cap póki nocne istnieją)
-            # lub STREFY DZIENNEJ (parter bez pokoi nocnych) — NIGDY do huba.
-            if night_ids:
-                sink_pool = night_ids
-            elif day_ids:
-                sink_pool = day_ids                      # dzień wchłania (soft ponad łączny cap)
-            else:
-                sink_pool = [k for k in targets if k != hub_id] or list(targets)
+            # 2b) RESZTĘ (remainder F1 = brutto−netto, „ściany") rozłóż ∝rozmiar po pokojach
+            # NOCNYCH + suchych USŁUGOWYCH. WYKLUCZAMY: hub (korytarz minimalny — solver karze
+            # 3·hub-excess), MOKRE (lazienka/wc — twardy cap WT, nie wchłoną), oraz STREFĘ
+            # DZIENNĄ (jest już przy ŁĄCZNYM cap-ie — open-plan invariant S17/20; doładowanie
+            # jej tu złamałoby day_zone_cap). Dzięki rozłożeniu po nocnych+suchych pojedyncza
+            # sypialnia/gabinet puchnie mniej niż przy night-only. Fallback: gdy brak nocnych
+            # i suchych (np. day-only) — dzień wchłania (jak dawniej).
+            wet = {s.id for s in specs if s.id.split("_")[0] in ("lazienka", "wc")}
+            sink_pool = [k for k in targets if k != hub_id and k not in wet and k not in day_ids]
+            if not sink_pool:
+                sink_pool = list(day_ids) or [k for k in targets if k != hub_id] or list(targets)
             total = sum(targets[k] for k in sink_pool) or 1.0
             for k in sink_pool:
                 targets[k] += leftover * (targets[k] / total)
