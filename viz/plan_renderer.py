@@ -14,7 +14,9 @@ from typing import Optional
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 from matplotlib.collections import PatchCollection
+from matplotlib.path import Path as MplPath
 from shapely.geometry import Polygon
+from shapely.ops import unary_union
 
 from core.models import FloorPlan, Room, Boundary, Strefa
 
@@ -33,6 +35,69 @@ STREFA_EDGE_COLORS = {
     Strefa.USLUGOWA: "#7B1FA2",
     Strefa.KOMUNIKACJA: "#2E7D32",
 }
+
+
+# Poché ścian (MVP credibility): grubość zewn./wewn. w metrach + barwa masy ściany.
+WALL_EXT = 0.30
+WALL_INT = 0.12
+POCHE_COLOR = "#9E9E9E"
+
+
+def _wall_poche_polygon(boundary_poly, room_polys, w_ext: float = WALL_EXT,
+                        w_int: float = WALL_INT):
+    """Wielokąt masy ścian: (obrys − unia pokoi skurczonych o w_int/2) ∪ pierścień zewn. w_ext.
+
+    Pokoje stykają się (F1=100%), więc każdy skurcza się o w_int/2 → między dwoma
+    sąsiadami zostaje fuga w_int (ściana działowa); przy obrysie zostaje pierścień,
+    pogrubiony osobno do w_ext (ściana zewnętrzna).
+    """
+    shrunk = []
+    for p in room_polys:
+        geoms = p.geoms if p.geom_type == "MultiPolygon" else [p]
+        for g in geoms:
+            s = g.buffer(-w_int / 2.0)
+            if not s.is_empty:
+                shrunk.append(s)
+    inner = unary_union(shrunk) if shrunk else boundary_poly
+    walls = boundary_poly.difference(inner)
+    ext_ring = boundary_poly.difference(boundary_poly.buffer(-w_ext))
+    return unary_union([walls, ext_ring])
+
+
+def _polygon_patch(geom, **kw):
+    """matplotlib PathPatch z wielokąta Shapely (z dziurami → wnętrza pokoi przebijają)."""
+    verts, codes = [], []
+    polys = geom.geoms if geom.geom_type == "MultiPolygon" else [geom]
+    for poly in polys:
+        if poly.is_empty:
+            continue
+        for ring in [poly.exterior, *poly.interiors]:
+            cs = list(ring.coords)
+            if len(cs) < 3:
+                continue
+            verts.extend(cs)
+            codes.append(MplPath.MOVETO)
+            codes.extend([MplPath.LINETO] * (len(cs) - 2))
+            codes.append(MplPath.CLOSEPOLY)
+    return mpatches.PathPatch(MplPath(verts, codes), **kw)
+
+
+def _draw_walls(ax, boundary_poly, rooms):
+    """Narysuj masę ścian (poché). Strefa dzienna scalona → bez ściany salon↔kuchnia."""
+    if boundary_poly is None:
+        return
+    polys = [r.polygon for r in rooms if r.polygon is not None]
+    if not polys:
+        return
+    day = [r.polygon for r in rooms
+           if r.polygon is not None and r.spec.strefa == Strefa.DZIENNA]
+    other = [r.polygon for r in rooms
+             if r.polygon is not None and r.spec.strefa != Strefa.DZIENNA]
+    merged = other + ([unary_union(day)] if len(day) >= 2 else day)
+    wall = _wall_poche_polygon(boundary_poly, merged)
+    if wall.is_empty:
+        return
+    ax.add_patch(_polygon_patch(wall, facecolor=POCHE_COLOR, edgecolor="none", zorder=2.6))
 
 
 def render_floor_plan(
@@ -67,6 +132,9 @@ def render_floor_plan(
         furn_by_room.setdefault(f.room_id, []).append(f.polygon)
     for room in plan.rooms:
         _draw_room(ax, room, furniture_polys=furn_by_room.get(room.spec.id))
+
+    # Masa ścian (poché) — nad pokojami, pod meblami/etykietami
+    _draw_walls(ax, getattr(plan.boundary, "polygon", None), plan.rooms)
 
     # Meble + drzwi + okna (MVP)
     if furniture:
@@ -252,6 +320,7 @@ def _draw_storey(ax, rooms, boundary, core_abs, furniture, title, low_strips=Non
         _draw_stair_in_room(ax, schody, hol)
     else:
         _draw_stair(ax, core_abs)
+    _draw_walls(ax, getattr(boundary, "polygon", None), rooms)
     _draw_furniture(ax, furniture)
     _draw_doors(ax, rooms)
     _draw_windows(ax, rooms, boundary)
@@ -460,7 +529,7 @@ def _draw_room(ax: plt.Axes, room: Room, draw_edge: bool = True, furniture_polys
 
     ax.text(cx, cy, label, ha="center", va="center",
             fontsize=fontsize, fontweight="bold",
-            color="#333333",
+            color="#333333", zorder=3.6,
             bbox=dict(boxstyle="round,pad=0.2", facecolor="white",
                       alpha=0.7, edgecolor="none"))
 
