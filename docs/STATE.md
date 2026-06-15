@@ -3,7 +3,24 @@
 > Updated after every working session. If it doesn't reflect reality —
 > Claude updates immediately.
 >
-> **⮕ NEXT SESSION (Dawid 2026-06-14, koniec sesji po przeglądzie renderów):** podniesiona poprzeczka —
+> **⮕ NEXT SESSION (2026-06-15, koniec sesji S31b — branch `feat/sfh-open-plan-day-zone`, ~14 commitów + plany, NIE pushnięte):**
+> **KIERUNEK PRZEDEFINIOWANY: REGUŁY, NIE 1:1** (audyt 7 agentów + decyzja Dawida) — wzorce = nauczyciel + miarka regresji, nie cel pikselowy.
+> Spec `docs/superpowers/specs/2026-06-15-reguly-nie-1to1-plan-tygodnia-design.md`. Pamięć [[project_s31b_week_plan_rules_not_1to1]].
+> **ZROBIONE (Dni 1-4, każdy task spec+quality review na Opusie):** D1 klamp mebli do pokoju + poché ścian (rzut, nie diagram);
+> D2 schody zabiegowe (U switchback) domyślne + glif — `force_straight` ZDJĘTY (probe potwierdził U feasible); D3 prowenancja
+> refs_geo (tropie=vector_traced, 5×vision_approx — koniec strojenia do zmyślonej geometrii) + diagnostyka `stair_kind` + `room_iou`
+> (tropie baseline ≈0.15); D4 capy-bugi (garaż 22→34 był <ref-min!, master 17, kotłownia 9, schody 6) + fix overflow-leak stage-2b
+> (∝rozmiar po nocnych+suchych, day-cap invariant ZACHOWANY) + straight-core retry na parter UNKNOWN (perf U-rdzenia).
+> **D5 ODKRYCIE: gramatyka (day-zone open-plan / łańcuch wejścia / garaż-F6) JUŻ ~zbudowana** (day-zone ~95%, wyjątek F5 jawny
+> `cpsat_solver.py:531`; wejście działa; garaż spec istnieje + F6 exempt `wymaga_okna=false`) → to HARDEN, nie BUILD.
+> **BENCHMARK (16 proj `reference_plans_full`): 58.6/100, 15/16 gen (a2-2 FAIL).** Uczciwie: fix overflow D4 NIE ruszył MAPE
+> (wciąż 17-100%) — był CZĘŚCIOWY; **realny driver bloatu = sparse room-set → DENSYFIKACJA (odłożona) = brakujący lewar #1.**
+> POZYTYW: kolumna `stair_kind` = `u_winder/u_winder=1` na większości → winder D2 zwalidowany. **Luka pomiarowa: brak pre-D4
+> baseline na 16-korpusie — łapać MAPE-baseline PRZED następnym strojeniem.**
+> **NEXT:** (a) **DENSYFIKACJA room-setu** (więcej pokoi=więcej absorberów — realny fix MAPE; ryzyko perf/INFEASIBLE, parter gardło);
+> (b) fix a2-2; (c) harden gramatyki (rygor 'jak oryginały'); (d) smoke AC (czeka na AC Dawida). Plany Dni 1-4: `docs/superpowers/plans/2026-06-15-dzien{1,2,3,4}-*.md`.
+>
+> **Previously — NEXT SESSION (Dawid 2026-06-14, koniec sesji po przeglądzie renderów):** podniesiona poprzeczka —
 > **generować rzuty DOKŁADNIE jak oryginały** (ten sam obrys, to samo wejście, te same ściany wewn.+zewn.),
 > nie tylko wysoki benchmark. Pamięć [[feedback_match_originals_exactly]]. **PUNCH-LIST z przeglądu renderów:**
 > (1) **schody → ZABIEGOWE/2-BIEGOWE domyślnie, nie jednobiegowe** — `generate_house` wymusza
