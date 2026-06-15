@@ -160,12 +160,13 @@ def place_furniture(rooms: list[Room], boundary=None, low_zones=None) -> list[Fu
     return furnish_rooms(rooms, boundary, low_zones=low_zones).furniture
 
 
-def clamp_furniture(furniture: list, rooms: list, area_tol: float = 0.02):
+def clamp_furniture(furniture: list[Furniture], rooms: list[Room],
+                    area_tol: float = 0.02) -> tuple[list[Furniture], list[str]]:
     """Odrzuć meble wystające istotnie poza poligon pokoju-rodzica.
 
     Gwarancja defensywna: render i (w przyszłości) eksport AC dostają tę samą
     geometrię, w której ŻADEN mebel nie straddle'uje ściany. Mebel w 100% wewnątrz
-    przechodzi bez zmian; mebel z nadmiarem pola > max(1e-6, area_tol·pole) →
+    przechodzi bez zmian; mebel z nadmiarem pola > max(1e-6, area_tol·pole_mebla) →
     usunięty + warning. Zwraca (kept, warnings).
     """
     by_id = {r.spec.id: r.polygon for r in rooms if r.polygon is not None}

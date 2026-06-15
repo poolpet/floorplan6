@@ -425,6 +425,15 @@ def test_clamp_keeps_correctly_placed_furniture():
     assert kept == fs and not warns
 
 
+def test_clamp_keeps_furniture_without_matching_room():
+    # room_id bez pasującego pokoju → klamp "nie nasza sprawa", mebel zostaje
+    from core.furniture import clamp_furniture
+    room = _room("salon", Strefa.DZIENNA, 5.0, 4.0)
+    orphan = Furniture("sofa", box(0.2, 0.2, 2.6, 1.1), "nieistniejacy_pokoj", "Sofa")
+    kept, warns = clamp_furniture([orphan], [room])
+    assert orphan in kept and not warns
+
+
 def test_furnish_rooms_output_is_clamped():
     # furnish_rooms ma już zwracać meble po klampie (render/AC jedzą to samo)
     room = _room("sypialnia_1", Strefa.NOCNA, 4.0, 3.5)
