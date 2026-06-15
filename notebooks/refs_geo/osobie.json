@@ -1,0 +1,86 @@
+{
+  "name": "osobie",
+  "source_pdf_dir": "schematics/dataset_raw/domy jednorodzinne/osobie",
+  "units": "m",
+  "geometry_source": "vision_approx",
+  "areas_source": "table",
+  "extraction": "vision (Opus) z lancuchow wymiarowych PDF skala 1:50 + tabela 'Zestawienie pomieszczen' (kolumna 'Powierzchnia podlogi'); prior reference_plans_full.json (osobie). Obrys 1102x792 cm (stan surowy bez tynkow, 15 cm ocieplenia). Dom wolnostojacy jednorodzinny, parter ~65 m2 / poddasze ~60 m2; przedsionek/ganek od wejscia (poza obrysem, -0,30), open-plan day-zone (salon+kuchnia).",
+  "corpus_outline": [[0.0, 0.0], [11.02, 0.0], [11.02, 7.92], [0.0, 7.92]],
+  "wall_thickness_m": 0.37,
+  "storeys": [
+    {
+      "storey": "parter",
+      "source_pdf": "AB.1 RZUT PARTERU.pdf",
+      "outline": [[0.0, 0.0], [11.02, 0.0], [11.02, 7.92], [0.0, 7.92]],
+      "entry": {"point": [6.24, 0.0], "side": "east", "wall": "h"},
+      "stairs": {"kind": "u_winder", "footprint": [[5.45, 4.30], [7.03, 4.30], [7.03, 7.67], [5.45, 7.67]], "down": false},
+      "open_plan_day_zone": true,
+      "facade_sides": ["north", "south", "east", "west"],
+      "internal_walls": [],
+      "windows": [
+        {"seg": [[0.0, 4.6], [0.0, 6.3]], "room": "salon", "note": "okno zach. salonu (lewa elewacja szczytowa)"},
+        {"seg": [[0.0, 0.7], [0.0, 1.9]], "room": "kuchnia", "note": "okno zach. kuchni"},
+        {"seg": [[1.7, 7.92], [3.5, 7.92]], "room": "salon", "note": "okno pln. salonu/strefy dziennej (gora arkusza)"},
+        {"seg": [[1.7, 0.0], [3.0, 0.0]], "room": "kuchnia", "note": "okno pld. kuchni (dol arkusza)"},
+        {"seg": [[11.02, 0.8], [11.02, 2.4]], "room": "sypialnia", "note": "okno wsch. pokoju (05)"},
+        {"seg": [[8.2, 0.0], [9.6, 0.0]], "room": "sypialnia", "note": "okno pld. pokoju (05)"},
+        {"seg": [[11.02, 6.0], [11.02, 7.0]], "room": "kotlownia", "note": "male okno wsch. kotlowni (07)"}
+      ],
+      "rooms": [
+        {"id": "salon", "label": "Salon + jadalnia (strefa dzienna)", "polygon": [[0.25, 3.22], [5.33, 3.22], [5.33, 7.67], [0.25, 7.67]], "area_m2": 22.6, "on_facade": true},
+        {"id": "kuchnia", "label": "Kuchnia", "polygon": [[0.25, 0.25], [5.33, 0.25], [5.33, 2.22], [0.25, 2.22]], "area_m2": 10.0, "on_facade": true},
+        {"id": "wiatrolap", "label": "Przedsionek", "polygon": [[5.45, 0.25], [7.03, 0.25], [7.03, 2.46], [5.45, 2.46]], "area_m2": 3.5, "on_facade": true},
+        {"id": "hol", "label": "Komunikacja", "polygon": [[5.45, 2.46], [7.03, 2.46], [7.03, 4.30], [7.27, 4.30], [7.27, 4.53], [10.77, 4.53], [10.77, 2.62], [7.27, 2.62], [7.27, 2.46]], "area_m2": 5.7, "on_facade": false},
+        {"id": "spizarnia", "label": "Spizarka (pod schodami)", "polygon": [[5.45, 4.30], [7.03, 4.30], [7.03, 7.67], [5.45, 7.67]], "area_m2": 5.3, "on_facade": false},
+        {"id": "sypialnia", "label": "Pokoj (05)", "polygon": [[7.27, 0.25], [10.77, 0.25], [10.77, 2.62], [7.27, 2.62]], "area_m2": 8.3, "on_facade": true},
+        {"id": "lazienka", "label": "Lazienka (06)", "polygon": [[7.27, 4.53], [10.77, 4.53], [10.77, 5.67], [7.27, 5.67]], "area_m2": 4.0, "on_facade": false},
+        {"id": "kotlownia", "label": "Kotlownia (07)", "polygon": [[7.27, 5.67], [10.77, 5.67], [10.77, 7.27], [7.27, 7.27]], "area_m2": 5.6, "on_facade": true}
+      ],
+      "doors": [
+        {"between": ["__outside__", "wiatrolap"], "point": [6.24, 0.0], "wall": "h", "type": "entry", "swing": 1},
+        {"between": ["wiatrolap", "hol"], "point": [6.24, 2.46], "wall": "h", "swing": 1},
+        {"between": ["hol", "salon"], "point": [5.45, 3.3], "wall": "v", "type": "opening"},
+        {"between": ["salon", "kuchnia"], "point": [2.8, 2.40], "wall": "h", "type": "opening"},
+        {"between": ["hol", "spizarnia"], "point": [6.24, 4.30], "wall": "h", "swing": 1},
+        {"between": ["hol", "sypialnia"], "point": [8.4, 2.62], "wall": "h", "swing": 1},
+        {"between": ["hol", "lazienka"], "point": [8.4, 4.53], "wall": "h", "swing": -1},
+        {"between": ["hol", "kotlownia"], "point": [7.27, 6.4], "wall": "v", "swing": 1}
+      ]
+    },
+    {
+      "storey": "poddasze",
+      "source_pdf": "AB.2 RZUT PODDASZA.pdf",
+      "outline": [[0.0, 0.0], [11.02, 0.0], [11.02, 7.92], [0.0, 7.92]],
+      "entry": null,
+      "stairs": {"kind": "u_winder", "footprint": [[5.13, 4.50], [7.15, 4.50], [7.15, 7.67], [5.13, 7.67]], "down": true},
+      "open_plan_day_zone": false,
+      "roof_knee_wall": true,
+      "facade_sides": ["north", "south", "east", "west"],
+      "internal_walls": [],
+      "windows": [
+        {"seg": [[0.0, 4.9], [0.0, 7.2]], "room": "sypialnia_11", "note": "okno zach. szczytowe 110x230 hp0 (Pokoj 11)"},
+        {"seg": [[0.0, 0.8], [0.0, 3.1]], "room": "master_sypialnia", "note": "okno zach. szczytowe 110x230 hp0 (Pokoj 12)"},
+        {"seg": [[11.02, 0.8], [11.02, 3.1]], "room": "sypialnia_13", "note": "okno wsch. szczytowe 110x230 hp0 (Pokoj 13)"},
+        {"seg": [[8.2, 7.92], [9.4, 7.92]], "room": "lazienka", "note": "okno polaciowe pln. 78x118 (Lazienka 14)"},
+        {"seg": [[5.7, 0.0], [6.9, 0.0]], "room": "garderoba", "note": "okno polaciowe pld. 78x118 (Garderoba 16)"},
+        {"seg": [[1.5, 7.92], [2.7, 7.92]], "room": "sypialnia_11", "note": "okno polaciowe pln. 78x118 (Pokoj 11)"},
+        {"seg": [[1.5, 0.0], [2.7, 0.0]], "room": "master_sypialnia", "note": "okno polaciowe pld. 78x118 (Pokoj 12)"}
+      ],
+      "rooms": [
+        {"id": "sypialnia_11", "label": "Pokoj 11 (pln.-zach.)", "polygon": [[0.25, 4.58], [4.88, 4.58], [4.88, 7.67], [0.25, 7.67]], "area_m2": 14.3, "on_facade": true},
+        {"id": "master_sypialnia", "label": "Pokoj 12 (pld.-zach., master)", "polygon": [[0.25, 0.25], [4.88, 0.25], [4.88, 3.49], [0.25, 3.49]], "area_m2": 15.0, "on_facade": true},
+        {"id": "garderoba", "label": "Garderoba (16)", "polygon": [[5.13, 0.25], [7.15, 0.25], [7.15, 3.12], [5.13, 3.12]], "area_m2": 5.8, "on_facade": true},
+        {"id": "podest", "label": "Komunikacja (15, podest)", "polygon": [[5.13, 4.50], [7.15, 4.50], [7.15, 7.67], [5.13, 7.67]], "area_m2": 6.4, "on_facade": false},
+        {"id": "lazienka", "label": "Lazienka (14)", "polygon": [[7.40, 5.31], [10.45, 5.31], [10.45, 7.67], [7.40, 7.67]], "area_m2": 7.2, "on_facade": true},
+        {"id": "sypialnia_13", "label": "Pokoj 13 (pld.-wsch.)", "polygon": [[7.40, 0.25], [10.45, 0.25], [10.45, 3.99], [7.40, 3.99]], "area_m2": 11.4, "on_facade": true}
+      ],
+      "doors": [
+        {"between": ["podest", "sypialnia_11"], "point": [5.13, 5.5], "wall": "v", "swing": 1},
+        {"between": ["podest", "master_sypialnia"], "point": [5.0, 3.49], "wall": "h", "swing": 1},
+        {"between": ["podest", "garderoba"], "point": [6.1, 3.12], "wall": "h", "swing": -1},
+        {"between": ["podest", "lazienka"], "point": [7.15, 5.8], "wall": "v", "swing": -1},
+        {"between": ["podest", "sypialnia_13"], "point": [7.15, 3.5], "wall": "v", "swing": 1}
+      ]
+    }
+  ]
+}

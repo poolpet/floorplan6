@@ -1,0 +1,77 @@
+{
+  "name": "rogoznik",
+  "source_pdf_dir": "schematics/dataset_raw/domy jednorodzinne/rogoźnik",
+  "units": "m",
+  "geometry_source": "vision_approx",
+  "areas_source": "table",
+  "extraction": "vision (Opus) z lancuchow wymiarowych PDF, skala 1:50; tabelki powierzchni w arkuszu (parter: pokoj dzienny 24.34, kuchnia 6.00, lazienka 3.93, pom.gosp 3.47, kom/schody 5.99; poddasze: 3x pokoj 12.52/11.58/10.28, lazienka 4.97, kom/schody 3.18). Poligony kafelkuja wnetrze (gaps=sciany), wiec area_m2 z poligonow sa nieco wieksze od czystej powierzchni z tabeli (pol grubosci scian).",
+  "corpus_outline": [[0.0, 0.0], [7.0, 0.0], [7.0, 9.0], [0.0, 9.0]],
+  "wall_thickness_m": 0.37,
+  "storeys": [
+    {
+      "storey": "parter",
+      "source_pdf": "A.06 RZUT PARTERU.pdf",
+      "outline": [[0.0, 0.0], [7.0, 0.0], [7.0, 9.0], [0.0, 9.0]],
+      "entry": {"point": [3.20, 0.0], "side": "south", "wall": "h"},
+      "stairs": {"kind": "u_winder", "footprint": [[2.0, 2.13], [3.95, 2.13], [3.95, 5.20], [2.0, 5.20]], "down": false},
+      "open_plan_day_zone": true,
+      "facade_sides": ["north", "south", "east", "west"],
+      "internal_walls": [],
+      "windows": [
+        {"seg": [[2.9, 9.0], [5.7, 9.0]], "room": "pokoj_dzienny", "note": "okno/przeszklenie pln. (280) strefy dziennej"},
+        {"seg": [[6.63, 3.4], [6.63, 4.6]], "room": "kuchnia", "note": "okno wsch. kuchni (90/120)"},
+        {"seg": [[0.7, 0.0], [1.6, 0.0]], "room": "pom_gosp", "note": "okno pld. pom. gospodarczego (90/120)"},
+        {"seg": [[4.6, 0.0], [5.5, 0.0]], "room": "lazienka", "note": "okno pld. lazienki (90/120)"}
+      ],
+      "rooms": [
+        {"id": "pokoj_dzienny", "label": "Pokoj dzienny (salon+jadalnia, strefa dzienna)", "polygon": [[0.37, 2.50], [0.37, 8.63], [6.63, 8.63], [6.63, 4.50], [3.95, 4.50], [3.95, 5.20], [2.0, 5.20], [2.0, 2.50]], "area_m2": 27.75, "on_facade": true},
+        {"id": "kuchnia", "label": "Kuchnia (otwarta na strefe dzienna)", "polygon": [[3.95, 2.13], [6.63, 2.13], [6.63, 4.50], [3.95, 4.50]], "area_m2": 6.35, "on_facade": true},
+        {"id": "schody", "label": "Schody / komunikacja (Kom)", "polygon": [[2.0, 2.13], [3.95, 2.13], [3.95, 5.20], [2.0, 5.20]], "area_m2": 5.99, "on_facade": false},
+        {"id": "wiatrolap", "label": "Wiatrolap / hol wejsciowy (P)", "polygon": [[2.0, 0.37], [4.40, 0.37], [4.40, 2.13], [2.0, 2.13]], "area_m2": 4.22, "on_facade": true},
+        {"id": "pom_gosp", "label": "Pomieszczenie gospodarcze", "polygon": [[0.37, 0.37], [2.0, 0.37], [2.0, 2.50], [0.37, 2.50]], "area_m2": 3.47, "on_facade": true},
+        {"id": "lazienka", "label": "Lazienka parter (WC + prysznic)", "polygon": [[4.40, 0.37], [6.63, 0.37], [6.63, 2.13], [4.40, 2.13]], "area_m2": 3.92, "on_facade": true}
+      ],
+      "doors": [
+        {"between": ["__outside__", "wiatrolap"], "point": [3.20, 0.0], "wall": "h", "type": "entry", "swing": 1},
+        {"between": ["wiatrolap", "schody"], "point": [2.97, 2.13], "wall": "h", "swing": 1},
+        {"between": ["wiatrolap", "lazienka"], "point": [4.40, 1.25], "wall": "v", "swing": -1},
+        {"between": ["wiatrolap", "pom_gosp"], "point": [2.0, 1.43], "wall": "v", "swing": 1},
+        {"between": ["schody", "pokoj_dzienny"], "point": [2.97, 5.20], "wall": "h", "type": "opening"},
+        {"between": ["kuchnia", "pokoj_dzienny"], "point": [5.30, 4.50], "wall": "h", "type": "opening"}
+      ]
+    },
+    {
+      "storey": "poddasze",
+      "source_pdf": "A.07 RZUT PODDASZA.pdf",
+      "outline": [[0.0, 0.0], [7.0, 0.0], [7.0, 9.0], [0.0, 9.0]],
+      "roof_knee_wall": true,
+      "entry": null,
+      "stairs": {"kind": "u_winder", "footprint": [[2.18, 0.37], [3.62, 0.37], [3.62, 4.49], [2.18, 4.49]], "down": true},
+      "open_plan_day_zone": false,
+      "facade_sides": ["north", "south", "east", "west"],
+      "internal_walls": [],
+      "windows": [
+        {"seg": [[2.3, 9.0], [3.25, 9.0]], "room": "pokoj_nw", "note": "okno pln. (95/220)"},
+        {"seg": [[4.2, 9.0], [5.15, 9.0]], "room": "pokoj_ne", "note": "okno pln. (95/220)"},
+        {"seg": [[0.0, 4.6], [0.0, 6.8]], "room": "pokoj_nw", "note": "okno zach. (120/90)"},
+        {"seg": [[6.63, 5.0], [6.63, 7.2]], "room": "pokoj_ne", "note": "okno wsch. (120/90)"},
+        {"seg": [[6.63, 1.5], [6.63, 3.7]], "room": "pokoj_se", "note": "okno wsch. (205/80)"},
+        {"seg": [[0.9, 0.0], [1.8, 0.0]], "room": "lazienka", "note": "okno pld. lazienki (90/120)"},
+        {"seg": [[4.5, 0.0], [5.4, 0.0]], "room": "pokoj_se", "note": "okno pld. (90/210)"}
+      ],
+      "rooms": [
+        {"id": "pokoj_nw", "label": "Pokoj (sypialnia pln.-zach.)", "polygon": [[0.37, 4.49], [3.62, 4.49], [3.62, 8.63], [0.37, 8.63]], "area_m2": 13.46, "on_facade": true},
+        {"id": "pokoj_ne", "label": "Pokoj (sypialnia pln.-wsch.)", "polygon": [[3.99, 4.49], [6.63, 4.49], [6.63, 8.63], [3.99, 8.63]], "area_m2": 10.93, "on_facade": true},
+        {"id": "pokoj_se", "label": "Pokoj (sypialnia pld.-wsch.)", "polygon": [[3.99, 0.37], [6.63, 0.37], [6.63, 4.49], [3.99, 4.49]], "area_m2": 10.88, "on_facade": true},
+        {"id": "lazienka", "label": "Lazienka poddasza (wanna + WC)", "polygon": [[0.37, 0.37], [2.18, 0.37], [2.18, 3.12], [0.37, 3.12]], "area_m2": 4.98, "on_facade": true},
+        {"id": "schody", "label": "Schody / podest (Kom)", "polygon": [[2.18, 0.37], [3.62, 0.37], [3.62, 4.49], [0.37, 4.49], [0.37, 3.12], [2.18, 3.12]], "area_m2": 8.41, "on_facade": false}
+      ],
+      "doors": [
+        {"between": ["schody", "pokoj_nw"], "point": [2.90, 4.49], "wall": "h", "swing": 1},
+        {"between": ["schody", "pokoj_ne"], "point": [3.62, 5.20], "wall": "v", "swing": 1},
+        {"between": ["schody", "pokoj_se"], "point": [3.62, 2.10], "wall": "v", "swing": 1},
+        {"between": ["schody", "lazienka"], "point": [2.18, 1.75], "wall": "v", "swing": -1}
+      ]
+    }
+  ]
+}

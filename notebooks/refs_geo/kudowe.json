@@ -1,0 +1,84 @@
+{
+  "name": "kudowe",
+  "source_pdf_dir": "schematics/dataset_raw/domy jednorodzinne/kudowe",
+  "units": "m",
+  "geometry_source": "vision_approx",
+  "areas_source": "table",
+  "extraction": "vision (Opus) z renderu PDF + lancuchow wymiarowych, skala 1:50. BLIZNIAK 2 lustrzane lokale (korpus 1646x886 cm); modelowany JEDEN segment ~8.23x8.86 m. Sciana wspolna = WEWNETRZNA (prawa/wsch. krawedz, bez okien). Powierzchnie z TABELI w arkuszu (RZUT PARTERU: Korytarz 6.48 / Kotlownia 7.16 / Kuchnia 11.50 / Pokoj dzienny 35.71 / WC 1.66; RZUT PODDASZA: Korytarz 6.59 / Schowek 2.97 / Sypialnia 12.69 / 12.84 / 13.26 / Lazienka 6.60; suma lokalu 117.46 m2). UWAGA: tabela na renderze rozni sie od area_m2 priora (prior mial wersje 56.27/48.89) — przyjeto wartosci WIDOCZNE w tabeli arkusza.",
+  "corpus_outline": [[0.0, 0.0], [8.23, 0.0], [8.23, 8.86], [0.0, 8.86]],
+  "wall_thickness_m": 0.37,
+  "storeys": [
+    {
+      "storey": "parter",
+      "source_pdf": "A.1 Parter.pdf",
+      "outline": [[0.0, 0.0], [8.23, 0.0], [8.23, 8.86], [0.0, 8.86]],
+      "entry": {"point": [5.4, 0.0], "side": "south", "wall": "h"},
+      "stairs": {"kind": "u_winder", "footprint": [[5.5, 3.2], [7.86, 3.2], [7.86, 6.4], [5.5, 6.4]], "down": false},
+      "open_plan_day_zone": true,
+      "roof_knee_wall": false,
+      "facade_sides": ["north", "south", "west"],
+      "internal_walls": [
+        {"seg": [[8.23, 0.0], [8.23, 8.86]]}
+      ],
+      "windows": [
+        {"seg": [[0.0, 5.6], [0.0, 7.4]], "room": "salon", "note": "okno zach. jadalni (strefa dzienna)"},
+        {"seg": [[1.4, 8.86], [2.6, 8.86]], "room": "salon", "note": "okno pln. salonu"},
+        {"seg": [[3.4, 8.86], [4.6, 8.86]], "room": "salon", "note": "okno pln. salonu"},
+        {"seg": [[0.0, 2.3], [0.0, 3.6]], "room": "kuchnia", "note": "okno zach. kuchni"},
+        {"seg": [[1.1, 0.0], [2.3, 0.0]], "room": "kuchnia", "note": "okno pld. kuchni"},
+        {"seg": [[3.0, 0.0], [4.0, 0.0]], "room": "korytarz", "note": "okno pld. przy wejsciu"}
+      ],
+      "rooms": [
+        {"id": "kuchnia", "label": "Kuchnia", "polygon": [[0.37, 0.37], [3.55, 0.37], [3.55, 3.95], [0.37, 3.95]], "area_m2": 11.5, "on_facade": true},
+        {"id": "salon", "label": "Pokoj dzienny (salon+jadalnia)", "polygon": [[0.37, 3.95], [6.4, 3.95], [6.4, 5.1], [7.86, 5.1], [7.86, 8.49], [0.37, 8.49]], "area_m2": 35.71, "on_facade": true},
+        {"id": "korytarz", "label": "Korytarz", "polygon": [[3.55, 0.37], [5.3, 0.37], [5.3, 3.95], [3.55, 3.95]], "area_m2": 6.48, "on_facade": true},
+        {"id": "wc", "label": "WC", "polygon": [[6.4, 3.95], [7.86, 3.95], [7.86, 5.1], [6.4, 5.1]], "area_m2": 1.66, "on_facade": false},
+        {"id": "kotlownia", "label": "Kotlownia", "polygon": [[5.3, 0.37], [7.86, 0.37], [7.86, 3.2], [5.3, 3.2]], "area_m2": 7.16, "on_facade": false}
+      ],
+      "doors": [
+        {"between": ["__outside__", "korytarz"], "point": [4.2, 0.0], "wall": "h", "type": "entry", "swing": 1},
+        {"between": ["korytarz", "kuchnia"], "point": [3.1, 2.2], "wall": "v", "swing": 1},
+        {"between": ["korytarz", "salon"], "point": [4.2, 4.6], "wall": "h", "type": "opening"},
+        {"between": ["korytarz", "kotlownia"], "point": [5.3, 1.6], "wall": "v", "swing": 1},
+        {"between": ["korytarz", "wc"], "point": [5.5, 5.9], "wall": "v", "swing": -1},
+        {"between": ["kuchnia", "salon"], "point": [1.7, 4.6], "wall": "h", "type": "opening"}
+      ]
+    },
+    {
+      "storey": "poddasze",
+      "source_pdf": "A.2 Poddasze.pdf",
+      "outline": [[0.0, 0.0], [8.23, 0.0], [8.23, 8.86], [0.0, 8.86]],
+      "entry": null,
+      "stairs": {"kind": "u_winder", "footprint": [[5.5, 3.2], [7.86, 3.2], [7.86, 6.4], [5.5, 6.4]], "down": true},
+      "open_plan_day_zone": false,
+      "roof_knee_wall": true,
+      "facade_sides": ["north", "south", "west"],
+      "internal_walls": [
+        {"seg": [[8.23, 0.0], [8.23, 8.86]]}
+      ],
+      "windows": [
+        {"seg": [[0.0, 5.7], [0.0, 7.3]], "room": "sypialnia_1", "note": "okno zach. sypialni pln.-zach."},
+        {"seg": [[1.4, 8.86], [2.6, 8.86]], "room": "sypialnia_1", "note": "okno pln."},
+        {"seg": [[3.6, 8.86], [4.8, 8.86]], "room": "sypialnia_2", "note": "okno pln. sypialni srodkowej"},
+        {"seg": [[0.0, 1.3], [0.0, 2.9]], "room": "sypialnia_3", "note": "okno zach. sypialni pld.-zach."},
+        {"seg": [[1.4, 0.0], [2.6, 0.0]], "room": "sypialnia_3", "note": "okno pld."},
+        {"seg": [[3.4, 0.0], [4.6, 0.0]], "room": "lazienka", "note": "okno pld. lazienki"}
+      ],
+      "rooms": [
+        {"id": "sypialnia_1", "label": "Sypialnia", "polygon": [[0.37, 4.4], [3.45, 4.4], [3.45, 8.49], [0.37, 8.49]], "area_m2": 12.84, "on_facade": true},
+        {"id": "sypialnia_2", "label": "Sypialnia", "polygon": [[3.45, 4.4], [5.5, 4.4], [5.5, 6.5], [7.86, 6.5], [7.86, 8.49], [3.45, 8.49]], "area_m2": 13.26, "on_facade": true},
+        {"id": "sypialnia_3", "label": "Sypialnia", "polygon": [[0.37, 0.37], [3.6, 0.37], [3.6, 4.4], [0.37, 4.4]], "area_m2": 12.69, "on_facade": true},
+        {"id": "korytarz", "label": "Korytarz / podest", "polygon": [[3.6, 2.2], [5.5, 2.2], [5.5, 5.6], [3.45, 5.6], [3.45, 4.4], [3.6, 4.4]], "area_m2": 6.59, "on_facade": false},
+        {"id": "schowek", "label": "Schowek", "polygon": [[3.6, 0.37], [5.5, 0.37], [5.5, 2.2], [3.6, 2.2]], "area_m2": 2.97, "on_facade": false},
+        {"id": "lazienka", "label": "Lazienka", "polygon": [[5.5, 0.37], [7.86, 0.37], [7.86, 3.2], [5.5, 3.2]], "area_m2": 6.6, "on_facade": true}
+      ],
+      "doors": [
+        {"between": ["korytarz", "sypialnia_2"], "point": [4.4, 4.5], "wall": "h", "swing": 1},
+        {"between": ["korytarz", "sypialnia_1"], "point": [3.45, 3.8], "wall": "v", "swing": 1},
+        {"between": ["korytarz", "schowek"], "point": [5.5, 3.8], "wall": "v", "swing": -1},
+        {"between": ["korytarz", "lazienka"], "point": [4.4, 3.0], "wall": "h", "swing": -1},
+        {"between": ["korytarz", "sypialnia_3"], "point": [3.45, 3.6], "wall": "v", "swing": -1}
+      ]
+    }
+  ]
+}

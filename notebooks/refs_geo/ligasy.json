@@ -1,0 +1,78 @@
+{
+  "name": "ligasy",
+  "source_pdf_dir": "schematics/dataset_raw/domy jednorodzinne/ligasy",
+  "units": "m",
+  "geometry_source": "vision_approx",
+  "areas_source": "table",
+  "extraction": "vision + wektory PDF (pymupdf get_drawings/get_text, skala 1:50). Obrys i osie scian odczytane z linii rysunku; skala kalibrowana wymiarem 600 cm na szerokosci (340 px) i 800 cm na wysokosci parteru. Powierzchnie z DRUKOWANEJ tabeli pomieszczen (autorytatywne); poligony kafelkuja wnetrze i sa blisko tabeli. Brak rozy wiatrow -> dol arkusza = poludnie.",
+  "corpus_outline": [[0.0, 0.0], [6.0, 0.0], [6.0, 8.0], [0.0, 8.0]],
+  "wall_thickness_m": 0.37,
+  "storeys": [
+    {
+      "storey": "parter",
+      "source_pdf": "A.02.1 Parter.pdf",
+      "outline": [[0.0, 0.0], [6.0, 0.0], [6.0, 8.0], [0.0, 8.0]],
+      "entry": {"point": [0.0, 3.5], "side": "west", "wall": "v"},
+      "stairs": {"kind": "l_winder", "footprint": [[3.32, 2.55], [4.92, 2.55], [4.92, 4.58], [3.32, 4.58]], "down": false},
+      "open_plan_day_zone": true,
+      "roof_knee_wall": false,
+      "facade_sides": ["north", "south", "east", "west"],
+      "internal_walls": [],
+      "windows": [
+        {"seg": [[1.4, 8.0], [3.6, 8.0]], "room": "salon", "note": "duze przeszklenie/okno pln. strefy dziennej (dashed 600 u gory)"},
+        {"seg": [[4.2, 8.0], [5.3, 8.0]], "room": "salon", "note": "okno pln. aneksu kuchennego"},
+        {"seg": [[6.0, 5.2], [6.0, 6.6]], "room": "salon", "note": "okno wsch. strefy dziennej"},
+        {"seg": [[0.0, 2.4], [0.0, 3.0]], "room": "wiatrolap", "note": "doswietlenie zach. przy wejsciu"},
+        {"seg": [[0.7, 0.0], [1.7, 0.0]], "room": "pom_tech", "note": "okno pld. pom. technicznego"},
+        {"seg": [[3.5, 0.0], [4.5, 0.0]], "room": "lazienka", "note": "okno pld. lazienki"}
+      ],
+      "rooms": [
+        {"id": "salon", "label": "Pokoj dzienny + aneks kuchenny (strefa dzienna)", "polygon": [[0.48, 4.58], [5.52, 4.58], [5.52, 7.53], [0.48, 7.53]], "area_m2": 15.48, "on_facade": true},
+        {"id": "wiatrolap", "label": "Wiatrolap", "polygon": [[0.48, 2.66], [2.10, 2.66], [2.10, 4.58], [0.48, 4.58]], "area_m2": 3.01, "on_facade": true},
+        {"id": "pom_tech", "label": "Pom. techniczne", "polygon": [[0.48, 0.47], [2.10, 0.47], [2.10, 2.66], [0.48, 2.66]], "area_m2": 4.12, "on_facade": true},
+        {"id": "korytarz", "label": "Korytarz", "polygon": [[2.10, 0.47], [3.32, 0.47], [3.32, 4.58], [2.10, 4.58]], "area_m2": 4.15, "on_facade": false},
+        {"id": "lazienka", "label": "Lazienka", "polygon": [[3.32, 0.47], [5.52, 0.47], [5.52, 2.55], [3.32, 2.55]], "area_m2": 4.55, "on_facade": true},
+        {"id": "schowek", "label": "Schowek (pod schodami)", "polygon": [[4.92, 2.55], [5.52, 2.55], [5.52, 4.58], [4.92, 4.58]], "area_m2": 3.07, "on_facade": true}
+      ],
+      "doors": [
+        {"between": ["__outside__", "wiatrolap"], "point": [0.0, 3.5], "wall": "v", "type": "entry", "swing": 1},
+        {"between": ["wiatrolap", "korytarz"], "point": [2.10, 3.6], "wall": "v", "swing": 1},
+        {"between": ["korytarz", "pom_tech"], "point": [2.10, 1.6], "wall": "v", "swing": -1},
+        {"between": ["korytarz", "salon"], "point": [2.7, 4.58], "wall": "h", "type": "opening"},
+        {"between": ["korytarz", "lazienka"], "point": [3.32, 1.5], "wall": "v", "swing": 1},
+        {"between": ["korytarz", "schowek"], "point": [3.9, 4.58], "wall": "h", "swing": 1}
+      ]
+    },
+    {
+      "storey": "poddasze",
+      "source_pdf": "A.02.2 Poddasze.pdf",
+      "outline": [[0.0, 0.0], [6.0, 0.0], [6.0, 7.58], [0.0, 7.58]],
+      "entry": null,
+      "stairs": {"kind": "l_winder", "footprint": [[4.34, 2.34], [6.0, 2.34], [6.0, 4.25], [4.34, 4.25]], "down": true},
+      "open_plan_day_zone": false,
+      "roof_knee_wall": true,
+      "facade_sides": ["north", "south", "east", "west"],
+      "internal_walls": [],
+      "windows": [
+        {"seg": [[2.0, 7.58], [3.4, 7.58]], "room": "sypialnia", "note": "okno pln. (lukarna) sypialni"},
+        {"seg": [[0.0, 5.0], [0.0, 6.2]], "room": "sypialnia", "note": "okno zach. sypialni"},
+        {"seg": [[0.0, 1.2], [0.0, 2.6]], "room": "pokoj_1", "note": "okno zach. pokoju 1"},
+        {"seg": [[1.6, 0.0], [2.4, 0.0]], "room": "pokoj_1", "note": "okno pld. pokoju 1"},
+        {"seg": [[3.8, 0.0], [4.6, 0.0]], "room": "pokoj_2", "note": "okno pld. pokoju 2"}
+      ],
+      "rooms": [
+        {"id": "sypialnia", "label": "Sypialnia (master)", "polygon": [[0.21, 4.25], [5.54, 4.25], [5.54, 7.32], [0.21, 7.32]], "area_m2": 12.73, "on_facade": true},
+        {"id": "pokoj_1", "label": "Pokoj 1", "polygon": [[0.21, 0.26], [2.57, 0.26], [2.57, 4.25], [0.21, 4.25]], "area_m2": 7.00, "on_facade": true},
+        {"id": "pokoj_2", "label": "Pokoj 2", "polygon": [[2.57, 0.26], [4.34, 0.26], [4.34, 2.34], [2.57, 2.34]], "area_m2": 5.02, "on_facade": true},
+        {"id": "hol", "label": "Hol / podest", "polygon": [[2.57, 2.34], [4.34, 2.34], [4.34, 4.25], [2.57, 4.25]], "area_m2": 3.38, "on_facade": false},
+        {"id": "schowek", "label": "Schowek (pod skosem)", "polygon": [[4.34, 0.26], [5.54, 0.26], [5.54, 2.34], [4.34, 2.34]], "area_m2": 2.50, "on_facade": true}
+      ],
+      "doors": [
+        {"between": ["hol", "sypialnia"], "point": [3.4, 4.25], "wall": "h", "swing": 1},
+        {"between": ["hol", "pokoj_1"], "point": [2.57, 3.4], "wall": "v", "swing": -1},
+        {"between": ["hol", "pokoj_2"], "point": [3.2, 2.34], "wall": "h", "swing": -1},
+        {"between": ["hol", "schowek"], "point": [4.34, 1.3], "wall": "v", "swing": 1}
+      ]
+    }
+  ]
+}
