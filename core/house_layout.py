@@ -390,6 +390,8 @@ def generate_house(polygon: Polygon, entry_point: tuple[float, float],
     _bw = boundary.bbox[2] - boundary.bbox[0]
     _bh = boundary.bbox[3] - boundary.bbox[1]
     _csw, _csh, stair_kind = _stair_core_dims(_bw, _bh)
+    core_straight = _reserve_core(boundary.bbox, entry_point, force_straight=True,
+                                  notch=boundary.notch)
     pietro_tpl0 = _template("house_pietro")
     if pietro_tpl0 is None:
         return TwoStoreyLayout(ok=False, message="Brak szablonu house_pietro.")
@@ -425,6 +427,17 @@ def generate_house(polygon: Polygon, entry_point: tuple[float, float],
                            stair_room_id="schody", hub_at_entry=True,
                            l_capable_ids={"hub"}, entry_room_id="wiatrolap",
                            external_bathroom_id="lazienka")
+    # Perf (S31b D4): U-rdzeń (5.76 m²) cięższy dla solvera parteru niż straight (4.62).
+    # Gdy parter z U = UNKNOWN/INFEASIBLE, ponów ze STRAIGHT rdzeniem (lżejszy packing)
+    # DLA OBU kondygnacji (pin schodów musi się pokrywać pionowo). Lżejszy, nie dłuższy.
+    if stair_kind == "u" and r_parter.status not in ("OPTIMAL", "FEASIBLE"):
+        core = core_straight
+        stair_kind = "straight"
+        r_parter = solve_cpsat(parter_tpl, boundary, time_limit_s=time_limit_s,
+                               reserved_core=core, program_config=parter_cfg,
+                               stair_room_id="schody", hub_at_entry=True,
+                               l_capable_ids={"hub"}, entry_room_id="wiatrolap",
+                               external_bathroom_id="lazienka")
     # Best-effort sypialni parteru (S30c, decyzja Dawida): na CIASNYM modalnym obrysie
     # (~88 m²) parter 8-pok z sypialnią to loteria perf (sonda parter8_bedroom_probe:
     # ~50% @60s; obrysy ≥~100 m² = 4/4 niezawodne). Gdy parter z sypialnią =

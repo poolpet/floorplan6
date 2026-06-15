@@ -177,3 +177,14 @@ def test_elongated_house_keeps_straight_kind():
     layout = _gen(12.0, 8.0, (6.0, 0.0))   # aspect 1.5 > 1.4 → straight
     assert layout.ok, layout.message
     assert layout.stair_kind == "straight"
+
+
+def test_winder_unknown_falls_back_to_straight_core():
+    """Perf retry: gdy U-parter nie zdąży w krótkim limicie, dom i tak się generuje
+    (straight-core retry). Niedeterministyczne — sprawdzamy ok=True, nie konkretny kind."""
+    from shapely.geometry import Polygon
+    from core.house_layout import generate_house
+    layout = generate_house(Polygon([(0, 0), (10, 0), (10, 8), (0, 8)]), (5.0, 0.0),
+                            time_limit_s=15.0)
+    assert layout.ok, layout.message
+    assert layout.stair_kind in ("u", "straight")
