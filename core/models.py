@@ -206,6 +206,7 @@ class Room:
     width: float = 0.0
     depth: float = 0.0
     proportion: float = 1.0
+    stair_kind: Optional[str] = None   # 'u'/'straight' tylko dla pokoju 'schody'; inaczej None
 
     def update_metrics(self):
         """Przelicz metryki z polygonu."""

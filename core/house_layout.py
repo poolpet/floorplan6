@@ -132,6 +132,7 @@ class TwoStoreyLayout:
     parter_rooms: list[Room] = field(default_factory=list)
     pietro_rooms: list[Room] = field(default_factory=list)
     stair_core: tuple[float, float, float, float] = (0.0, 0.0, STAIR_W, STAIR_H)
+    stair_kind: str = "straight"   # 'u' (zabiegowe) / 'straight' — wg proporcji obrysu
     boundary: object = None
     # (S27, wycofane w S29) boundary pasa poddasza — zostaje dla back-compat, zawsze None.
     attic_boundary: object = None
@@ -381,10 +382,14 @@ def generate_house(polygon: Polygon, entry_point: tuple[float, float],
         return TwoStoreyLayout(ok=False,
             message=f"Obrys {polygon.area:.0f} m2 za maly na program domu (min ~{MIN_STOREY_AREA:.0f} m2/kondygnacje).")
     boundary = analyze_boundary(polygon, entry_point=entry_point)
-    # Knee-wall (S26): bieg prosty wzdłuż kalenicy — patrz _stair_core_dims(force_straight).
-    # S30: notch-aware — dla L rdzeń ląduje przy wklęsłym narożniku, nie w wcięciu.
-    core = _reserve_core(boundary.bbox, entry_point, force_straight=True,
-                         notch=boundary.notch)
+    # Winder default (S31b): force_straight ZDJĘTY. Po knee-wall v2 poddasze ma pełny
+    # footprint i schody są zwolnione ze strefy niskiej ścianki, więc U-rdzeń jest
+    # wykonalny (probe: parter FEASIBLE vs straight UNKNOWN na 88/130 m²). Obrysy aspect
+    # > STAIR_ASPECT_THRESHOLD i tak dostają bieg prosty. S30: notch-aware (róg przeciwny wcięciu).
+    core = _reserve_core(boundary.bbox, entry_point, notch=boundary.notch)
+    _bw = boundary.bbox[2] - boundary.bbox[0]
+    _bh = boundary.bbox[3] - boundary.bbox[1]
+    _csw, _csh, stair_kind = _stair_core_dims(_bw, _bh)
     pietro_tpl0 = _template("house_pietro")
     if pietro_tpl0 is None:
         return TwoStoreyLayout(ok=False, message="Brak szablonu house_pietro.")
@@ -444,6 +449,11 @@ def generate_house(polygon: Polygon, entry_point: tuple[float, float],
     if r_parter.status not in ("OPTIMAL", "FEASIBLE") or r_pietro.status not in ("OPTIMAL", "FEASIBLE"):
         return TwoStoreyLayout(ok=False,
             message=f"Solver nie znalazl ukladu (parter={r_parter.status}, pietro={r_pietro.status}).",
-            stair_core=core, boundary=boundary, attic_low_strips=strips)
+            stair_core=core, stair_kind=stair_kind, boundary=boundary, attic_low_strips=strips)
+    for _rooms in (r_parter.rooms, r_pietro.rooms):
+        for _r in _rooms:
+            if _r.spec.id == "schody":
+                _r.stair_kind = stair_kind
     return TwoStoreyLayout(ok=True, parter_rooms=r_parter.rooms, pietro_rooms=r_pietro.rooms,
-                           stair_core=core, boundary=boundary, attic_low_strips=strips)
+                           stair_core=core, stair_kind=stair_kind, boundary=boundary,
+                           attic_low_strips=strips)

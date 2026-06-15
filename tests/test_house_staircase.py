@@ -76,7 +76,7 @@ def test_generate_house_feasible_and_schody_separate_from_hol():
     layout = generate_house(Polygon([(0, 0), (10, 0), (10, 8), (0, 8)]), (5.0, 0.0),
                             time_limit_s=45.0)
     assert layout.ok, layout.message
-    sw, sh, _ = _stair_core_dims(10.0, 8.0, force_straight=True)
+    sw, sh, _ = _stair_core_dims(10.0, 8.0)   # winder default (S31b): 10×8 aspect 1.25 → U
     core_area = sw * sh
     cx, cy, csw, csh = layout.stair_core
     core_box = box(cx, cy, cx + csw, cy + csh)

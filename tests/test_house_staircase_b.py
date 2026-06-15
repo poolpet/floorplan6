@@ -36,8 +36,8 @@ def _shared_edge_len(a, b) -> float:
 def test_schody_is_separate_room():
     layout = _gen(10.0, 8.0, (5.0, 0.0))
     assert layout.ok, layout.message
-    # dom 2-kond. = bieg prosty wzdłuż kalenicy (knee-wall, patrz _stair_core_dims)
-    sw, sh, _ = _stair_core_dims(10.0, 8.0, force_straight=True)
+    # winder default (S31b): 10×8 (aspect 1.25 ≤ 1.4) → rdzeń U; band 4–6 m² nadal trzyma (5.76)
+    sw, sh, _ = _stair_core_dims(10.0, 8.0)
     core_area = sw * sh
     for rooms in (layout.parter_rooms, layout.pietro_rooms):
         schody = next((r for r in rooms if r.spec.id == "schody"), None)
@@ -159,3 +159,21 @@ def test_feasible_across_footprints_and_entries():
     for W, H, e in cases:
         layout = _gen(W, H, e)
         assert layout.ok, f"{W}x{H} entry {e}: {layout.message}"
+
+
+def test_compact_house_gets_winder_u_kind():
+    """S31b: obrys compact (aspect ≤ 1.4) → rdzeń U (zabiegowe), nie bieg prosty.
+    Probe: U na 88/130 m² daje parter FEASIBLE (prosty dawał UNKNOWN)."""
+    layout = _gen(10.0, 8.0, (5.0, 0.0))   # aspect 1.25 ≤ 1.4 → U
+    assert layout.ok, layout.message
+    assert layout.stair_kind == "u", f"oczekiwano 'u', jest {layout.stair_kind!r}"
+    for rooms in (layout.parter_rooms, layout.pietro_rooms):
+        schody = _room(rooms, "schody")
+        assert getattr(schody, "stair_kind", None) == "u"
+
+
+def test_elongated_house_keeps_straight_kind():
+    """Obrys wydłużony (aspect > 1.4) zostaje przy biegu prostym — winder tylko compact."""
+    layout = _gen(12.0, 8.0, (6.0, 0.0))   # aspect 1.5 > 1.4 → straight
+    assert layout.ok, layout.message
+    assert layout.stair_kind == "straight"
