@@ -91,6 +91,30 @@ def area_deviation(gen_rooms, ref_rooms) -> tuple[float, int]:
     return (sum(devs) / len(devs) if devs else 100.0), len(devs)
 
 
+def room_iou(gen_typed_polys, ref_typed_polys):
+    """Średni IoU pokoi dopasowanych po TYPIE. Argumenty: list[(type, shapely.Polygon)].
+    Dla każdego pokoju WZORCA bierze najlepszy nakładający się generowany pokój tego
+    samego typu (greedy, bez wykluczania — diagnostyka). None gdy brak dopasowań.
+    Tylko dla wzorców z REALNĄ geometrią (refs_geo vector_traced = tropie)."""
+    from collections import defaultdict
+    gen_by_type = defaultdict(list)
+    for t, p in gen_typed_polys:
+        if p is not None:
+            gen_by_type[t].append(p)
+    ious = []
+    for t, rp in ref_typed_polys:
+        if rp is None:
+            continue
+        best = 0.0
+        for gp in gen_by_type.get(t, []):
+            uni = rp.union(gp).area
+            if uni > 0:
+                best = max(best, rp.intersection(gp).area / uni)
+        if gen_by_type.get(t):
+            ious.append(best)
+    return sum(ious) / len(ious) if ious else None
+
+
 def adjacency_jaccard(gen_edges: set, ref_edges: set) -> float:
     if not ref_edges:
         return 1.0
