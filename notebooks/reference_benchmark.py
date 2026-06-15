@@ -99,6 +99,23 @@ def adjacency_jaccard(gen_edges: set, ref_edges: set) -> float:
     return inter / union if union else 1.0
 
 
+STAIR_KIND_NORM = {"u": "u_winder", "straight": "straight"}
+
+
+def stair_kind_match(gen_stair_kind: str, has_schody: bool, storeys: int, ref_kind) -> dict:
+    """Zgodność typu schodów generator↔wzorzec (diagnostyka, waga 0 w score).
+
+    Generator zwraca 'u'/'straight' → normalizujemy 'u'→'u_winder'. Parterowiec
+    (storeys==1 bez pokoju 'schody') traktujemy jako 'none' (wzorce parterowca mają
+    stairs.kind='none'). Zwraca {gen, ref, match}.
+    """
+    if storeys == 1 and not has_schody:
+        gen = "none"
+    else:
+        gen = STAIR_KIND_NORM.get(gen_stair_kind, gen_stair_kind)
+    return {"gen": gen, "ref": ref_kind, "match": 1.0 if gen == ref_kind else 0.0}
+
+
 def _gen_edges(rooms) -> set:
     """Krawędzie sąsiedztwa wygenerowanego układu (po TYPACH, wspólna krawędź ≥0.9 m)."""
     # master = największa sypialnia
@@ -194,6 +211,14 @@ def score_project(project: dict, time_limit: float) -> dict:
         res[storey] = {"room_f1": round(f1, 3), "area_mape_pct": round(mape, 1),
                        "n_matched": nm, "adj_jaccard": round(jac, 3)}
         f1s.append(f1); mapes.append(mape); jacs.append(jac)
+    # Diagnostyka stair_kind (waga 0 w score) — waliduje winder default (S31b).
+    # entry_side POMINIĘTY: benchmark wstrzykuje ref.side jako entry_point (line 167) →
+    #   match byłby tautologią; realny wymaga zwrotu ZREALIZOWANEJ strony z generate_house.
+    # open_plan POMINIĘTY: generator trzyma osobny pokój 'kuchnia' (rysowany open-plan),
+    #   wzorce mają aneks (brak 'kuchnia') → proxy zawsze mismatch = różnica reprezentacji.
+    has_schody = any(r.spec.id == "schody" for r in lay.parter_rooms)
+    res["stair_kind"] = stair_kind_match(lay.stair_kind, has_schody, storeys,
+                                         (ref_p.get("stairs") or {}).get("kind"))
     # score 0-100: pokoje 50% + powierzchnie 30% (100%→0 pkt przy MAPE≥50%) + sąsiedztwa 20%
     f1m = sum(f1s) / len(f1s); mapem = sum(mapes) / len(mapes); jacm = sum(jacs) / len(jacs)
     res["score"] = round(100 * (0.5 * f1m + 0.3 * max(0.0, 1 - mapem / 50.0) + 0.2 * jacm), 1)
@@ -221,6 +246,9 @@ def main():
             if st in r:
                 d = r[st]
                 det.append(f"{st}: F1={d['room_f1']} MAPE={d['area_mape_pct']}% adj={d['adj_jaccard']}")
+        if "stair_kind" in r:
+            sk = r["stair_kind"]
+            det.append(f"stair={sk['gen']}/{sk['ref']}={sk['match']:.0f}")
         print(f"{r['name']:28s} {r['status']:28s} {r.get('score', '—'):>5}  {' | '.join(det)}")
     scored = [r["score"] for r in results if "score" in r]
     if scored:
