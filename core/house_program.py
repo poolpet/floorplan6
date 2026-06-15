@@ -56,10 +56,13 @@ class HouseProgramConfig:
 # Domyślne cap-y metraży [m²] ugruntowane na korpusie ARCHON (Session 17).
 # EDYTOWALNE — UI/per-run nadpisuje przez HouseProgramConfig.caps.
 DEFAULT_HOUSE_CAPS: dict[str, float] = {
-    "salon": 35.0, "kuchnia": 13.0, "sypialnia": 13.0, "master": 16.5,
-    "gabinet": 14.0, "pokoj": 14.0, "garaz": 22.0, "kotlownia": 8.0, "pralnia": 6.0,
+    # capy NETTO ugruntowane na medianach 22+ wzorców (S31b D4): garaz 34 (ref-med 32.7,
+    # cap 22 był < ref-min 21.5), master 17.0 (geoMed 17.76), kotlownia 9 (ref-max 12.6),
+    # schody 6.0 (ref-med 5.6, winder/dog-leg footprint).
+    "salon": 35.0, "kuchnia": 13.0, "sypialnia": 13.0, "master": 17.0,
+    "gabinet": 14.0, "pokoj": 14.0, "garaz": 34.0, "kotlownia": 9.0, "pralnia": 6.0,
     "spizarnia": 5.0, "garderoba": 6.0, "wiatrolap": 8.0, "wc": 3.0,
-    "schowek": 3.5, "pom": 6.0, "gosp": 6.0, "schody": 5.0,
+    "schowek": 3.5, "pom": 6.0, "gosp": 6.0, "schody": 6.0,
     # uwaga: "hub" (hol/podest) celowo BEZ cap-u — jest elastycznym sinkiem nadmiaru
     # (na parterze nadmiar bierze salon, na piętrze podest). Twardy cap zawieszałby F1.
 }
