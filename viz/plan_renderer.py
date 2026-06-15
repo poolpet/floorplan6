@@ -373,49 +373,43 @@ def stair_run_orientation(schody_bounds, hol_bounds):
 
 
 def _draw_winder_in_room(ax, schody, hol):
-    """Glif schodów dwubiegowych/zabiegowych (U): dwa biegi rozdzielone studnią +
-    spocznik pełnej szerokości na końcu OD holu + strzałka 'w górę' jednym biegiem.
-    Orientacja z stair_run_orientation (oś biegu + zwrot odchodzący od holu)."""
+    """Glif schodów zabiegowych/dwubiegowych: linia biegu w kształcie U (dwa biegi +
+    zawrót po stronie OD holu) z poprzeczkami-stopniami i jedną strzałką 'w górę'.
+    Sam kształt U czyta się jako obrót — mało linii, bez gridu. Orientacja z
+    stair_run_orientation (oś biegu + zwrot odchodzący od holu)."""
     sx, sy, ex, ey = schody.polygon.bounds
     sw, sh = ex - sx, ey - sy
     color = "#B71C1C"
     hb = hol.polygon.bounds if (hol is not None and getattr(hol, "polygon", None) is not None) else None
     axis, arrow = stair_run_orientation(schody.polygon.bounds, hb)
-    LAND = 0.30                                   # udział spocznika w głębokości biegu
-    if axis == "vertical":                        # biegi pionowe, studnia pionowa w X
-        xm = sx + sw / 2.0
-        ax.plot([xm, xm], [sy, ey], color=color, lw=1.0, zorder=5)
-        far_top = (arrow == "N")                  # 'w górę' = N → spocznik u góry
-        ly0, ly1 = (ey - sh * LAND, ey) if far_top else (sy, sy + sh * LAND)
-        ax.add_patch(mpatches.Rectangle((sx, ly0), sw, ly1 - ly0, facecolor="none",
-                                        edgecolor=color, lw=0.8, zorder=5))
-        rlo, rhi = (sy, ly0) if far_top else (ly1, ey)
-        n = max(2, int((rhi - rlo) / 0.28))
-        for k in range(1, n):
-            y = rlo + (rhi - rlo) * k / n
-            ax.plot([sx, xm], [y, y], color=color, lw=0.5, zorder=5)
-            ax.plot([xm, ex], [y, y], color=color, lw=0.5, zorder=5)
-        xL = sx + sw * 0.25
-        a0, a1 = (rlo + (rhi - rlo) * 0.1, rhi) if far_top else (rhi - (rhi - rlo) * 0.1, rlo)
-        ax.annotate("", xy=(xL, a1), xytext=(xL, a0),
-                    arrowprops=dict(arrowstyle="->", color=color, lw=1.2), zorder=6)
-    else:                                         # biegi poziome, studnia pozioma w Y
-        ym = sy + sh / 2.0
-        ax.plot([sx, ex], [ym, ym], color=color, lw=1.0, zorder=5)
+    if axis == "horizontal":                      # biegi poziome (wzdłuż x), zawrót w pionie
         far_right = (arrow == "E")
-        lx0, lx1 = (ex - sw * LAND, ex) if far_right else (sx, sx + sw * LAND)
-        ax.add_patch(mpatches.Rectangle((lx0, sy), lx1 - lx0, sh, facecolor="none",
-                                        edgecolor=color, lw=0.8, zorder=5))
-        rlo, rhi = (sx, lx0) if far_right else (lx1, ex)
-        n = max(2, int((rhi - rlo) / 0.28))
+        x_in = (sx + sw * 0.12) if far_right else (ex - sw * 0.12)   # wejście od strony holu
+        x_turn = (ex - sw * 0.18) if far_right else (sx + sw * 0.18)  # zawrót po stronie OD holu
+        y_bot, y_top, half = sy + sh * 0.27, ey - sh * 0.27, sh * 0.16
+        ax.plot([x_in, x_turn], [y_bot, y_bot], color=color, lw=1.2, zorder=5)    # bieg 1 (wejście)
+        ax.plot([x_turn, x_turn], [y_bot, y_top], color=color, lw=1.2, zorder=5)  # zawrót
+        ax.annotate("", xy=(x_in, y_top), xytext=(x_turn, y_top),                 # bieg 2 (strzałka 'w górę')
+                    arrowprops=dict(arrowstyle="->", color=color, lw=1.3), zorder=6)
+        n = max(2, int(abs(x_turn - x_in) / 0.27))
+        for k in range(1, n):                                                     # stopnie (poprzeczki)
+            x = x_in + (x_turn - x_in) * k / n
+            ax.plot([x, x], [y_bot - half, y_bot + half], color=color, lw=0.5, zorder=5)
+            ax.plot([x, x], [y_top - half, y_top + half], color=color, lw=0.5, zorder=5)
+    else:                                         # biegi pionowe (wzdłuż y), zawrót w poziomie
+        far_top = (arrow == "N")
+        y_in = (sy + sh * 0.12) if far_top else (ey - sh * 0.12)
+        y_turn = (ey - sh * 0.18) if far_top else (sy + sh * 0.18)
+        x_lft, x_rgt, half = sx + sw * 0.27, ex - sw * 0.27, sw * 0.16
+        ax.plot([x_lft, x_lft], [y_in, y_turn], color=color, lw=1.2, zorder=5)    # bieg 1
+        ax.plot([x_lft, x_rgt], [y_turn, y_turn], color=color, lw=1.2, zorder=5)  # zawrót
+        ax.annotate("", xy=(x_rgt, y_in), xytext=(x_rgt, y_turn),                 # bieg 2 (strzałka)
+                    arrowprops=dict(arrowstyle="->", color=color, lw=1.3), zorder=6)
+        n = max(2, int(abs(y_turn - y_in) / 0.27))
         for k in range(1, n):
-            x = rlo + (rhi - rlo) * k / n
-            ax.plot([x, x], [sy, ym], color=color, lw=0.5, zorder=5)
-            ax.plot([x, x], [ym, ey], color=color, lw=0.5, zorder=5)
-        yL = sy + sh * 0.25
-        a0, a1 = (rlo + (rhi - rlo) * 0.1, rhi) if far_right else (rhi - (rhi - rlo) * 0.1, rlo)
-        ax.annotate("", xy=(a1, yL), xytext=(a0, yL),
-                    arrowprops=dict(arrowstyle="->", color=color, lw=1.2), zorder=6)
+            y = y_in + (y_turn - y_in) * k / n
+            ax.plot([x_lft - half, x_lft + half], [y, y], color=color, lw=0.5, zorder=5)
+            ax.plot([x_rgt - half, x_rgt + half], [y, y], color=color, lw=0.5, zorder=5)
 
 
 def _draw_stair_in_room(ax, schody, hol):
