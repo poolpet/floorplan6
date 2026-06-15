@@ -404,3 +404,30 @@ def test_dining_table_with_salon_suffix_id():
                 polygon=box(7.0, 0.0, 12.0, 8.0)); kuch.update_metrics()
     res = furnish_rooms([salon, kuch], boundary=b)
     assert any(f.piece_type == "dining_table" for f in res.furniture), "salon_1 nie dostał stołu (id-drift)"
+
+
+def test_clamp_drops_piece_straddling_wall():
+    from core.furniture import clamp_furniture
+    room = _room("sypialnia_1", Strefa.NOCNA, 4.0, 3.5)        # poligon (0,0)–(4,3.5)
+    inside = Furniture("bed", box(0.2, 0.2, 1.8, 2.2), "sypialnia_1", "Łóżko")
+    straddle = Furniture("wardrobe", box(3.5, 1.0, 4.6, 3.0), "sypialnia_1", "Szafa")  # wystaje 0.6 m za x=4
+    kept, warns = clamp_furniture([inside, straddle], [room])
+    assert inside in kept
+    assert straddle not in kept
+    assert warns and "sypialnia_1" in warns[0]
+
+
+def test_clamp_keeps_correctly_placed_furniture():
+    from core.furniture import clamp_furniture
+    room = _room("salon", Strefa.DZIENNA, 5.0, 4.0)
+    fs = furnish_rooms([room]).furniture
+    kept, warns = clamp_furniture(fs, [room])
+    assert kept == fs and not warns
+
+
+def test_furnish_rooms_output_is_clamped():
+    # furnish_rooms ma już zwracać meble po klampie (render/AC jedzą to samo)
+    room = _room("sypialnia_1", Strefa.NOCNA, 4.0, 3.5)
+    container = room.polygon.buffer(1e-6)
+    for f in furnish_rooms([room]).furniture:
+        assert container.contains(f.polygon), f"{f.piece_type} wystaje poza pokój po furnish_rooms"

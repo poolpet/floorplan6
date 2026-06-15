@@ -149,12 +149,39 @@ def furnish_rooms(rooms: list[Room], boundary=None, low_zones=None) -> FurnishRe
         warnings.extend(w)
     # stół jadalny w otwartej strefie dziennej (styk salon↔kuchnia) — po pokojach
     furniture += _place_dining(rooms, furniture, door_zones)
+    # klamp defensywny: żaden mebel nie straddle'uje ściany (render i AC = ta sama geometria)
+    furniture, clamp_warns = clamp_furniture(furniture, rooms)
+    warnings.extend(clamp_warns)
     return FurnishResult(furniture=furniture, warnings=warnings)
 
 
 def place_furniture(rooms: list[Room], boundary=None, low_zones=None) -> list[Furniture]:
     """Back-compat: płaska lista mebli (bez ostrzeżeń). Patrz furnish_rooms."""
     return furnish_rooms(rooms, boundary, low_zones=low_zones).furniture
+
+
+def clamp_furniture(furniture: list, rooms: list, area_tol: float = 0.02):
+    """Odrzuć meble wystające istotnie poza poligon pokoju-rodzica.
+
+    Gwarancja defensywna: render i (w przyszłości) eksport AC dostają tę samą
+    geometrię, w której ŻADEN mebel nie straddle'uje ściany. Mebel w 100% wewnątrz
+    przechodzi bez zmian; mebel z nadmiarem pola > max(1e-6, area_tol·pole) →
+    usunięty + warning. Zwraca (kept, warnings).
+    """
+    by_id = {r.spec.id: r.polygon for r in rooms if r.polygon is not None}
+    kept, warns = [], []
+    for f in furniture:
+        room_poly = by_id.get(f.room_id)
+        if room_poly is None:                       # brak pokoju → zostaw (nie nasza sprawa)
+            kept.append(f)
+            continue
+        inside = room_poly.buffer(1e-9).intersection(f.polygon).area
+        outside = f.polygon.area - inside
+        if outside <= max(1e-6, area_tol * f.polygon.area):
+            kept.append(f)
+        else:
+            warns.append(f"{f.room_id}: mebel {f.piece_type} wystaje poza pokój — usunięto")
+    return kept, warns
 
 
 def _room_window_walls(room: Room, boundary) -> set:
