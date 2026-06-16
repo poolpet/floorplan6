@@ -3,7 +3,31 @@
 > Updated after every working session. If it doesn't reflect reality —
 > Claude updates immediately.
 >
-> **⮕ NEXT SESSION (2026-06-15, koniec sesji S31b — branch `feat/sfh-open-plan-day-zone`, ~14 commitów + plany, NIE pushnięte):**
+> **⮕ NEXT SESSION (2026-06-16, koniec sesji S31c — branch `feat/sfh-open-plan-day-zone`, +1 commit `0b474ef`, NIE pushnięte):**
+> **WĄTEK A — KORYTARZ DONE (commit `0b474ef`):** reguła Dawida — korytarz/komunikacja **≥1.2 m domyślnie, wyjątkowo 1.0 m, NIGDY <1.0**.
+> Bug: ramię L huba schodziło do 0.8 m (za wąsko w renderach). Fix: `cpsat_solver` MIN_CORRIDOR_CM=120/EXCEPTIONAL=100 + param
+> `corridor_min_cm` (baza KOMUNIKACJA `min_dim` + OBA wymiary ramienia L `wi2/hi2`); `house_layout` fast-fail — próba 1.2 m KRÓTKI
+> budżet (CORRIDOR_TRY_S=30), relaks 1.0 m PEŁNY budżet PRZED straight-core/bedroom-drop (INFEASIBLE@1.2 pada w 0 s). **KOSZT (Dawid
+> zaakceptował): dom ~90 s** (1.0 m TWARDSZY dla CP-SAT niż 0.8 m — probe: 11×8 @1.0 ~56 s, 12×8 straight-core @1.2 INFEASIBLE/@1.0
+> ~120 s); **default `generate_house` time_limit_s 30→90** (GUI wołał bez limitu → 30 s łamałoby modalne domy). **Benchmark z fixem:
+> 59.2/100 BEZ ZMIAN, generate-rate bez zmian** → korytarz nie psuje jakości, tylko zwalnia. apt-44 M2 = 1.2 m za darmo (3 s).
+> „1.2-m-domy-SZYBKO" = kolejka perf (parter-gardło S26). Test: `tests/test_corridor_min_width.py` (otwarcie morfologiczne) + `notebooks/
+> corridor_feasibility_probe.py`. Przy okazji: `test_wc_*` w lroom_phase2b wc→lazienka (STALE od S30c, failowały na HEAD); budżety testów
+> domu 45/60→90 s; winder@15→90 s. Pamięć [[feedback_corridor_min_width]].
+> **WĄTEK B — DENSYFIKACJA PRZEFORMUŁOWANA (czysty diagnostyk `notebooks/densyfikacja_diag.py`, BEZ solve'a — reużywa funkcji benchmarku):**
+> `unabsorbed_leftover`=0 na 32/32 kondygnacjach → teza D4 „remainder F1 pompuje sink" ZNEUTRALIZOWANA; bloat idzie przez stage-2b
+> `compute_house_targets` wlewający remainder PONAD capy. **MAPE (śr. predicted 37.5%, zwalidowane benchmarkiem) ma DWA NIEZALEŻNE
+> drivery:** (B1) deficyt pokoi na dużych domach (pt 9/7 vs wzorzec 12/12 → pMAPE 147%; ar02-1b/a2-2/kudowe pod-upokojone); (B2)
+> **miskalibracja UDZIAŁÓW przy ZGODNEJ liczbie pokoi — `a2-5` parter F1=1.0 (identyczny zestaw!) a MAPE 51% = CZYSTA IZOLACJA,
+> zero ryzyka perf.** Sama densyfikacja NIE naprawi MAPE — połowa błędu to kalibracja. **DECYZJA DAWIDA 2026-06-16:** najpierw
+> **B2 (kalibracja targetów, a2-5)**, potem B1 (densyfikacja REALNYCH dużych domów 120-160 m²); **pt 300 m²/kond. ODŁOŻONY** (outlier —
+> zweryfikować czy obrys nie jest błędem ekstrakcji). **BASELINE post-D4+korytarz: 59.2/100, 13-14/16 (FAILe = perf-loteria gigantów
+> kudowe/ar02-1b/pt/a2-2 — niedeterminizm, nie regresja).**
+> **NEXT: B2 — kalibracja `compute_house_targets`** tam gdzie zestaw pokoi już zgodny (a2-5 izolacja); mierzyć PREDICTED-MAPE czystym
+> diagnostykiem PRZED każdym solve'em (sekundy zamiast 30-min benchmarku). Znane flaki (NIE regresja): single-storey 11×11/10×10
+> (pamięć), batch-contention ~9 testów.
+>
+> **Previously — S31b (2026-06-15, branch `feat/sfh-open-plan-day-zone`, ~14 commitów + plany, NIE pushnięte):**
 > **KIERUNEK PRZEDEFINIOWANY: REGUŁY, NIE 1:1** (audyt 7 agentów + decyzja Dawida) — wzorce = nauczyciel + miarka regresji, nie cel pikselowy.
 > Spec `docs/superpowers/specs/2026-06-15-reguly-nie-1to1-plan-tygodnia-design.md`. Pamięć [[project_s31b_week_plan_rules_not_1to1]].
 > **ZROBIONE (Dni 1-4, każdy task spec+quality review na Opusie):** D1 klamp mebli do pokoju + poché ścian (rzut, nie diagram);
