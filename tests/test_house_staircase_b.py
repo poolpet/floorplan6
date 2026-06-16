@@ -12,9 +12,9 @@ from core.models import Strefa
 
 
 def _gen(W, H, entry):
-    # 60 s: parter 96 m² bywa graniczny przy 45 s (UNKNOWN-flake — perf parteru w kolejce
-    # S26); piętro na pasie poddasza z L-podestem kończy szybko.
-    return generate_house(Polygon([(0, 0), (W, 0), (W, H), (0, H)]), entry, time_limit_s=60.0)
+    # 90 s (S31b): korytarz ≥1.0/1.2 m jest TWARDSZY dla solvera niż dawne 0.8 m —
+    # modalne domy 88-96 m² potrzebują fast-fail 1.2 + fallback 1.0 (~50-90 s; był 60).
+    return generate_house(Polygon([(0, 0), (W, 0), (W, H), (0, H)]), entry, time_limit_s=90.0)
 
 
 def _room(rooms, rid):
@@ -180,11 +180,13 @@ def test_elongated_house_keeps_straight_kind():
 
 
 def test_winder_unknown_falls_back_to_straight_core():
-    """Perf retry: gdy U-parter nie zdąży w krótkim limicie, dom i tak się generuje
-    (straight-core retry). Niedeterministyczne — sprawdzamy ok=True, nie konkretny kind."""
+    """Dom się generuje mimo trudności (straight-core retry + korytarz-fallback).
+    S31b: budżet 15→90 s — korytarz ≥1.0 m jest twardszy niż 0.8 m, kaskada
+    (1.2 fast-fail → 1.0 → straight → bedroom-drop) potrzebuje realnego czasu;
+    przy 15 s żaden korytarz nie zdążył. Niedeterministyczne — sprawdzamy ok=True."""
     from shapely.geometry import Polygon
     from core.house_layout import generate_house
     layout = generate_house(Polygon([(0, 0), (10, 0), (10, 8), (0, 8)]), (5.0, 0.0),
-                            time_limit_s=15.0)
+                            time_limit_s=90.0)
     assert layout.ok, layout.message
     assert layout.stair_kind in ("u", "straight")

@@ -34,7 +34,7 @@ def _entry(side, W, H):
 _CACHE = {}
 
 
-def _layout(W, H, side, t=45.0):
+def _layout(W, H, side, t=90.0):   # S31b: korytarz ≥1.0 m twardszy niż 0.8 m → modalne domy ~50-90 s (był 45)
     """Generuje (i cache'uje) układ — ten sam (W,H,side) nie jest solvowany dwa razy."""
     key = (W, H, side)
     if key not in _CACHE:
@@ -95,15 +95,16 @@ def test_wiatrolap_on_entry_wall(side):
 # --- 3. Sąsiedztwo WC/wiatrołap ↔ hol zachowane mimo owinięcia L ---
 @pytest.mark.parametrize("side", SIDES)
 def test_wc_and_wiatrolap_reachable_through_hub(side):
-    """F5: hol (gwiazda-rozdzielacz) dotyka WC i wiatrołapu wspólną krawędzią ≥0.9 m
-    mimo owinięcia ich ramieniem L (sąsiedztwo przez którykolwiek prostokąt)."""
+    """F5: hol (gwiazda-rozdzielacz) dotyka łazienki i wiatrołapu wspólną krawędzią ≥0.9 m
+    mimo owinięcia ich ramieniem L (sąsiedztwo przez którykolwiek prostokąt). S30c: parter
+    ma pełną 'lazienka' zamiast 'wc' (test przeoczony przy wc→lazienka, naprawiony S31b)."""
     W, H = 11.0, 8.0
     lay = _layout(W, H, side)
     assert lay.ok, f"{W}x{H} {side}: {lay.message}"
     hub = _room(lay.parter_rooms, "hub")
-    wc = _room(lay.parter_rooms, "wc")
+    laz = _room(lay.parter_rooms, "lazienka")
     w = _room(lay.parter_rooms, "wiatrolap")
-    assert _shared(wc, hub) >= 0.9 - 1e-6, f"WC↔hol {_shared(wc, hub):.2f} < 0.9 [{side}]"
+    assert _shared(laz, hub) >= 0.9 - 1e-6, f"łazienka↔hol {_shared(laz, hub):.2f} < 0.9 [{side}]"
     assert _shared(w, hub) >= 0.9 - 1e-6, f"wiatrołap↔hol {_shared(w, hub):.2f} < 0.9 [{side}]"
 
 
@@ -159,13 +160,14 @@ def test_hub_span_within_real_model_bound(W, H):
 
 # --- 7. WC pozostaje prostokątem + F2 caps z aktywnym L ---
 def test_wc_stays_rectangular_and_wet_rooms_capped():
-    """WC NIE jest L-capable → musi zostać prostokątem (area == pole bbox). F2 niezmienione
-    przez fazę 2b: lazienka ≤ 5, WC ≤ 3 na obu kondygnacjach."""
+    """Łazienka parteru NIE jest L-capable → musi zostać prostokątem (area == pole bbox).
+    F2 niezmienione przez fazę 2b: lazienka ≤ 5, WC ≤ 3 na obu kondygnacjach. S30c: parter
+    ma 'lazienka' zamiast 'wc' (test przeoczony przy wc→lazienka, naprawiony S31b)."""
     lay = _layout(11.0, 8.0, "south")
     assert lay.ok, lay.message
-    wc = _room(lay.parter_rooms, "wc")
-    b = wc.polygon.bounds
-    assert abs(wc.area - (b[2] - b[0]) * (b[3] - b[1])) < 0.05, "WC musi zostać prostokątem"
+    laz = _room(lay.parter_rooms, "lazienka")
+    b = laz.polygon.bounds
+    assert abs(laz.area - (b[2] - b[0]) * (b[3] - b[1])) < 0.05, "łazienka parteru musi zostać prostokątem"
     caps = {"lazienka": 5.0, "wc": 3.0}
     for r in (*lay.parter_rooms, *lay.pietro_rooms):
         cap = caps.get(r.spec.id.split("_")[0])

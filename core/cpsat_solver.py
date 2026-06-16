@@ -35,6 +35,12 @@ SCALE = 100  # metry -> cm
 # 90cm = szerokość drzwi standardowych
 MIN_SHARED_EDGE_CM = 90
 
+# Korytarz/komunikacja: min szerokość 1.2 m (Dawid S31b — realizm rzutu; ramię L huba
+# schodziło do 0.8 m → za wąsko). Wyjątkowo 1.0 m, gdy 1.2 czyni układ INFEASIBLE
+# (callery domu/parterowca robią retry z floor=MIN_CORRIDOR_EXCEPTIONAL_CM). NIGDY <1.0.
+MIN_CORRIDOR_CM = 120
+MIN_CORRIDOR_EXCEPTIONAL_CM = 100
+
 
 @dataclass
 class RoomArrangement:
@@ -281,6 +287,7 @@ def solve_cpsat(
     entry_room_id: Optional[str] = None,
     l_capable_ids: Optional[set] = None,
     external_bathroom_id: str = "wc",
+    corridor_min_cm: int = MIN_CORRIDOR_CM,
 ) -> CpsatResult:
     """Solver CP-SAT — umieszcza pokoje szablonu w obrysie.
 
@@ -348,7 +355,11 @@ def solve_cpsat(
     y_ends = []  # y[i] + h[i]
 
     for i, spec in enumerate(specs):
-        min_dim_cm = max(round(spec.min_szerokosc * SCALE), 100)  # min 1m
+        # Korytarz (KOMUNIKACJA) ma podwyższony floor szerokości (S31b: 1.2 m default);
+        # pozostałe pokoje min 1 m. Floor stosuje się do KAŻDEGO wymiaru, więc prostokąt
+        # holu nie może być węższy niż korytarz.
+        floor_cm = corridor_min_cm if spec.strefa == Strefa.KOMUNIKACJA else 100
+        min_dim_cm = max(round(spec.min_szerokosc * SCALE), floor_cm)
 
         xi = model.new_int_var(0, BW, f"x_{i}")
         yi = model.new_int_var(0, BH, f"y_{i}")
@@ -463,8 +474,8 @@ def solve_cpsat(
             x_intervals.append(xiv2); y_intervals.append(yiv2)
             model.add(wi2 == 0).only_enforce_if(p.Not())     # brak L ⇒ rect2 = nic
             model.add(hi2 == 0).only_enforce_if(p.Not())
-            model.add(wi2 >= 80).only_enforce_if(p)           # L ⇒ ramię ≥ 0.8 m
-            model.add(hi2 >= 80).only_enforce_if(p)
+            model.add(wi2 >= corridor_min_cm).only_enforce_if(p)  # L ⇒ ramię korytarza ≥ 1.2 m (S31b)
+            model.add(hi2 >= corridor_min_cm).only_enforce_if(p)
             t_contig = _touches_bool(model, x[i], y[i], x_ends[i], y_ends[i],
                                      xi2, yi2, xe2, ye2, MIN_SHARED_EDGE_CM, BW, BH, f"contig_{i}")
             model.add(t_contig == 1).only_enforce_if(p)       # L ⇒ 2 prostokąty ciągłe

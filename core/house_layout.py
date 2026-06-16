@@ -13,7 +13,9 @@ from typing import Optional
 from shapely.geometry import Polygon, box
 
 from core.boundary_analyzer import analyze_boundary
-from core.cpsat_solver import solve_cpsat
+from core.cpsat_solver import (
+    MIN_CORRIDOR_CM, MIN_CORRIDOR_EXCEPTIONAL_CM, solve_cpsat,
+)
 from core.house_program import default_house_config
 from core.models import Room
 from core.template_selector import load_all_templates
@@ -25,6 +27,11 @@ MIN_STOREY_AREA = 60.0
 # --- Parterowiec (single-storey) ---
 MIN_SINGLE_STOREY_AREA = 45.0   # prowizoryczny; dostrajany przez feasibility-matrix (test_house_single_storey)
 PRZEDSIONEK_MIN_AREA = 50.0     # D2: poniżej tego progu drzwi wprost do holu (bez wiatrołapu)
+
+# Korytarz 1.2 m (S31b) bywa wolny/INFEASIBLE na ciasnych domach (probe: 11×8 ~56s,
+# 12×8 INFEASIBLE@1.2). Próba z preferowanym 1.2 m dostaje KRÓTKI budżet; gdy nie wejdzie
+# szybko, relaksujemy do 1.0 m z PEŁNYM budżetem (nie marnujemy czasu na trudną 1.2 m).
+CORRIDOR_TRY_S = 30.0
 
 # Dobór pokoi parterowca wg powierzchni obrysu. Rdzeń zawsze; reszta greedy wg sumy
 # minów z marginesem na upakowanie ((suma_min+m)·margin ≤ area). Wiatrołap wg progu D2.
@@ -364,10 +371,16 @@ def _generate_single_storey(polygon: Polygon, entry_point: tuple[float, float],
     tpl_f = _filter_template(tpl, keep)
     cfg = default_house_config(storey="single", master_id="sypialnia_1")
     has_wiatrolap = "wiatrolap" in keep
-    r = solve_cpsat(tpl_f, boundary, time_limit_s=time_limit_s,
-                    program_config=cfg, hub_at_entry=True,
-                    entry_room_id="wiatrolap" if has_wiatrolap else None,
-                    l_capable_ids={"hub"})
+
+    def _solve(corridor, t):
+        return solve_cpsat(tpl_f, boundary, time_limit_s=t,
+                           program_config=cfg, hub_at_entry=True,
+                           entry_room_id="wiatrolap" if has_wiatrolap else None,
+                           l_capable_ids={"hub"}, corridor_min_cm=corridor)
+
+    r = _solve(MIN_CORRIDOR_CM, min(time_limit_s, CORRIDOR_TRY_S))     # 1.2 m: krótki budżet
+    if r.status not in ("OPTIMAL", "FEASIBLE"):     # niewykonalny/wolny → wyjątkowo 1.0 m (pełny budżet)
+        r = _solve(MIN_CORRIDOR_EXCEPTIONAL_CM, time_limit_s)
     if r.status not in ("OPTIMAL", "FEASIBLE"):
         return TwoStoreyLayout(ok=False,
             message=f"Solver nie znalazl ukladu parterowca (status={r.status}).", boundary=boundary)
@@ -375,7 +388,11 @@ def _generate_single_storey(polygon: Polygon, entry_point: tuple[float, float],
 
 
 def generate_house(polygon: Polygon, entry_point: tuple[float, float],
-                   num_storeys: int = 2, time_limit_s: float = 30.0) -> TwoStoreyLayout:
+                   num_storeys: int = 2, time_limit_s: float = 90.0) -> TwoStoreyLayout:
+    # Default 90 s (S31b): korytarz ≥1.0/1.2 m jest TWARDSZY dla solvera niż dawne
+    # 0.8 m (probe: 11×8 @1.0 ~56 s, 12×8 @1.2 INFEASIBLE). Modalne domy potrzebują
+    # ~50-90 s na fallback 1.0 m; przy 30 s (stary default) parter = UNKNOWN. GUI woła
+    # bez time_limit, więc default MUSI wystarczać na realny dom (benchmark: 90 s OK).
     if num_storeys == 1:
         return _generate_single_storey(polygon, entry_point, time_limit_s)
     if polygon.area < MIN_STOREY_AREA:
@@ -422,44 +439,61 @@ def generate_house(polygon: Polygon, entry_point: tuple[float, float],
     bx0, by0 = boundary.bbox[0], boundary.bbox[1]
     low_rel = [(s.bounds[0] - bx0, s.bounds[1] - by0,
                 s.bounds[2] - bx0, s.bounds[3] - by0) for s in strips]
-    r_parter = solve_cpsat(parter_tpl, boundary, time_limit_s=time_limit_s,
-                           reserved_core=core, program_config=parter_cfg,
+    def _ok(r):
+        return r.status in ("OPTIMAL", "FEASIBLE")
+
+    def _solve_parter(_core, _corridor, _t):
+        # parter_tpl czytany późno (bedroom-drop go podmienia poniżej przed wywołaniem)
+        return solve_cpsat(parter_tpl, boundary, time_limit_s=_t,
+                           reserved_core=_core, program_config=parter_cfg,
                            stair_room_id="schody", hub_at_entry=True,
                            l_capable_ids={"hub"}, entry_room_id="wiatrolap",
-                           external_bathroom_id="lazienka")
+                           external_bathroom_id="lazienka", corridor_min_cm=_corridor)
+
+    corridor = MIN_CORRIDOR_CM
+    r_parter = _solve_parter(core, corridor, min(time_limit_s, CORRIDOR_TRY_S))   # 1.2 m: krótki budżet
+    # Korytarz 1.2 m default (S31b, reguła Dawida). Gdy parter z 1.2 m = UNKNOWN/INFEASIBLE
+    # (ciasny modalny obrys: 8 pokoi + rdzeń bywa za ciasne — probe: 12×8 INFEASIBLE @0 s,
+    # 88/80 feasible-ale-wolne), relaksuj korytarz do 1.0 m (wyjątkowo, PEŁNY budżet) PRZED
+    # cięższymi retry — to NAJTAŃSZY fix (INFEASIBLE@1.2 pada w 0 s; wolna 1.2 nie pali budżetu).
+    if not _ok(r_parter):
+        corridor = MIN_CORRIDOR_EXCEPTIONAL_CM
+        r_parter = _solve_parter(core, corridor, time_limit_s)
     # Perf (S31b D4): U-rdzeń (5.76 m²) cięższy dla solvera parteru niż straight (4.62).
     # Gdy parter z U = UNKNOWN/INFEASIBLE, ponów ze STRAIGHT rdzeniem (lżejszy packing)
     # DLA OBU kondygnacji (pin schodów musi się pokrywać pionowo). Lżejszy, nie dłuższy.
-    if stair_kind == "u" and r_parter.status not in ("OPTIMAL", "FEASIBLE"):
+    if stair_kind == "u" and not _ok(r_parter):
         core = core_straight
         stair_kind = "straight"
-        r_parter = solve_cpsat(parter_tpl, boundary, time_limit_s=time_limit_s,
-                               reserved_core=core, program_config=parter_cfg,
-                               stair_room_id="schody", hub_at_entry=True,
-                               l_capable_ids={"hub"}, entry_room_id="wiatrolap",
-                               external_bathroom_id="lazienka")
+        r_parter = _solve_parter(core, corridor, time_limit_s)
     # Best-effort sypialni parteru (S30c, decyzja Dawida): na CIASNYM modalnym obrysie
     # (~88 m²) parter 8-pok z sypialnią to loteria perf (sonda parter8_bedroom_probe:
     # ~50% @60s; obrysy ≥~100 m² = 4/4 niezawodne). Gdy parter z sypialnią =
     # UNKNOWN/INFEASIBLE → FALLBACK na niezawodny program BEZ sypialni parteru
     # (poddasze odzyskuje wszystkie sypialnie, total zachowany). KAŻDY dom się generuje;
     # sypialnia parteru pojawia się gdy wykonalna.
-    if parter_bedroom and r_parter.status not in ("OPTIMAL", "FEASIBLE"):
+    if parter_bedroom and not _ok(r_parter):
         parter_tpl = parter_template_for(polygon.area, with_parter_bedroom=False)
         pietro_tpl = _filter_template(
             pietro_tpl0, set(pietro_room_ids(pietro_tpl0.pokoje, eff, bedroom_offset=0)))
-        r_parter = solve_cpsat(parter_tpl, boundary, time_limit_s=time_limit_s,
-                               reserved_core=core, program_config=parter_cfg,
-                               stair_room_id="schody", hub_at_entry=True,
-                               l_capable_ids={"hub"}, entry_room_id="wiatrolap",
-                               external_bathroom_id="lazienka")
+        r_parter = _solve_parter(core, corridor, time_limit_s)
     # Piętro NIE ma drzwi zewnętrznych — podest łączy się ze schodami, nie z fasadą
     # wejścia. Podest L-capable (mechanika „mini-korytarza" S26) — opasuje klatkę.
-    r_pietro = solve_cpsat(pietro_tpl, boundary, time_limit_s=time_limit_s,
+    # Korytarz poddasza = ten sam co parter (1.2 lub relaxed 1.0); gdy podest @1.2
+    # niewykonalny — własna relaksacja do 1.0 (podest bywa ciasny przy strefach niskich).
+    def _solve_pietro(_corridor, _t):
+        return solve_cpsat(pietro_tpl, boundary, time_limit_s=_t,
                            reserved_core=core, program_config=pietro_cfg,
                            stair_room_id="schody", hub_at_entry=False,
-                           l_capable_ids={"hub"}, low_zones=low_rel)
-    if r_parter.status not in ("OPTIMAL", "FEASIBLE") or r_pietro.status not in ("OPTIMAL", "FEASIBLE"):
+                           l_capable_ids={"hub"}, low_zones=low_rel, corridor_min_cm=_corridor)
+
+    if corridor == MIN_CORRIDOR_EXCEPTIONAL_CM:        # parter już zrelaksowany → podest 1.0 m, pełny budżet
+        r_pietro = _solve_pietro(corridor, time_limit_s)
+    else:                                              # parter trzyma 1.2 m → podest 1.2 m krótko, potem relaks
+        r_pietro = _solve_pietro(corridor, min(time_limit_s, CORRIDOR_TRY_S))
+        if not _ok(r_pietro):
+            r_pietro = _solve_pietro(MIN_CORRIDOR_EXCEPTIONAL_CM, time_limit_s)
+    if not _ok(r_parter) or not _ok(r_pietro):
         return TwoStoreyLayout(ok=False,
             message=f"Solver nie znalazl ukladu (parter={r_parter.status}, pietro={r_pietro.status}).",
             stair_core=core, stair_kind=stair_kind, boundary=boundary, attic_low_strips=strips)
