@@ -16,7 +16,7 @@ def test_house_parter_loads_with_expected_rooms():
     t = _by_id("house_parter")
     assert t is not None
     ids = {r.id for r in t.pokoje}
-    assert {"hub", "wiatrolap", "salon", "kuchnia", "spizarnia", "wc", "kotlownia"} <= ids
+    assert {"hub", "wiatrolap", "salon", "kuchnia", "spizarnia", "lazienka", "kotlownia"} <= ids
 
 
 def test_house_pietro_loads_with_three_bedrooms_and_bathroom():
