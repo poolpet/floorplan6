@@ -20,9 +20,16 @@
 > `%`-udziału (kandydat: area-ważony MAPE). Hygiene: stale-test `wc→lazienka` w `test_house_templates` (pre-existing od S30c) naprawiony.
 > **TESTY: fast 26 passed + dom 139 passed/3 skip/0 fail; benchmark 58.8/14-of-16** (FAIL pt+a2-2 = znane giganty perf-loterii, NIE regresja).
 > a2-5 parter F1=1.0 niezmienne (target nie rusza zestawu pokoi).
-> **NEXT: B1 — DENSYFIKACJA REALNYCH dużych domów 120-160 m²** (więcej pokoi = więcej absorberów; ryzyko perf/INFEASIBLE — parter-gardło).
-> **⚠️ WALIDOWAĆ REALNYM BENCHMARKIEM, NIE diagnostykiem (proxy-gap S31d).** pt 300 m²/kond. ODŁOŻONY (outlier — zweryfikować czy obrys
-> nie jest błędem ekstrakcji).
+> **B1 PREMISA OBALONA (brainstorm 2026-06-17) — to NIE densyfikacja.** Rozkład F1 na precision/recall (32 kond.): driver to
+> **OVER-generacja** (nadmiar lazienka×12/kotłownia×7/gabinet×6), NIE braki. Najgorsze F1 = wysoki recall + niski precision.
+> Decyzja Dawida: **trzymać standard architektoniczny** (2.łazienka ≥3 syp POPRAWNA — tabele wzorców niepełne; generator > benchmark),
+> NIE ścinać słusznych pokoi. Sweep predicted-F1 (F1 WIARYGODNY z selekcji, ≠ MAPE): jedyny czysty lewar = **garaż sparowany
+> (próg+metryka) +0.0077** (próg ODŁOŻONY — ryzyko perf); garderoba/spiżarnia net-zero/dwukierunkowe → DROP. **PŁASKOWYŻ POTWIERDZONY:
+> room-set już dobrze dopasowany; F1-straty to architektonicznie-słuszne extra (keep) + artefakty metryki — nie luki.**
+> Spec `docs/superpowers/specs/2026-06-17-b1-densyfikacja-design.md`. **NEXT (gotowy plan):
+> `docs/superpowers/plans/2026-06-17-b1-garaz-metryka.md`** — fix metryki garaż w F1 (Lewar 2, deterministyczny, ~+0.15 pkt, zero ryzyka
+> perf). **PO B1: target+selekcja-tweaki wyczerpane (płaskowyż) — następny lewar gdzie indziej: adjacency (20% score) / jakość renderów /
+> AC bridge domów.** pt 300 m²/kond. ODŁOŻONY (outlier — zweryfikować ekstrakcję obrysu).
 >
 > **Previously — S31c (2026-06-16, koniec sesji — branch `feat/sfh-open-plan-day-zone`, +1 commit `0b474ef`, NIE pushnięte):**
 > **WĄTEK A — KORYTARZ DONE (commit `0b474ef`):** reguła Dawida — korytarz/komunikacja **≥1.2 m domyślnie, wyjątkowo 1.0 m, NIGDY <1.0**.
