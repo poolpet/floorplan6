@@ -3,7 +3,28 @@
 > Updated after every working session. If it doesn't reflect reality —
 > Claude updates immediately.
 >
-> **⮕ NEXT SESSION (2026-06-16, koniec sesji S31c — branch `feat/sfh-open-plan-day-zone`, +1 commit `0b474ef`, NIE pushnięte):**
+> **⮕ NEXT SESSION (2026-06-17, koniec sesji S31d — branch `feat/sfh-open-plan-day-zone`, +commit B2, NIE pushnięte):**
+> **WĄTEK B2 — KALIBRACJA TARGETÓW WDROŻONA (keep — decyzja Dawida), ale REALIZED-NEUTRALNA (kluczowe odkrycie metodologiczne).**
+> Diagnoza per-pokój (sondy read-only `/tmp`, na korpusie 16): generator systematycznie pompuje DUŻE prywatne (master +4.3/salon
+> +6.3/sypialnia +3.1 pkt udziału) a głodzi SERWISOWE (kotłownia −5.6/hol −4.0/lazienka −3.0/wiatrołap −2.9). Driver = remainder-fill 2b
+> `∝rozmiar` (kompounduje napompowane). **Część biasu CHRONIONA regułami** (lazienka-parter F2≤5; hol korytarz-min) — wyłączona z celu.
+> **3 zmiany (keep):** (1) `compute_house_targets` 2b waga `∝rozmiar`→`∝bazowy min` (`house_program.py:173`); (2) `DEFAULT_HOUSE_CAPS
+> ["kotlownia"]` 9→12 (był < ref-max 12.6 = latentny błąd); (3) szablony parter+single: kotłownia pct .03-.07→.05-.10, wiatrołap
+> .02-.06→.04-.08. **Diagnostyk: predicted-MAPE 37.5→34.7; kalibrowalny (excl hol+lazienka-parter) 35.7→31.8.**
+> **🔑 ALE REALIZED (benchmark) NEUTRALNE: 58.8/100, 14/16 vs baseline 59.2 (w szumie).** Kontrolny pre/post na subsecie (git-stash):
+> a2-5 parter 42.4→40.7, osobie parter 18.1→18.5, a2-5 poddasze 36.1→36.9 = **±1-2%, PONIŻEJ progu niedeterminizmu solvera.**
+> **ODKRYCIE: diagnostyk targetowy (`densyfikacja_diag`) to LUŹNY PROXY realized'a** — solver NIE trafia w target (dominują geometria +
+> coverage-F1 + loteria pierwszego optymalnego układu). Predicted-MAPE wprowadza w błąd jako miara realizmu. Pamięć [[proxy_gap_target_vs_realized]].
+> **Decyzja keep (Dawid):** targety bliższe wzorcom (kotłownia, ∝min zasadne) zaprocentują, gdy sprzężenie solver↔target się poprawi; zero
+> regresji. Sweep pokazał też: trim master/kuchnia POGARSZA, mikro-pokoje (garderoba, ref<6%) = 20% pMAPE z 7% pokoi = artefakt metryki
+> `%`-udziału (kandydat: area-ważony MAPE). Hygiene: stale-test `wc→lazienka` w `test_house_templates` (pre-existing od S30c) naprawiony.
+> **TESTY: fast 26 passed + dom 139 passed/3 skip/0 fail; benchmark 58.8/14-of-16** (FAIL pt+a2-2 = znane giganty perf-loterii, NIE regresja).
+> a2-5 parter F1=1.0 niezmienne (target nie rusza zestawu pokoi).
+> **NEXT: B1 — DENSYFIKACJA REALNYCH dużych domów 120-160 m²** (więcej pokoi = więcej absorberów; ryzyko perf/INFEASIBLE — parter-gardło).
+> **⚠️ WALIDOWAĆ REALNYM BENCHMARKIEM, NIE diagnostykiem (proxy-gap S31d).** pt 300 m²/kond. ODŁOŻONY (outlier — zweryfikować czy obrys
+> nie jest błędem ekstrakcji).
+>
+> **Previously — S31c (2026-06-16, koniec sesji — branch `feat/sfh-open-plan-day-zone`, +1 commit `0b474ef`, NIE pushnięte):**
 > **WĄTEK A — KORYTARZ DONE (commit `0b474ef`):** reguła Dawida — korytarz/komunikacja **≥1.2 m domyślnie, wyjątkowo 1.0 m, NIGDY <1.0**.
 > Bug: ramię L huba schodziło do 0.8 m (za wąsko w renderach). Fix: `cpsat_solver` MIN_CORRIDOR_CM=120/EXCEPTIONAL=100 + param
 > `corridor_min_cm` (baza KOMUNIKACJA `min_dim` + OBA wymiary ramienia L `wi2/hi2`); `house_layout` fast-fail — próba 1.2 m KRÓTKI

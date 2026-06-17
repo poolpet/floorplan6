@@ -57,10 +57,11 @@ class HouseProgramConfig:
 # EDYTOWALNE — UI/per-run nadpisuje przez HouseProgramConfig.caps.
 DEFAULT_HOUSE_CAPS: dict[str, float] = {
     # capy NETTO ugruntowane na medianach 22+ wzorców (S31b D4): garaz 34 (ref-med 32.7,
-    # cap 22 był < ref-min 21.5), master 17.0 (geoMed 17.76), kotlownia 9 (ref-max 12.6),
-    # schody 6.0 (ref-med 5.6, winder/dog-leg footprint).
+    # cap 22 był < ref-min 21.5), master 17.0 (geoMed 17.76), schody 6.0 (ref-med 5.6,
+    # winder/dog-leg footprint). kotlownia 12 (S31c B2: 9 sztucznie ścinał ref-max 12.6,
+    # udział −5.6 pkt vs wzorzec — był systematycznie za mały).
     "salon": 35.0, "kuchnia": 13.0, "sypialnia": 13.0, "master": 17.0,
-    "gabinet": 14.0, "pokoj": 14.0, "garaz": 34.0, "kotlownia": 9.0, "pralnia": 6.0,
+    "gabinet": 14.0, "pokoj": 14.0, "garaz": 34.0, "kotlownia": 12.0, "pralnia": 6.0,
     "spizarnia": 5.0, "garderoba": 6.0, "wiatrolap": 8.0, "wc": 3.0,
     "schowek": 3.5, "pom": 6.0, "gosp": 6.0, "schody": 6.0,
     # uwaga: "hub" (hol/podest) celowo BEZ cap-u — jest elastycznym sinkiem nadmiaru
@@ -159,20 +160,24 @@ def compute_house_targets(
                     targets[k] += add * (h / total_head)
                 leftover = usable_area_m2 - sum(targets.values())
         if leftover > 1e-9:
-            # 2b) RESZTĘ (remainder F1 = brutto−netto, „ściany") rozłóż ∝rozmiar po pokojach
+            # 2b) RESZTĘ (remainder F1 = brutto−netto, „ściany") rozłóż ∝BAZOWY min po pokojach
             # NOCNYCH + suchych USŁUGOWYCH. WYKLUCZAMY: hub (korytarz minimalny — solver karze
             # 3·hub-excess), MOKRE (lazienka/wc — twardy cap WT, nie wchłoną), oraz STREFĘ
             # DZIENNĄ (jest już przy ŁĄCZNYM cap-ie — open-plan invariant S17/20; doładowanie
-            # jej tu złamałoby day_zone_cap). Dzięki rozłożeniu po nocnych+suchych pojedyncza
-            # sypialnia/gabinet puchnie mniej niż przy night-only. Fallback: gdy brak nocnych
-            # i suchych (np. day-only) — dzień wchłania (jak dawniej).
+            # jej tu złamałoby day_zone_cap). WAGA = bazowy min_powierzchnia (footprint pokoju),
+            # NIE bieżący target — bo ∝target KOMPOUNDUJE: już napompowane duże pokoje (master/
+            # salon) puchną jeszcze bardziej, a serwisowe gasną (S31c: master +3.6/kotłownia
+            # −5.6 udziału vs wzorzec). ∝min rozkłada „ściany" wg stabilnego footprintu →
+            # kalibrowalny pMAPE 35.7→33.9 na korpusie. Fallback: brak nocnych/suchych (day-only)
+            # — dzień wchłania (jak dawniej).
             wet = {s.id for s in specs if s.id.split("_")[0] in ("lazienka", "wc")}
             sink_pool = [k for k in targets if k != hub_id and k not in wet and k not in day_ids]
             if not sink_pool:
                 sink_pool = list(day_ids) or [k for k in targets if k != hub_id] or list(targets)
-            total = sum(targets[k] for k in sink_pool) or 1.0
+            weights = {k: max(mins[k], 0.5) for k in sink_pool}
+            total = sum(weights.values()) or 1.0
             for k in sink_pool:
-                targets[k] += leftover * (targets[k] / total)
+                targets[k] += leftover * (weights[k] / total)
             leftover = usable_area_m2 - sum(targets.values())
     elif leftover < -1e-9:  # mały obrys: ściśnij pokoje powyżej min ku min
         for _ in range(200):
