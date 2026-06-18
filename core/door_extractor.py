@@ -154,27 +154,33 @@ def infer_door_openings(rooms) -> list[DoorOpening]:
     oznaczana jako otwarcie (`is_opening`). Pokój USŁUGOWY bez żadnego styku z komunikacją
     (śluzy z sąsiedztw korpusowych S30: kotłownia za garażem, spiżarnia za kuchnią) dostaje
     drzwi do sąsiada z najdłuższą wspólną krawędzią — każde pomieszczenie musi mieć wejście.
-    AC-agnostyczne; drzwi raz na parę."""
+    AC-agnostyczne; JEDNO wejście na pokój (hol preferowany — F5; inaczej najdłuższa krawędź)."""
     valid = [r for r in rooms if r.polygon is not None]
-    seen: set = set()
     out: list[DoorOpening] = []
     for a in valid:
         if a.spec.strefa == Strefa.KOMUNIKACJA:   # drzwi liczymy od strony POKOJU, nie komunikacji
             continue
+        # JEDNO wejście na pokój (reguła Dawida 2026-06-18): spośród sąsiadów-komunikacji
+        # wybierz HOL (F5: wszystkie pokoje przez hol); gdy pokój nie dotyka holu —
+        # komunikacja z NAJDŁUŻSZĄ wspólną krawędzią. Pokój przy holu I wiatrołapie
+        # dostawał dotąd 2 drzwi (per-para), teraz dokładnie jedno.
+        candidates = []   # (is_hub, edge_len, b, res)
         for b in valid:
             if b is a or b.spec.strefa != Strefa.KOMUNIKACJA or b.spec.id == "schody":
-                continue
-            key = frozenset((a.spec.id, b.spec.id))
-            if key in seen:
                 continue
             res = _shared_edge_door(a, b)
             if res is None:
                 continue
-            seen.add(key)
-            center, axis, width = res
-            c = a.polygon.centroid
-            out.append(DoorOpening(a.spec.id, b.spec.id, center, axis, width, (c.x, c.y),
-                                   is_opening=(a.spec.strefa == Strefa.DZIENNA)))
+            edge_len = a.polygon.boundary.intersection(b.polygon.boundary).length
+            candidates.append((b.spec.id == "hub", edge_len, b, res))
+        if not candidates:
+            continue
+        candidates.sort(key=lambda c: (c[0], c[1]), reverse=True)  # hol wygrywa, potem najdłuższa krawędź
+        _, _, b, res = candidates[0]
+        center, axis, width = res
+        c = a.polygon.centroid
+        out.append(DoorOpening(a.spec.id, b.spec.id, center, axis, width, (c.x, c.y),
+                               is_opening=(a.spec.strefa == Strefa.DZIENNA)))
 
     # Fallback śluzy (S30): usługowy pokój bez drzwi od komunikacji → drzwi do
     # sąsiada z najdłuższą wspólną krawędzią (kotłownia↔garaż, spiżarnia↔kuchnia).

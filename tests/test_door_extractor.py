@@ -522,3 +522,44 @@ def test_infer_door_openings_service_sluice_fallback():
     kuch = mk("kuchnia", Strefa.DZIENNA, 2, 0, 6, 4)
     d3 = infer_door_openings([spz, kuch])
     assert len(d3) == 1 and {d3[0].room_a, d3[0].room_b} == {"spizarnia", "kuchnia"}
+
+
+def test_infer_door_openings_one_entrance_prefers_hub():
+    """Bug 2026-06-18: pokój dotykający HOLU i WIATROŁAPU (oba KOMUNIKACJA) dostawał
+    2 drzwi. Reguła Dawida: JEDNO wejście na pokój — z holu (F5), nawet gdy krawędź
+    wiatrołapu jest dłuższa."""
+    from core.door_extractor import infer_door_openings
+    from core.models import Room, RoomSpec, Strefa
+    from shapely.geometry import box
+
+    def mk(rid, strefa, x0, y0, x1, y1):
+        r = Room(spec=RoomSpec(id=rid, nazwa=rid, strefa=strefa,
+                               wymaga_okna=False, priorytet_fasady=None),
+                 polygon=box(x0, y0, x1, y1)); r.update_metrics()
+        return r
+
+    syp = mk("sypialnia_1", Strefa.NOCNA, 0, 0, 4, 3)
+    hub = mk("hub", Strefa.KOMUNIKACJA, 4, 0, 6, 3)              # styk pionowy x=4, dł. 3
+    wiatrolap = mk("wiatrolap", Strefa.KOMUNIKACJA, 0, 3, 4, 5)  # styk poziomy y=3, dł. 4 (DŁUŻSZY)
+    doors = infer_door_openings([syp, hub, wiatrolap])
+    syp_doors = [d for d in doors if d.room_a == "sypialnia_1"]
+    assert len(syp_doors) == 1, f"jedno wejście na pokój, było: {[d.room_b for d in syp_doors]}"
+    assert syp_doors[0].room_b == "hub", "wejście z holu (F5), nie z dłuższej krawędzi wiatrołapu"
+
+
+def test_infer_door_openings_other_circulation_when_no_hub():
+    """Pokój dotykający TYLKO wiatrołapu (brak holu) → jedno wejście z wiatrołapu."""
+    from core.door_extractor import infer_door_openings
+    from core.models import Room, RoomSpec, Strefa
+    from shapely.geometry import box
+
+    def mk(rid, strefa, x0, y0, x1, y1):
+        r = Room(spec=RoomSpec(id=rid, nazwa=rid, strefa=strefa,
+                               wymaga_okna=False, priorytet_fasady=None),
+                 polygon=box(x0, y0, x1, y1)); r.update_metrics()
+        return r
+
+    syp = mk("sypialnia_1", Strefa.NOCNA, 0, 0, 4, 3)
+    wiatrolap = mk("wiatrolap", Strefa.KOMUNIKACJA, 0, 3, 4, 5)
+    doors = infer_door_openings([syp, wiatrolap])
+    assert len(doors) == 1 and doors[0].room_b == "wiatrolap"
