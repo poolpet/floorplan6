@@ -107,6 +107,7 @@ def render_floor_plan(
     show: bool = True,
     figsize: tuple[float, float] = (10, 8),
     furniture: Optional[list] = None,
+    architectural: bool = False,
 ) -> plt.Figure:
     """Renderuj FloorPlan jako matplotlib figure.
 
@@ -124,14 +125,15 @@ def render_floor_plan(
     fig, ax = plt.subplots(1, 1, figsize=figsize)
 
     # Rysuj obrys
-    _draw_boundary(ax, plan.boundary)
+    _draw_boundary(ax, plan.boundary, architectural=architectural)
 
     # Rysuj pokoje (etykiety odsunięte od mebli)
     furn_by_room: dict[str, list] = {}
     for f in (furniture or []):
         furn_by_room.setdefault(f.room_id, []).append(f.polygon)
     for room in plan.rooms:
-        _draw_room(ax, room, furniture_polys=furn_by_room.get(room.spec.id))
+        _draw_room(ax, room, furniture_polys=furn_by_room.get(room.spec.id),
+                   architectural=architectural)
 
     # Masa ścian (poché) — nad pokojami, pod meblami/etykietami
     _draw_walls(ax, getattr(plan.boundary, "polygon", None), plan.rooms)
@@ -149,33 +151,37 @@ def render_floor_plan(
             title += f" (score: {plan.score:.2f})"
     ax.set_title(title, fontsize=14, fontweight="bold")
 
-    # Legenda stref
-    legend_patches = []
-    for strefa, color in STREFA_COLORS.items():
-        if any(r.spec.strefa == strefa for r in plan.rooms):
-            legend_patches.append(mpatches.Patch(
-                facecolor=color, edgecolor="black",
-                label=strefa.display,
-            ))
-    if furniture:
-        legend_patches.append(mpatches.Patch(facecolor="#A1887F", edgecolor="#4E342E", label="Meble"))
-    # legenda POD rzutem (poziomo) — nie zasłania etykiet pokoi
-    ax.legend(handles=legend_patches, loc="upper center", bbox_to_anchor=(0.5, -0.08),
-              ncol=len(legend_patches) or 1, fontsize=9, framealpha=0.9)
+    if not architectural:
+        # Legenda stref
+        legend_patches = []
+        for strefa, color in STREFA_COLORS.items():
+            if any(r.spec.strefa == strefa for r in plan.rooms):
+                legend_patches.append(mpatches.Patch(
+                    facecolor=color, edgecolor="black",
+                    label=strefa.display,
+                ))
+        if furniture:
+            legend_patches.append(mpatches.Patch(facecolor="#A1887F", edgecolor="#4E342E", label="Meble"))
+        # legenda POD rzutem (poziomo) — nie zasłania etykiet pokoi
+        ax.legend(handles=legend_patches, loc="upper center", bbox_to_anchor=(0.5, -0.08),
+                  ncol=len(legend_patches) or 1, fontsize=9, framealpha=0.9)
 
-    # info POD rzutem, z lewej (poza obszarem danych) — nie nachodzi na tytuł ani meble
-    info_text = (
-        f"Outline: {plan.boundary.area:.1f} m²   "
-        f"Rooms: {plan.total_room_area:.1f} m²   "
-        f"Hub: {plan.hub_percent * 100:.1f}%"
-    )
-    ax.text(0.0, -0.15, info_text, transform=ax.transAxes,
-            fontsize=8, verticalalignment="top", horizontalalignment="left",
-            bbox=dict(boxstyle="round", facecolor="white", alpha=0.8))
+        # info POD rzutem, z lewej (poza obszarem danych) — nie nachodzi na tytuł ani meble
+        info_text = (
+            f"Outline: {plan.boundary.area:.1f} m²   "
+            f"Rooms: {plan.total_room_area:.1f} m²   "
+            f"Hub: {plan.hub_percent * 100:.1f}%"
+        )
+        ax.text(0.0, -0.15, info_text, transform=ax.transAxes,
+                fontsize=8, verticalalignment="top", horizontalalignment="left",
+                bbox=dict(boxstyle="round", facecolor="white", alpha=0.8))
 
     ax.set_aspect("equal")
-    ax.set_xlabel("x [m]")
-    ax.set_ylabel("y [m]")
+    if architectural:
+        ax.axis("off")
+    else:
+        ax.set_xlabel("x [m]")
+        ax.set_ylabel("y [m]")
     plt.tight_layout()
 
     if save_path:
@@ -536,17 +542,18 @@ def _draw_windows(ax, rooms, boundary):
                 solid_capstyle="butt", zorder=7)
 
 
-def _draw_boundary(ax: plt.Axes, boundary: Boundary):
-    """Rysuj obrys mieszkania."""
+def _draw_boundary(ax: plt.Axes, boundary: Boundary, architectural: bool = False):
+    """Rysuj obrys mieszkania. architectural=True → bez markera/etykiety ENTRY (dev)."""
     x, y = boundary.polygon.exterior.xy
     ax.plot(x, y, color="black", linewidth=2.5)
 
-    # Oznacz drzwi wejściowe
-    ex, ey = boundary.entry_point
-    ax.plot(ex, ey, "rv", markersize=12, label="Drzwi wejściowe")
-    ax.annotate("ENTRY", (ex, ey), textcoords="offset points",
-                xytext=(0, -15), ha="center", fontsize=8, color="red",
-                fontweight="bold")
+    # Oznacz drzwi wejściowe (dev — pomijane w trybie architektonicznym)
+    if not architectural:
+        ex, ey = boundary.entry_point
+        ax.plot(ex, ey, "rv", markersize=12, label="Drzwi wejściowe")
+        ax.annotate("ENTRY", (ex, ey), textcoords="offset points",
+                    xytext=(0, -15), ha="center", fontsize=8, color="red",
+                    fontweight="bold")
 
     # Marginesy
     bx0, by0, bx1, by1 = boundary.bbox

@@ -119,3 +119,42 @@ def test_stairs_red_in_default():
     fig = render_two_storey(_house_layout(), show=False)  # default kolor
     assert RED & _line_colors(fig.axes[0]), "default: schody czerwone (regresja-lock)"
     plt.close(fig)
+
+
+# --- Task 4: ścieżka render_floor_plan (parterowce + mieszkania) ---
+from core.boundary_analyzer import analyze_boundary
+from core.models import FloorPlan
+from viz.plan_renderer import render_floor_plan
+
+
+def _apt_plan():
+    b = analyze_boundary(Polygon([(0, 0), (8, 0), (8, 4), (0, 4)]), entry_point=(4, 0))
+    syp = _room("sypialnia_1", Strefa.NOCNA, 4.0, 4.0, 0.0, 0.0)
+    hub = _room("hub", Strefa.KOMUNIKACJA, 4.0, 4.0, 4.0, 0.0)
+    return FloorPlan(boundary=b, template=None, rooms=[syp, hub])
+
+
+def _texts(ax):
+    return [t.get_text() for t in ax.texts]
+
+
+def test_floor_plan_architectural_clean(tmp_path):
+    fig = render_floor_plan(_apt_plan(), title="Mieszkanie", architectural=True, show=False,
+                            save_path=tmp_path / "apt_arch.png")
+    ax = fig.axes[0]
+    assert ax.get_legend() is None, "tryb arch: brak legendy"
+    assert ax.axison is False, "tryb arch: osie off"
+    assert not any(t.startswith("Outline:") for t in _texts(ax)), "tryb arch: brak info_text"
+    assert "ENTRY" not in _texts(ax), "tryb arch: brak etykiety ENTRY"
+    assert not (ZONE_RGB & set(_fill_rgbs(ax))), "tryb arch: brak kolorów stref"
+    plt.close(fig)
+
+
+def test_floor_plan_default_unchanged(tmp_path):
+    fig = render_floor_plan(_apt_plan(), title="Mieszkanie", show=False, save_path=tmp_path / "apt_color.png")
+    ax = fig.axes[0]
+    assert ax.get_legend() is not None
+    assert ax.axison is True
+    assert any(t.startswith("Outline:") for t in _texts(ax))
+    assert "ENTRY" in _texts(ax)
+    plt.close(fig)
