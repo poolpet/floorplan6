@@ -319,9 +319,9 @@ def _draw_storey(ax, rooms, boundary, core_abs, furniture, title, low_strips=Non
     schody = next((r for r in rooms if r.spec.id == "schody"), None)
     if schody is not None and schody.polygon is not None:
         hol = next((r for r in rooms if r.spec.id == "hub"), None)
-        _draw_stair_in_room(ax, schody, hol)
+        _draw_stair_in_room(ax, schody, hol, architectural=architectural)
     else:
-        _draw_stair(ax, core_abs)
+        _draw_stair(ax, core_abs, architectural=architectural)
     _draw_walls(ax, getattr(boundary, "polygon", None), rooms)
     _draw_furniture(ax, furniture)
     _draw_doors(ax, rooms)
@@ -378,14 +378,15 @@ def stair_run_orientation(schody_bounds, hol_bounds):
     return ("vertical", "S" if dy > 0 else "N")
 
 
-def _draw_winder_in_room(ax, schody, hol):
+def _draw_winder_in_room(ax, schody, hol, architectural=False):
     """Glif schodów zabiegowych/dwubiegowych: linia biegu w kształcie U (dwa biegi +
     zawrót po stronie OD holu) z poprzeczkami-stopniami i jedną strzałką 'w górę'.
     Sam kształt U czyta się jako obrót — mało linii, bez gridu. Orientacja z
-    stair_run_orientation (oś biegu + zwrot odchodzący od holu)."""
+    stair_run_orientation (oś biegu + zwrot odchodzący od holu).
+    architectural=True → kolor czarny."""
     sx, sy, ex, ey = schody.polygon.bounds
     sw, sh = ex - sx, ey - sy
-    color = "#B71C1C"
+    color = "#212121" if architectural else "#B71C1C"
     hb = hol.polygon.bounds if (hol is not None and getattr(hol, "polygon", None) is not None) else None
     axis, arrow = stair_run_orientation(schody.polygon.bounds, hb)
     if axis == "horizontal":                      # biegi poziome (wzdłuż x), zawrót w pionie
@@ -418,16 +419,17 @@ def _draw_winder_in_room(ax, schody, hol):
             ax.plot([x_rgt - half, x_rgt + half], [y, y], color=color, lw=0.5, zorder=5)
 
 
-def _draw_stair_in_room(ax, schody, hol):
+def _draw_stair_in_room(ax, schody, hol, architectural=False):
     """Symbol biegu WEWNĄTRZ pokoju 'schody' — stopnie + strzałka 'w górę' (bez
     osobnego prostokąta/etykiety; pokój jest już narysowany i podpisany 'Schody').
-    Dla stair_kind=='u' rysuje glif dwubiegowy (zabiegowe), inaczej bieg prosty."""
+    Dla stair_kind=='u' rysuje glif dwubiegowy (zabiegowe), inaczej bieg prosty.
+    architectural=True → kolor czarny."""
     if getattr(schody, "stair_kind", None) == "u":
-        _draw_winder_in_room(ax, schody, hol)
+        _draw_winder_in_room(ax, schody, hol, architectural=architectural)
         return
     sx, sy, ex, ey = schody.polygon.bounds
     sw, sh = ex - sx, ey - sy
-    color = "#B71C1C"
+    color = "#212121" if architectural else "#B71C1C"
     hb = hol.polygon.bounds if (hol is not None and hol.polygon is not None) else None
     axis, arrow = stair_run_orientation(schody.polygon.bounds, hb)
     if axis == "vertical":                      # bieg ↕ — stopnie poziome
@@ -450,27 +452,29 @@ def _draw_stair_in_room(ax, schody, hol):
                     arrowprops=dict(arrowstyle="->", color=color, lw=1.2), zorder=6)
 
 
-def _draw_stair(ax, core_abs):
-    """Symbol klatki schodowej — czerwony prostokąt + stopnie + strzałka 'w górę'."""
+def _draw_stair(ax, core_abs, architectural=False):
+    """Symbol klatki schodowej — prostokąt + stopnie + strzałka 'w górę'.
+    architectural=True → kolor czarny (czerwień = tryb debug)."""
     sx, sy, sw, sh = core_abs
+    color = "#212121" if architectural else "#D32F2F"
     ax.add_patch(mpatches.Rectangle((sx, sy), sw, sh, fill=False,
-                                    edgecolor="#D32F2F", linewidth=2.0, zorder=5))
+                                    edgecolor=color, linewidth=2.0, zorder=5))
     if sw >= sh:                                   # stopnie prostopadłe do dłuższego boku
         n = max(3, int(sw / 0.28))
         for k in range(1, n):
             x = sx + sw * k / n
-            ax.plot([x, x], [sy, sy + sh], color="#D32F2F", linewidth=0.5, zorder=5)
+            ax.plot([x, x], [sy, sy + sh], color=color, linewidth=0.5, zorder=5)
         ax.annotate("", xy=(sx + sw * 0.88, sy + sh / 2), xytext=(sx + sw * 0.12, sy + sh / 2),
-                    arrowprops=dict(arrowstyle="->", color="#D32F2F", lw=1.2), zorder=6)
+                    arrowprops=dict(arrowstyle="->", color=color, lw=1.2), zorder=6)
     else:
         n = max(3, int(sh / 0.28))
         for k in range(1, n):
             y = sy + sh * k / n
-            ax.plot([sx, sx + sw], [y, y], color="#D32F2F", linewidth=0.5, zorder=5)
+            ax.plot([sx, sx + sw], [y, y], color=color, linewidth=0.5, zorder=5)
         ax.annotate("", xy=(sx + sw / 2, sy + sh * 0.88), xytext=(sx + sw / 2, sy + sh * 0.12),
-                    arrowprops=dict(arrowstyle="->", color="#D32F2F", lw=1.2), zorder=6)
+                    arrowprops=dict(arrowstyle="->", color=color, lw=1.2), zorder=6)
     ax.text(sx + sw / 2, sy + sh * 0.5, "SCHODY", ha="center", va="center", fontsize=6,
-            color="#B71C1C", fontweight="bold", zorder=7,
+            color=color, fontweight="bold", zorder=7,
             bbox=dict(boxstyle="round,pad=0.1", facecolor="white", alpha=0.6, edgecolor="none"))
 
 
