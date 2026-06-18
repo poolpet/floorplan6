@@ -545,25 +545,32 @@ def _draw_boundary(ax: plt.Axes, boundary: Boundary):
     ax.set_ylim(by0 - margin, by1 + margin)
 
 
-def _draw_room(ax: plt.Axes, room: Room, draw_edge: bool = True, furniture_polys=None):
+def _draw_room(ax: plt.Axes, room: Room, draw_edge: bool = True, furniture_polys=None,
+               architectural: bool = False):
     """Rysuj pojedynczy pokój. draw_edge=False → tylko wypełnienie bez krawędzi
     (dla pokoi open-plan, których wspólny obrys rysuje się osobno).
-    furniture_polys → etykieta nazwy jest odsuwana od mebli (nie nachodzi na łóżko/szafę)."""
+    furniture_polys → etykieta nazwy jest odsuwana od mebli (nie nachodzi na łóżko/szafę).
+    architectural=True → tryb rzutu: białe wnętrze + cienka szara krawędź (nie kolor strefy)."""
     if room.polygon is None:
         return
 
-    color = STREFA_COLORS.get(room.spec.strefa, "#E0E0E0")
-    edge_color = STREFA_EDGE_COLORS.get(room.spec.strefa, "#333333") if draw_edge else "none"
-    lw = 1.5 if draw_edge else 0.0
+    if architectural:                                   # tryb rzutu: białe wnętrze, cienka szara krawędź
+        color, fill_alpha = "white", 1.0
+        edge_color = "#BDBDBD" if draw_edge else "none"
+        lw = 0.6 if draw_edge else 0.0
+    else:
+        color, fill_alpha = STREFA_COLORS.get(room.spec.strefa, "#E0E0E0"), 0.6
+        edge_color = STREFA_EDGE_COLORS.get(room.spec.strefa, "#333333") if draw_edge else "none"
+        lw = 1.5 if draw_edge else 0.0
 
     # Obsługa MultiPolygon (L-kształtne pokoje po carving)
     if room.polygon.geom_type == "MultiPolygon":
         for geom in room.polygon.geoms:
             x, y = geom.exterior.xy
-            ax.fill(x, y, alpha=0.6, facecolor=color, edgecolor=edge_color, linewidth=lw)
+            ax.fill(x, y, alpha=fill_alpha, facecolor=color, edgecolor=edge_color, linewidth=lw)
     else:
         x, y = room.polygon.exterior.xy
-        ax.fill(x, y, alpha=0.6, facecolor=color, edgecolor=edge_color, linewidth=lw)
+        ax.fill(x, y, alpha=fill_alpha, facecolor=color, edgecolor=edge_color, linewidth=lw)
 
     # Etykieta — odsunięta od mebli (gdy podane), inaczej w centrum pokoju
     cx, cy = _label_anchor(room.polygon, furniture_polys or [])
