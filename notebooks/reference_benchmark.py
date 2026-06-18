@@ -196,6 +196,14 @@ def _storey_rooms(ref_storey: dict) -> list[tuple[str, float]]:
             if _ref_room_type(r) not in ("taras", "garaz", "other")]
 
 
+def _ref_f1_types(ref_storey: dict) -> list[str]:
+    """Typy pokoi wzorca dla room-set F1. W ODRÓŻNIENIU od `_storey_rooms` (MAPE)
+    LICZY `garaz` — przynależność do zestawu jest pewna, choć POLE garażu w tabelach
+    bywa niepewne/brak (dlatego MAPE go wyklucza). Bez schody/taras/other (jak F1)."""
+    return [_ref_room_type(r) for r in ref_storey["rooms"]
+            if _ref_room_type(r) not in ("taras", "schody", "other")]
+
+
 def score_project(project: dict, time_limit: float) -> dict:
     """project: {"name", "parter": <plan-json>, "poddasze": <plan-json|None>}"""
     name = project["name"]
