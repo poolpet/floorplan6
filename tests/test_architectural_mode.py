@@ -40,3 +40,43 @@ def test_draw_room_default_keeps_zone_color():
     _draw_room(ax, _room("salon", Strefa.DZIENNA, 4, 3), architectural=False)
     assert ZONE_RGB & set(_fill_rgbs(ax)), "default musi mieć kolor strefy"
     plt.close(fig)
+
+
+# --- Task 2: ścieżka domu 2-kond. (render_two_storey) ---
+from core.house_layout import TwoStoreyLayout
+from core.furniture import place_furniture
+from viz.plan_renderer import render_two_storey
+
+
+def _house_layout():
+    parter = [
+        _room("salon", Strefa.DZIENNA, 4.0, 3.0, 0.0, 0.0),
+        _room("hub", Strefa.KOMUNIKACJA, 2.5, 3.0, 4.0, 0.0),
+        _room("kuchnia", Strefa.DZIENNA, 6.5, 2.0, 0.0, 3.0),
+    ]
+    pietro = [
+        _room("sypialnia_1", Strefa.NOCNA, 4.0, 3.0, 0.0, 0.0),
+        _room("hub", Strefa.KOMUNIKACJA, 2.5, 3.0, 4.0, 0.0),
+        _room("lazienka", Strefa.USLUGOWA, 6.5, 2.0, 0.0, 3.0),
+    ]
+    return TwoStoreyLayout(ok=True, parter_rooms=parter, pietro_rooms=pietro,
+                           stair_core=(4.0, 0.0, 2.5, 3.0), boundary=None)
+
+
+def test_two_storey_architectural_axes_off_no_legend_white(tmp_path):
+    fig = render_two_storey(_house_layout(), architectural=True,
+                            save_path=tmp_path / "arch.png", show=False)
+    for ax in fig.axes:
+        assert ax.get_legend() is None, "tryb arch: brak legendy"
+        assert ax.axison is False, "tryb arch: osie wyłączone"
+        assert not (ZONE_RGB & set(_fill_rgbs(ax))), "tryb arch: brak kolorów stref"
+    plt.close(fig)
+
+
+def test_two_storey_default_unchanged(tmp_path):
+    fig = render_two_storey(_house_layout(), save_path=tmp_path / "color.png", show=False)
+    ax = fig.axes[0]
+    assert ax.get_legend() is not None, "default: legenda obecna"
+    assert ax.axison is True, "default: osie włączone"
+    assert ZONE_RGB & set(_fill_rgbs(ax)), "default: kolory stref obecne"
+    plt.close(fig)

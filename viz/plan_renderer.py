@@ -220,6 +220,7 @@ def render_two_storey(
     save_path: Optional[Path] = None,
     show: bool = True,
     figsize: tuple[float, float] = (16, 8),
+    architectural: bool = False,
 ) -> plt.Figure:
     """Renderuj dom 2-kondygnacyjny (TwoStoreyLayout) — 2 panele PARTER | PIĘTRO.
 
@@ -237,11 +238,11 @@ def render_two_storey(
     # strefy niskiej ścianki kolankowej (przyciemnienie + linia ścianki).
     strips = getattr(layout, "attic_low_strips", None) or []
     _draw_storey(ax_p, layout.parter_rooms, layout.boundary, core_abs,
-                 parter_furniture or [], "PARTER")
+                 parter_furniture or [], "PARTER", architectural=architectural)
     _draw_storey(ax_g, layout.pietro_rooms, layout.boundary, core_abs,
                  pietro_furniture or [],
                  "PODDASZE" if strips else "PIĘTRO",
-                 low_strips=strips)
+                 low_strips=strips, architectural=architectural)
 
     if title is None:
         title = "Dom jednorodzinny 2-kondygnacyjny"
@@ -267,7 +268,8 @@ def _frame_origin(layout) -> tuple[float, float]:
     return 0.0, 0.0
 
 
-def _draw_storey(ax, rooms, boundary, core_abs, furniture, title, low_strips=None):
+def _draw_storey(ax, rooms, boundary, core_abs, furniture, title, low_strips=None,
+                 architectural=False):
     # obrys
     if boundary is not None and getattr(boundary, "polygon", None) is not None:
         bx, by = boundary.polygon.exterior.xy
@@ -303,12 +305,12 @@ def _draw_storey(ax, rooms, boundary, core_abs, furniture, title, low_strips=Non
         furn_by_room.setdefault(f.room_id, []).append(f.polygon)
     for room in rooms:
         _draw_room(ax, room, draw_edge=(room not in day_rooms),
-                   furniture_polys=furn_by_room.get(room.spec.id))
+                   furniture_polys=furn_by_room.get(room.spec.id), architectural=architectural)
     if len(day_rooms) >= 2:
         from shapely.ops import unary_union
         union = unary_union([r.polygon for r in day_rooms])
         geoms = union.geoms if union.geom_type == "MultiPolygon" else [union]
-        edge = STREFA_EDGE_COLORS.get(Strefa.DZIENNA, "#333333")
+        edge = "#616161" if architectural else STREFA_EDGE_COLORS.get(Strefa.DZIENNA, "#333333")
         for g in geoms:
             gx, gy = g.exterior.xy
             ax.plot(gx, gy, color=edge, linewidth=1.5, zorder=3)
@@ -326,24 +328,28 @@ def _draw_storey(ax, rooms, boundary, core_abs, furniture, title, low_strips=Non
     _draw_windows(ax, rooms, boundary)
 
     ax.set_title(title, fontsize=13, fontweight="bold")
-    legend_patches = [
-        mpatches.Patch(facecolor=color, edgecolor="black", label=strefa.display)
-        for strefa, color in STREFA_COLORS.items()
-        if any(r.spec.strefa == strefa for r in rooms)
-    ]
-    if furniture:
-        legend_patches.append(mpatches.Patch(facecolor="#A1887F", edgecolor="#4E342E", label="Meble"))
-    # legenda POD panelem (poziomo) — nie zasłania etykiet pokoi (MVP credibility)
-    ax.legend(handles=legend_patches, loc="upper center", bbox_to_anchor=(0.5, -0.10),
-              ncol=len(legend_patches) or 1, fontsize=8, framealpha=0.9)
+    if not architectural:
+        legend_patches = [
+            mpatches.Patch(facecolor=color, edgecolor="black", label=strefa.display)
+            for strefa, color in STREFA_COLORS.items()
+            if any(r.spec.strefa == strefa for r in rooms)
+        ]
+        if furniture:
+            legend_patches.append(mpatches.Patch(facecolor="#A1887F", edgecolor="#4E342E", label="Meble"))
+        # legenda POD panelem (poziomo) — nie zasłania etykiet pokoi (MVP credibility)
+        ax.legend(handles=legend_patches, loc="upper center", bbox_to_anchor=(0.5, -0.10),
+                  ncol=len(legend_patches) or 1, fontsize=8, framealpha=0.9)
 
     bx0, by0, bx1, by1 = bnds
     margin = max(bx1 - bx0, by1 - by0) * 0.05
     ax.set_xlim(bx0 - margin, bx1 + margin)
     ax.set_ylim(by0 - margin, by1 + margin)
     ax.set_aspect("equal")
-    ax.set_xlabel("x [m]")
-    ax.set_ylabel("y [m]")
+    if architectural:
+        ax.axis("off")
+    else:
+        ax.set_xlabel("x [m]")
+        ax.set_ylabel("y [m]")
 
 
 def stair_run_orientation(schody_bounds, hol_bounds):

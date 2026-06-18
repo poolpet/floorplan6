@@ -52,7 +52,8 @@ def house_details_text(layout: TwoStoreyLayout) -> str:
 
 
 def render_house_figure(layout: TwoStoreyLayout, with_furniture: bool, title: Optional[str] = None,
-                        save_path: Optional[Path] = None, show: bool = False):
+                        save_path: Optional[Path] = None, show: bool = False,
+                        architectural: bool = False):
     """Renderuj gotowy TwoStoreyLayout jako 2-panelowy rzut (PARTER | PIĘTRO)."""
     parter_furniture, pietro_furniture = furnish_layout(layout, with_furniture)
     return render_two_storey(
@@ -62,4 +63,5 @@ def render_house_figure(layout: TwoStoreyLayout, with_furniture: bool, title: Op
         title=title,
         save_path=save_path,
         show=show,
+        architectural=architectural,
     )
