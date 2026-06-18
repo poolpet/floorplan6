@@ -3,7 +3,27 @@
 > Updated after every working session. If it doesn't reflect reality —
 > Claude updates immediately.
 >
-> **⮕ NEXT SESSION (2026-06-18, B1-done + PIVOT na wiarygodność — branch `feat/sfh-open-plan-day-zone`, +2 commity bench, NIE pushnięte):**
+> **⮕ NEXT SESSION (2026-06-18 cz.3, DOM→AC WRITE-BACK — branch `feat/sfh-open-plan-day-zone`, NIE pushnięte):**
+> **AUDYT MVP (4 równoległe agenty Opus) → luka #1 = dom→AC.** Ustalenia: mózg + render GOTOWE (benchmark 60/15-16, tryb
+> architektoniczny + jedno-wejście zaakceptowane okiem). **Mieszkania**: pełny pipe do AC (GUI→`export_plan_to_archicad`→Tapir).
+> **Domy**: tylko offline `ac_house_smoke` (strefy+ściany PARTERU), GUI „Wstaw do AC" zablokowane. Pakowanie/C++ shell/przycisk-w-AC =
+> produktyzacja (odłożona). Decyzja Dawida: **budować dom→AC** (MVP „dla Dawida", nie dystrybucja).
+> **WDROŻONE (kod, decyzje: 2-pass realne kondygnacje + reuse writera per-piętro + ręczny przełącznik kondygnacji):**
+> `bridge/house_writer.export_house_to_archicad(layout, storey)` — buduje per-kondygnację `FloorPlan` z szablonem
+> (`house_single_storey`/`house_parter`/`house_pietro`, wybór jak `house_to_contract`) → woła istniejący `export_plan_to_archicad`
+> (reuse 1:1). **MINA OMINIĘTA:** `apartment_id="DOM-{storey}"` jawnie (szablon domu nie ma `typ_mieszkania`, którego writer sięga w
+> domyślnym apartment_id). Meble OFF. GUI: `house_storey_combo` (Parter/Poddasze) + odblokowany przycisk w `_on_house_ready` +
+> dyspozytor w `_export_to_archicad` (tryb dom → `_export_house_to_archicad`). Commity `21920d0` (writer) + GUI-commit. Testy:
+> `test_house_writer` 5/5 (monkeypatch spy — izoluje od Tapira), `test_house_export_gui` 1/1 (dyspozytor+storey). Spec
+> `2026-06-18-dom-do-archicad-writeback-design.md`, plan `plans/2026-06-18-dom-do-archicad-writeback.md`.
+> **🟡 PENDING — WERYFIKACJA NA ŻYWO DAWIDA W AC (bramka finalna, Claude bez AC):** 2 przebiegi — (1) w AC aktywna kondygnacja=Parter,
+> GUI „Parter"→Wstaw; (2) w AC=Poddasze, GUI „Poddasze"→Wstaw. Ocena stref/ścian/drzwi/okien/etykiet obu kondygnacji.
+> **MINY do sprawdzenia live:** szablon `sasiedztwo` vs realny room-set domu (część drzwi może nie powstać — akceptowalne MVP, architekt
+> dostawia); orientacja drzwi/otwory wymaga custom Tapir build (stock=domyślna, 1-klik flip); aktywna kondygnacja/zCoordinate = reuse
+> zachowania mieszkań (do potwierdzenia). **NEXT po live-OK:** pozostałe telle wiarygodności (#5 okna-3-linie / #6 tabela+wymiary / #7 meble CAD),
+> albo produktyzacja (pakowanie/C++ shell), albo pokrycie (bliźniak/szereg, perf dużych L/T).
+>
+> **Previously — (2026-06-18, B1-done + PIVOT na wiarygodność — branch `feat/sfh-open-plan-day-zone`, +2 commity bench, NIE pushnięte):**
 > **B1 ZAMKNIĘTE — fix metryki garaż (Lewar 2) WDROŻONY i ZWALIDOWANY.** `_ref_f1_types` (nowy helper) liczy `garaz` w room-set F1
 > (przynależność do zestawu PEWNA), ale `_storey_rooms`/MAPE NIEzmienione (pole garażu w tabelach niepewne). Commity `be87f35` (helper+test
 > `tests/test_benchmark_garaz_f1.py` 3/3) + `17f9033` (podpięcie w `score_project`, tylko ścieżka F1). **BENCHMARK: 60.0/100, 15/16**

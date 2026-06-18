@@ -422,6 +422,13 @@ class MainWindow(QMainWindow):
         self.furniture_check.setChecked(True)
         self.furniture_check.setToolTip("Rozstaw kanoniczne meble w pokojach (parter + piętro).")
         house_opt_lay.addWidget(self.furniture_check)
+        house_opt_lay.addWidget(QLabel("Kondygnacja → AC:"))
+        self.house_storey_combo = QComboBox()
+        self.house_storey_combo.addItems(["Parter", "Poddasze"])
+        self.house_storey_combo.setToolTip(
+            "Którą kondygnację wstawić. Ustaw TĘ SAMĄ aktywną kondygnację w ArchiCAD."
+        )
+        house_opt_lay.addWidget(self.house_storey_combo)
         step2_lay.addWidget(self.house_options)
         self.house_options.setVisible(False)
 
@@ -574,7 +581,7 @@ class MainWindow(QMainWindow):
         )
         self.preview_stack.setCurrentWidget(self.image_label)
         self.archicad_btn.setToolTip(
-            "Eksport domu do AC — później (shell C++)." if house else ""
+            "Wstaw wybraną kondygnację do AKTYWNEJ kondygnacji ArchiCAD." if house else ""
         )
 
     def _input_polygon_entry(self):
@@ -674,6 +681,7 @@ class MainWindow(QMainWindow):
             return
         self._house_layout = layout
         self.export_btn.setEnabled(True)
+        self.archicad_btn.setEnabled(True)
         self.variant_label.setText("Dom (PARTER + PIĘTRO)")
         self.statusBar().showMessage("Wygenerowano dom 2-kondygnacyjny.")
         self._show_house()
@@ -1039,6 +1047,9 @@ class MainWindow(QMainWindow):
 
     def _export_to_archicad(self):
         """Export current variant to ArchiCAD as zones."""
+        if self.mode_house_radio.isChecked():
+            self._export_house_to_archicad()
+            return
         if not self.variants:
             return
         plan = self.variants[self.current_idx]
@@ -1067,6 +1078,38 @@ class MainWindow(QMainWindow):
                 self, "ArchiCAD",
                 f"Cannot connect to ArchiCAD:\n{e}\n\n"
                 "Make sure ArchiCAD is running with Tapir Add-On."
+            )
+
+    def _export_house_to_archicad(self):
+        """Wstaw wybraną kondygnację domu do AKTYWNEJ kondygnacji AC (2-pass)."""
+        layout = getattr(self, "_house_layout", None)
+        if layout is None:
+            return
+        storey = "poddasze" if self.house_storey_combo.currentText() == "Poddasze" else "parter"
+        try:
+            from bridge.house_writer import export_house_to_archicad
+            result = export_house_to_archicad(layout, storey=storey, offset=self._archicad_offset)
+            n_zones = len(result.get("zones", []))
+            n_walls = len(result.get("walls", []))
+            n_doors = len(result.get("doors", []))
+            n_windows = len(result.get("windows", []))
+            n_labels = len(result.get("labels", []))
+            self.statusBar().showMessage(
+                f"Dom [{storey}]: {n_zones} stref + {n_walls} ścian + {n_doors} drzwi "
+                f"+ {n_windows} okien + {n_labels} etykiet"
+            )
+            QMessageBox.information(
+                self, "ArchiCAD",
+                f"Kondygnacja '{storey}' wstawiona na AKTYWNĄ kondygnację AC:\n\n"
+                f"{n_zones} stref + {n_walls} ścianek + {n_doors} drzwi + {n_windows} okien "
+                f"+ {n_labels} etykiet.\n\n"
+                f"Druga kondygnacja: przełącz kondygnację w AC, wybierz ją tutaj, kliknij ponownie."
+            )
+        except Exception as e:
+            QMessageBox.warning(
+                self, "ArchiCAD",
+                f"Nie udało się wstawić domu do ArchiCAD:\n{e}\n\n"
+                "Upewnij się, że ArchiCAD działa z Tapir Add-On."
             )
 
     def _import_from_inner_edge(self):
