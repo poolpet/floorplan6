@@ -3,7 +3,29 @@
 > Updated after every working session. If it doesn't reflect reality —
 > Claude updates immediately.
 >
-> **⮕ NEXT SESSION (2026-06-17, koniec sesji S31d — branch `feat/sfh-open-plan-day-zone`, +commit B2, NIE pushnięte):**
+> **⮕ NEXT SESSION (2026-06-18, B1-done + PIVOT na wiarygodność — branch `feat/sfh-open-plan-day-zone`, +2 commity bench, NIE pushnięte):**
+> **B1 ZAMKNIĘTE — fix metryki garaż (Lewar 2) WDROŻONY i ZWALIDOWANY.** `_ref_f1_types` (nowy helper) liczy `garaz` w room-set F1
+> (przynależność do zestawu PEWNA), ale `_storey_rooms`/MAPE NIEzmienione (pole garażu w tabelach niepewne). Commity `be87f35` (helper+test
+> `tests/test_benchmark_garaz_f1.py` 3/3) + `17f9033` (podpięcie w `score_project`, tylko ścieżka F1). **BENCHMARK: 60.0/100, 15/16**
+> (baseline 58.8/14-16) — **BRAMKA PASS** (gen-rate 15≥14, score 60≥58.5, zero nowych FAILi: tylko `pt` pietro=UNKNOWN = znany 300 m²
+> outlier-perf; a2-2 teraz OK=63.1). Garaż-TP na parterach z garażem (a2-2 parter F1=0.889, tropie 0.727, ar02-1b 0.625). UCZCIWIE:
+> część skoku 58.8→60.0 to perf-loteria (a2-2 dziś się generuje), sam fix net-dodatni+poprawnościowy. Sweep predicted-F1: jedyny czysty
+> lewar = garaż sparowany +0.0077 (próg `_PARTER_GARAZ_MIN_NET` ODŁOŻONY — ryzyko perf); garderoba/spiżarnia net-zero → DROP.
+> **PŁASKOWYŻ POTWIERDZONY: room-set już dobrze dopasowany; F1-straty = architektonicznie-słuszne extra (keep — 2.łazienka przy ≥3 syp,
+> gabinet, kotłownia) + artefakty metryki — NIE luki. Target+selekcja-tweaki WYCZERPANE.**
+> **PIVOT (decyzja Dawida 2026-06-18): WIARYGODNOŚĆ OKIEM, nie benchmark-score** (proxy-gap: score = luźny proxy tego co oceniasz wzrokowo).
+> RECON (rendery benchmarku vs oryginały D7 Studio `rzuty/domy/*.pdf` = złoty standard): **wall-poché S31b-D1 DZIAŁA w świeżych renderach**
+> (grube szare mury, drzwi-łuki czytelne) — pierwszy odruch „brak ścian" był z PRZESTARZAŁYCH `renders_mvp` (11-13 cze, przed S31b).
+> POZOSTAŁE TELLE vs D7: (1) osie wykresu x/y[m]+ticki+ramka, (2) kolorowe strefy DAY/NIGHT/SERVICE, (3) legenda kolorów, (4) schody
+> CZERWONE (`#D32F2F`/`#B71C1C` — glif stopni+strzałka OK, czerwień=debug), (5) okna jako pasek nie symbol-3-linie, (6) brak tabeli
+> powierzchni/wymiarowania/osi konstr., (7) meble=szare bloki nie symbole CAD. **WĄTEK W TOKU: „tryb architektoniczny" renderera (#1-4:
+> osie OFF + białe wnętrza + bez legendy + schody czarne)** jako FLAGA `architectural=False` opt-in (default kolor — testy zielone, dev bez
+> zmian), jawnie włączana w benchmark+MVP+preview/AC. Brainstorm zaakceptowany (kierunek + pierwszy-krok + flaga). NEXT: spec→plan→impl
+> (CPU wolne). Punkty zmian w `viz/plan_renderer.py`: osie 345-346/177-178, strefy `_draw_room` 563/566, legendy 337/163, schody
+> `_draw_stair`/`_draw_stair_in_room`/`_draw_winder_in_room` 447-470/415-446/375. Pamięć [[project_proxy_gap_target_vs_realized]]
+> [[feedback_match_originals_exactly]] [[project_layout_optimization_archon]].
+>
+> **Previously — S31d (2026-06-17, koniec sesji S31d — branch `feat/sfh-open-plan-day-zone`, +commit B2, NIE pushnięte):**
 > **WĄTEK B2 — KALIBRACJA TARGETÓW WDROŻONA (keep — decyzja Dawida), ale REALIZED-NEUTRALNA (kluczowe odkrycie metodologiczne).**
 > Diagnoza per-pokój (sondy read-only `/tmp`, na korpusie 16): generator systematycznie pompuje DUŻE prywatne (master +4.3/salon
 > +6.3/sypialnia +3.1 pkt udziału) a głodzi SERWISOWE (kotłownia −5.6/hol −4.0/lazienka −3.0/wiatrołap −2.9). Driver = remainder-fill 2b
