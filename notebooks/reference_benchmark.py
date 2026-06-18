@@ -260,10 +260,11 @@ def score_project(project: dict, time_limit: float) -> dict:
     # render do oceny wzrokowej
     if storeys == 2:
         render_house_figure(lay, with_furniture=False, title=f"BENCH {name}",
-                            save_path=OUT / f"{name}.png", show=False)
+                            save_path=OUT / f"{name}.png", show=False, architectural=True)
     else:
         plan = FloorPlan(boundary=lay.boundary, template=None, rooms=lay.parter_rooms)
-        render_floor_plan(plan, title=f"BENCH {name}", save_path=OUT / f"{name}.png", show=False)
+        render_floor_plan(plan, title=f"BENCH {name}", save_path=OUT / f"{name}.png",
+                          show=False, architectural=True)
     return res
 
 

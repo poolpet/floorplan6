@@ -18,11 +18,18 @@
 > (grube szare mury, drzwi-łuki czytelne) — pierwszy odruch „brak ścian" był z PRZESTARZAŁYCH `renders_mvp` (11-13 cze, przed S31b).
 > POZOSTAŁE TELLE vs D7: (1) osie wykresu x/y[m]+ticki+ramka, (2) kolorowe strefy DAY/NIGHT/SERVICE, (3) legenda kolorów, (4) schody
 > CZERWONE (`#D32F2F`/`#B71C1C` — glif stopni+strzałka OK, czerwień=debug), (5) okna jako pasek nie symbol-3-linie, (6) brak tabeli
-> powierzchni/wymiarowania/osi konstr., (7) meble=szare bloki nie symbole CAD. **WĄTEK W TOKU: „tryb architektoniczny" renderera (#1-4:
-> osie OFF + białe wnętrza + bez legendy + schody czarne)** jako FLAGA `architectural=False` opt-in (default kolor — testy zielone, dev bez
-> zmian), jawnie włączana w benchmark+MVP+preview/AC. Brainstorm zaakceptowany (kierunek + pierwszy-krok + flaga). NEXT: spec→plan→impl
-> (CPU wolne). Punkty zmian w `viz/plan_renderer.py`: osie 345-346/177-178, strefy `_draw_room` 563/566, legendy 337/163, schody
-> `_draw_stair`/`_draw_stair_in_room`/`_draw_winder_in_room` 447-470/415-446/375. Pamięć [[project_proxy_gap_target_vs_realized]]
+> powierzchni/wymiarowania/osi konstr., (7) meble=szare bloki nie symbole CAD.
+> **WĄTEK DONE: „tryb architektoniczny" renderera (#1-4) WDROŻONY** — flaga `architectural=False` opt-in (default kolor, testy zielone,
+> dev/ścieżka kolorowa bajt-w-bajt), w `viz/plan_renderer.py`+`viz/house_preview.py`, podpięta w benchmarku (`score_project` →
+> `architectural=True`). #1 osie OFF, #2 białe wnętrza (+cienka szara krawędź pokoju; strefy skosu poddasza ZOSTAJĄ), #3 bez legendy,
+> #4 schody czarne (`#212121`). Commity `6a3270a`(_draw_room białe)→`ad2dbd0`(dom 2-kond.)→`8220b85`(schody)→`e2b07ea`(render_floor_plan)→
+> bench-wiring. Test `tests/test_architectural_mode.py` 8/8 + regresja renderera (two_storey/house_preview/wall_poche) zielona. Rendery
+> `rzuty/renders_mvp/arch_mode_{10x8,parterowiec}.png` — **Dawid zaakceptował OKIEM** (4 telle + info_text/ENTRY zniknęły; przeskok
+> diagram→rzut). Spec `2026-06-18-tryb-architektoniczny-renderera-design.md`, plan `plans/2026-06-18-tryb-architektoniczny-renderera.md`.
+> **🔴 NOWY BUG (Dawid 2026-06-18, wypatrzony na czystym renderze): ZA DUŻO DRZWI — niektóre pokoje mają 2 wejścia. REGUŁA: do
+> pomieszczenia TYLKO JEDNO wejście. NEXT = systematic-debugging door-inference (`core/door_extractor` / `viz/plan_renderer._draw_doors`).**
+> Pozostałe telle wiarygodności w kolejce: okna-3-linie #5, tabela+wymiarowanie+osie konstr. #6, meble CAD #7.
+> Pamięć [[project_proxy_gap_target_vs_realized]]
 > [[feedback_match_originals_exactly]] [[project_layout_optimization_archon]].
 >
 > **Previously — S31d (2026-06-17, koniec sesji S31d — branch `feat/sfh-open-plan-day-zone`, +commit B2, NIE pushnięte):**
