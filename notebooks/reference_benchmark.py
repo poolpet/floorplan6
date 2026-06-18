@@ -236,8 +236,10 @@ def score_project(project: dict, time_limit: float) -> dict:
         ref_typed = _storey_rooms(ref)
         # schody wykluczone z F1 (ekstrakcja wzorców nie listuje ich jako pokój,
         # jak garaz/other) — inaczej nasz pokój schody zaniża precyzję.
+        # B1: F1 liczy garaz przez _ref_f1_types (przynależność); MAPE zostaje na
+        # ref_typed (_storey_rooms — garaz wykluczony, pole niepewne).
         f1 = room_set_f1(_room_multiset([t for t, _ in gen_typed if t != "schody"]),
-                         _room_multiset([t for t, _ in ref_typed if t != "schody"]))
+                         _room_multiset(_ref_f1_types(ref)))
         mape, nm = area_deviation(gen_typed, ref_typed)
         jac = adjacency_jaccard(_gen_edges(rooms), _ref_edges(ref["rooms"]))
         res[storey] = {"room_f1": round(f1, 3), "area_mape_pct": round(mape, 1),
