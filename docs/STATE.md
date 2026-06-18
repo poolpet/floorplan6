@@ -26,8 +26,12 @@
 > bench-wiring. Test `tests/test_architectural_mode.py` 8/8 + regresja renderera (two_storey/house_preview/wall_poche) zielona. Rendery
 > `rzuty/renders_mvp/arch_mode_{10x8,parterowiec}.png` — **Dawid zaakceptował OKIEM** (4 telle + info_text/ENTRY zniknęły; przeskok
 > diagram→rzut). Spec `2026-06-18-tryb-architektoniczny-renderera-design.md`, plan `plans/2026-06-18-tryb-architektoniczny-renderera.md`.
-> **🔴 NOWY BUG (Dawid 2026-06-18, wypatrzony na czystym renderze): ZA DUŻO DRZWI — niektóre pokoje mają 2 wejścia. REGUŁA: do
-> pomieszczenia TYLKO JEDNO wejście. NEXT = systematic-debugging door-inference (`core/door_extractor` / `viz/plan_renderer._draw_doors`).**
+> **✅ BUG DRZWI NAPRAWIONY (`82afdfc`, systematic-debugging): „za dużo drzwi" — pokój dotykający holu I wiatrołapu (oba KOMUNIKACJA)
+> dostawał 2 wejścia (`infer_door_openings` dedupował per-PARĘ, nie per-pokój). Root cause potwierdzony reprodukcją (`['hub','wiatrolap']`
+> na sypialnia_2/wc/kotlownia/sypialnia_parter). Fix: JEDNO wejście/pokój — HOL (F5, reguła Dawida „zawsze hol"), inaczej komunikacja z
+> najdłuższą krawędzią; fallback śluzy (brak styku z komunikacją) NIETKNIĘTY. Render-only (`infer_door_openings` nieużywane w ścieżce AC —
+> ta idzie przez `extract_doors`/template). Testy `test_door_extractor` 23/23 (+2 nowe), 0 pokoi z 2 drzwiami na 10x8/parterowcu, rendery
+> `arch_mode_*` odświeżone i zweryfikowane okiem.**
 > Pozostałe telle wiarygodności w kolejce: okna-3-linie #5, tabela+wymiarowanie+osie konstr. #6, meble CAD #7.
 > Pamięć [[project_proxy_gap_target_vs_realized]]
 > [[feedback_match_originals_exactly]] [[project_layout_optimization_archon]].
