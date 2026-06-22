@@ -29,6 +29,15 @@ NS = "TapirCommand"
 PORTS = range(19723, 19731)
 
 
+def _tap(conn, name, params=None):
+    """Dowolna komenda Tapir AddOn → dict ({'_err': ...} przy błędzie)."""
+    try:
+        cid = conn.types.AddOnCommandId(NS, name)
+        return conn.commands.ExecuteAddOnCommand(cid, params or {}) or {}
+    except Exception as e:
+        return {"_err": repr(e)}
+
+
 def _details(conn, guids):
     """Tapir GetDetailsOfElements na liście GUID-ów → lista detali."""
     if not guids:
@@ -46,11 +55,19 @@ def inventory(port):
         return
     if conn is None:
         return
+
+    # Nazwa dokumentu + aktywna kondygnacja — drukuj NAJPIERW (widoczne nawet gdy AC zajęty).
+    proj = _tap(conn, "GetProjectInfo").get("projectName", "?")
+    st = _tap(conn, "GetStories")
+    act = st.get("actStory", "?")
+    story_names = [s.get("name", "") for s in st.get("stories", [])] if isinstance(st, dict) else []
+    print(f"\n{'=' * 66}\nPORT {port}  proj={proj!r}  actStory={act}  stories={story_names}\n{'=' * 66}")
+
     try:
         all_ids = conn.commands.GetAllElements()
         types = conn.commands.GetTypesOfElements(all_ids)
     except Exception as e:
-        print(f"\nPORT {port}: GetAllElements BŁĄD {e!r}")
+        print(f"   GetAllElements BŁĄD {e!r} (AC zajęty? domknij dialog/narzędzie i powtórz)")
         return
 
     zg, wg = [], []
@@ -68,7 +85,7 @@ def inventory(port):
         elif et == "Wall":
             wg.append(str(guid))
 
-    print(f"\n{'=' * 66}\nPORT {port}  —  Zone={len(zg)}  Wall={len(wg)}\n{'=' * 66}")
+    print(f"   Zone={len(zg)}  Wall={len(wg)}")
 
     zd = _details(conn, zg)
     dom_rows, by = [], Counter()
@@ -83,7 +100,7 @@ def inventory(port):
         by[(prefix, z)] += 1
 
     if dom_rows:
-        print(f">>> NASZE strefy eksportu (DOM-*): {len(dom_rows)}")
+        print(f">>> NASZE strefy DOM-* na porcie {port} (proj {proj!r}, actStory={act}): {len(dom_rows)}")
         for name, number, z in dom_rows:
             print(f"    {name:24s} | {number:24s} | z={z}")
     else:
