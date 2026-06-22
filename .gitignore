@@ -63,3 +63,6 @@ notebooks/output/
 .AppleDouble
 .LSOverride
 Raport_*.pdf
+
+# Reference plans / renders kept local only (decyzja Dawida 2026-06-22 — 19MB binariów)
+rzuty/
