@@ -120,6 +120,51 @@ class TapirConnection:
             "ArchiCAD nie odpowiada na żadnym ze skanowanych portów."
         )
 
+    @classmethod
+    def list_instances(cls, port_range=None) -> list[dict]:
+        """Wykryte instancje AC: [{port, projectName, projectPath}] (deterministyczny picker).
+
+        Świeże połączenie per port (NIE mutuje singletona), nazwa via Tapir GetProjectInfo.
+        Martwy port pominięty; brak nazwy → "(nieznany)".
+        """
+        if port_range is None:
+            port_range = range(ARCHICAD_PORT_START,
+                               ARCHICAD_PORT_START + ARCHICAD_PORT_RANGE)
+        out: List[dict] = []
+        for port in port_range:
+            conn = cls._try_connect(port)
+            if conn is None:
+                continue
+            name, path = "(nieznany)", ""
+            try:
+                cid = conn.types.AddOnCommandId(TAPIR_NAMESPACE, "GetProjectInfo")
+                info = conn.commands.ExecuteAddOnCommand(cid, {}) or {}
+                name = info.get("projectName") or "(nieznany)"
+                path = info.get("projectPath", "") or ""
+            except Exception:
+                pass
+            out.append({"port": port, "projectName": name, "projectPath": path})
+        return out
+
+    def use_port(self, port: int) -> bool:
+        """Połącz z JAWNYM portem (bez scan/prefer-selection). Determinizm celu eksportu."""
+        conn = self._try_connect(port)
+        if conn is None:
+            raise ConnectionError(
+                f"ArchiCAD na porcie {port} nie odpowiada (Tapir Add-On?)."
+            )
+        self._active_port = port
+        self._conn = conn
+        return True
+
+    def get_stories(self) -> dict:
+        """Struktura kondygnacji: {actStory, firstStory, lastStory, stories:[...]} (Tapir GetStories)."""
+        return self._execute_tapir("GetStories", {})
+
+    def get_project_info(self) -> dict:
+        """Info projektu: {projectName, projectPath, ...} (Tapir GetProjectInfo)."""
+        return self._execute_tapir("GetProjectInfo", {})
+
     @property
     def active_port(self) -> Optional[int]:
         """Port currently being used (informational)."""
@@ -186,6 +231,9 @@ class TapirConnection:
         """
         elements = self.get_elements_by_type("Wall")
         if not elements:
+            print("[get_all_walls] 0 ścian na aktywnej kondygnacji/oknie "
+                  "(GetElementsByType = scope aktywnej bazy planu) — okna pominięte. "
+                  "Sprawdź, czy aktywne okno AC to plan właściwej kondygnacji.")
             return []
         guids = []
         for e in elements:
@@ -427,3 +475,27 @@ class TapirConnection:
                     guids.append(guid)
                 return guids
         return []
+
+
+def check_active_story(act_story: int, first_story: int, last_story: int,
+                       gui_storey: str) -> tuple[bool, str]:
+    """Czy aktywna kondygnacja AC pasuje do wyboru w GUI (czysta logika, bez AC).
+
+    Mapowanie po INDEKSIE (nazwy story bywają puste): "parter" ↔ kondygnacja bazowa
+    (firstStory); "poddasze" ↔ kondygnacja powyżej (idx > firstStory). Zwraca
+    (ok, komunikat) — komunikat tylko gdy mismatch (ok=False).
+    """
+    if gui_storey == "poddasze":
+        if last_story == first_story:
+            return False, ("Projekt jednokondygnacyjny — nie ma poddasza. "
+                           "Wybierz 'Parter' albo dodaj kondygnację w AC.")
+        if act_story > first_story:
+            return True, ""
+        return False, (f"Aktywna kondygnacja AC = parter (idx {act_story}), "
+                       f"a wybrałeś 'Poddasze'. Przełącz w AC kondygnację na poddasze "
+                       f"(idx > {first_story}) i spróbuj ponownie.")
+    # parter (domyślnie)
+    if act_story == first_story:
+        return True, ""
+    return False, (f"Aktywna kondygnacja AC = idx {act_story}, a wybrałeś 'Parter' "
+                   f"(idx {first_story}). Przełącz w AC kondygnację na parter.")
