@@ -3,7 +3,33 @@
 > Updated after every working session. If it doesn't reflect reality —
 > Claude updates immediately.
 >
-> **⮕ NEXT SESSION (2026-06-18 cz.3, DOM→AC WRITE-BACK — branch `feat/sfh-open-plan-day-zone`, NIE pushnięte):**
+> **⮕ NEXT SESSION (2026-06-19, DOM→AC LIVE-DEBUG: „poddasze nie wchodzi" — branch `feat/sfh-open-plan-day-zone`, NIE pushnięte):**
+> **LIVE-VERIFY ZACZĘTA (Dawid w AC). PARTER ✅ — wstawia się poprawnie** (strefy/ściany/drzwi-łuki/okna/etykiety; Dawid: „układ
+> prócz schodów OK", zaakceptowany okiem). **PODDASZE ❌ — nie pojawia się.** Status bar pokazał `7 stref + 14 ścian + 0 drzwi +
+> 0 okien + 7 etykiet` → Tapir ZWRÓCIŁ GUID-y (`result["zones"]=create_zones(...)`), czyli API „sukces", ale w AC nie widać.
+> **DIAGNOZA (systematic-debugging; sondy `notebooks/ac_story_diag.py` + raw-probes na żywym AC) — root cause ZAWĘŻONY, NIE domknięty:**
+> **(FAKT KODOWY)** `plan_writer`/`tapir_connection` NIE targetują kondygnacji — `CreateZones`(referencePosition)+`CreateWalls`(`zCoordinate`
+> = wysokość Z, NIE indeks story) lecą na AKTYWNĄ kondygnację AC; tylko `create_labels` ma `floorInd`; brak komendy SetActiveStory.
+> **MINA #1 (multi-instance) — gorący kandydat:** otwarte DWIE instancje AC (porty **19723** i **19724**); `TapirConnection` = SINGLETON
+> preferujący instancję „z zaznaczeniem" (`_scan_for_archicad`) → **cel eksportu NIEDETERMINISTYCZNY** — parter i poddasze mogły trafić do
+> RÓŻNYCH dokumentów/instancji (patrzysz na jeden, poddasze poszło gdzie indziej). **MINA #2 (Tapir ślepy):** `GetElementsByType("Zone"/"Wall")`
+> zwraca **0** na 19723, choć standardowe `GetAllElements` widzi tam 18 stref + 36 ścian → **psuje logikę okien** w `plan_writer`
+> (`get_all_walls()`→`get_elements_by_type("Wall")`→0 ścian→**0 okien** poddasza). Czemu 0 — do zbadania (filtr story? wersja Tapira?
+> brak `filters`?). **INWENTARYZACJA (standard GetAllElements+GetTypesOfElements via `t.typeOfElement` + Tapir GetDetailsOfElements):** 19723 =
+> realny projekt domu Dawida (PBC/ZABUDOWA/Pokój dzienny…, numberStr „01–12", +Roof/Stair/Skylight); 19724 = inny realny 2-kond. (001–112).
+> **ŻADNA instancja NIE zawiera teraz naszych `DOM-PARTER-*`/`DOM-PODDASZE-*`** → albo cofnięte (Ctrl+Z) przed diagiem, albo 3-ci dokument.
+> Detale strefy NIE mają `floorInd` (mają `zCoordinate`) — story trzeba czytać z Z / `GetElementsRelatedToStories`.
+> **HIPOTEZY (do rozstrzygnięcia 1 biegiem live):** A=eksport poszedł do innej instancji niż oglądana (multi-instance); B=brak story-target →
+> obie kondygnacje na 1 story (overlap), screenshot z przed-poddasza; C=cofnięte przed diagiem. **NEXT (PLAN PRZED KODEM, B2):**
+> (1) **deterministyczny target instancji** — log portu w eksporcie + ostrzeżenie/wybór gdy >1 instancja AC; (2) **diag NATYCHMIAST po eksporcie,
+> PRZED undo**, filtrując `DOM-*`, z logiem portu (gotowy `ac_story_diag.py` — skan portów + zCoordinate); (3) **story-guard**: odczyt aktywnej
+> kondygnacji + twarde ostrzeżenie gdy combo „Poddasze" a aktywna=parter / projekt 1-kondygnacyjny; (4) **fix okien**: root-cause `GetElementsByType`=0
+> (jeśli scope/filtr — naprawić `get_all_walls`), inaczej poddasze zawsze 0 okien; (5) 0 drzwi poddasza = znane (template `sasiedztwo` vs room-set,
+> MVP-akceptowalne). **STAN: kod write-backu OK** (`test_house_writer`+`test_house_export_gui` 6/6 zielone — problem jest w warstwie AC-target/Tapir,
+> nie w budowie payloadu). GUI ubite, working tree: +`notebooks/ac_story_diag.py` (untracked). Pamięć [[project_ac_multi_instance_hazard]]
+> [[project_ac_export_apartment_confirmed]].
+>
+> **Previously — (2026-06-18 cz.3, DOM→AC WRITE-BACK — branch `feat/sfh-open-plan-day-zone`, NIE pushnięte):**
 > **AUDYT MVP (4 równoległe agenty Opus) → luka #1 = dom→AC.** Ustalenia: mózg + render GOTOWE (benchmark 60/15-16, tryb
 > architektoniczny + jedno-wejście zaakceptowane okiem). **Mieszkania**: pełny pipe do AC (GUI→`export_plan_to_archicad`→Tapir).
 > **Domy**: tylko offline `ac_house_smoke` (strefy+ściany PARTERU), GUI „Wstaw do AC" zablokowane. Pakowanie/C++ shell/przycisk-w-AC =
