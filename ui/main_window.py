@@ -218,6 +218,7 @@ class MainWindow(QMainWindow):
         self._imported_wall_types = None  # ustawione w dialogu po imporcie
         self._importing = False  # flaga blokująca _clear_import podczas importu
         self._archicad_offset = (0.0, 0.0)  # offset do eksportu stref
+        self._ac_target_port = None         # wybrana instancja AC (picker, pamiętana między przebiegami)
 
         self._build_ui()
 
@@ -1080,27 +1081,91 @@ class MainWindow(QMainWindow):
                 "Make sure ArchiCAD is running with Tapir Add-On."
             )
 
+    def _pick_ac_instance(self, instances):
+        """Picker: gdy >1 instancja AC, user wskazuje dokument-cel. Zwraca port lub None."""
+        from PyQt5.QtWidgets import QInputDialog
+        labels = [f"{i['port']} — {i['projectName']}" for i in instances]
+        cur = 0
+        for idx, inst in enumerate(instances):
+            if inst["port"] == self._ac_target_port:
+                cur = idx
+        label, ok = QInputDialog.getItem(
+            self, "Instancja ArchiCAD",
+            "Otwartych >1 instancji — wybierz dokument-cel eksportu:",
+            labels, cur, False,
+        )
+        if not ok or not label:
+            return None
+        return instances[labels.index(label)]["port"]
+
     def _export_house_to_archicad(self):
-        """Wstaw wybraną kondygnację domu do AKTYWNEJ kondygnacji AC (2-pass)."""
+        """Wstaw wybraną kondygnację domu do WYBRANEJ instancji AC, z guardem kondygnacji."""
         layout = getattr(self, "_house_layout", None)
         if layout is None:
             return
         storey = "poddasze" if self.house_storey_combo.currentText() == "Poddasze" else "parter"
+        from bridge.tapir_connection import TapirConnection, check_active_story
+        from bridge.house_writer import export_house_to_archicad
+
+        # 1. Wykryj instancje AC (deterministyczny cel).
         try:
-            from bridge.house_writer import export_house_to_archicad
-            result = export_house_to_archicad(layout, storey=storey, offset=self._archicad_offset)
+            instances = TapirConnection.list_instances()
+        except Exception as e:
+            QMessageBox.warning(self, "ArchiCAD", f"Nie udało się wykryć instancji AC:\n{e}")
+            return
+        if not instances:
+            QMessageBox.warning(
+                self, "ArchiCAD",
+                "Żadna instancja ArchiCAD nie odpowiada.\n\n"
+                "Uruchom AC z Tapir Add-On i spróbuj ponownie."
+            )
+            return
+
+        # 2. Wybór instancji (picker gdy >1).
+        if len(instances) == 1:
+            port = instances[0]["port"]
+        else:
+            port = self._pick_ac_instance(instances)
+            if port is None:
+                return
+        self._ac_target_port = port
+        name = next((i["projectName"] for i in instances if i["port"] == port), "?")
+
+        try:
+            tapir = TapirConnection()
+            tapir.use_port(port)
+
+            # 3. Story-guard — twarde ostrzeżenie gdy aktywna kondygnacja ≠ wybór.
+            st = tapir.get_stories() or {}
+            ok, msg = check_active_story(
+                int(st.get("actStory", 0)), int(st.get("firstStory", 0)),
+                int(st.get("lastStory", 0)), storey,
+            )
+            if not ok:
+                reply = QMessageBox.warning(
+                    self, "Kondygnacja AC",
+                    f"{msg}\n\nWstawić MIMO TO?",
+                    QMessageBox.Yes | QMessageBox.Cancel, QMessageBox.Cancel,
+                )
+                if reply != QMessageBox.Yes:
+                    return
+
+            # 4. Eksport do wybranej instancji.
+            result = export_house_to_archicad(
+                layout, storey=storey, tapir=tapir, offset=self._archicad_offset,
+            )
             n_zones = len(result.get("zones", []))
             n_walls = len(result.get("walls", []))
             n_doors = len(result.get("doors", []))
             n_windows = len(result.get("windows", []))
             n_labels = len(result.get("labels", []))
             self.statusBar().showMessage(
-                f"Dom [{storey}]: {n_zones} stref + {n_walls} ścian + {n_doors} drzwi "
-                f"+ {n_windows} okien + {n_labels} etykiet"
+                f"Dom [{storey}] → port {port} ({name}): {n_zones} stref + {n_walls} ścian "
+                f"+ {n_doors} drzwi + {n_windows} okien + {n_labels} etykiet"
             )
             QMessageBox.information(
                 self, "ArchiCAD",
-                f"Kondygnacja '{storey}' wstawiona na AKTYWNĄ kondygnację AC:\n\n"
+                f"Kondygnacja '{storey}' → {name} (port {port}):\n\n"
                 f"{n_zones} stref + {n_walls} ścianek + {n_doors} drzwi + {n_windows} okien "
                 f"+ {n_labels} etykiet.\n\n"
                 f"Druga kondygnacja: przełącz kondygnację w AC, wybierz ją tutaj, kliknij ponownie."
