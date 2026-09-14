@@ -18,10 +18,13 @@ def _version() -> str:
 
 
 def selftest() -> int:
-    from service.app import start_server
-    from service.client import ServiceClient
-    h = start_server(port=0)
+    # Wszystko w try: w paczce najczęściej wysypie się sam import serwisu
+    # (brakujący hidden import) — tester ma zobaczyć SELFTEST FAIL, nie traceback.
+    h = None
     try:
+        from service.app import start_server
+        from service.client import ServiceClient
+        h = start_server(port=0)
         c = ServiceClient(h.url)
         c.health()
         job = c.wait(c.solve(SELFTEST_REQ), timeout=120)
@@ -36,17 +39,19 @@ def selftest() -> int:
         print(f"SELFTEST FAIL: {e!r}")
         return 1
     finally:
-        h.stop()
+        if h is not None:
+            h.stop()
 
 
 def main(argv: list[str] | None = None) -> int:
     argv = sys.argv[1:] if argv is None else argv
+    if "--version" in argv:
+        # Czysty odczyt: bez trybu beta, bez pliku logu, bez importu Qt/serwisu.
+        print(_version())
+        return 0
     os.environ.setdefault("FLOORFORGE_BETA", "1")
     from ui.app_logging import setup_logging
     setup_logging()
-    if "--version" in argv:
-        print(_version())
-        return 0
     if "--selftest" in argv:
         return selftest()
     from ui.main_window import run_gui
