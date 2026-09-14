@@ -14,13 +14,6 @@ def server(monkeypatch):
     h.stop()
 
 
-def _post(url, body):
-    data = json.dumps(body).encode()
-    r = urllib.request.Request(url, data=data, headers={"Content-Type": "application/json"}, method="POST")
-    with urllib.request.urlopen(r, timeout=5) as resp:
-        return resp.status, json.loads(resp.read())
-
-
 def test_health(server):
     with urllib.request.urlopen(f"{server.url}/health", timeout=5) as r:
         body = json.loads(r.read())
@@ -40,12 +33,14 @@ def test_bad_json_is_400(server):
     with pytest.raises(urllib.error.HTTPError) as ei:
         urllib.request.urlopen(r, timeout=5)
     assert ei.value.code == 400
+    ei.value.close()
 
 
 def test_unknown_job_is_404(server):
     with pytest.raises(urllib.error.HTTPError) as ei:
         urllib.request.urlopen(f"{server.url}/jobs/xyz", timeout=5)
     assert ei.value.code == 404
+    ei.value.close()
 
 
 def test_export_without_archicad_is_503(server, monkeypatch):
@@ -57,6 +52,7 @@ def test_export_without_archicad_is_503(server, monkeypatch):
     with pytest.raises(urllib.error.HTTPError) as ei:
         urllib.request.urlopen(r, timeout=5)
     assert ei.value.code == 503
+    ei.value.close()
 
 
 def test_client_wait_raises_on_error(server, monkeypatch):
@@ -68,3 +64,45 @@ def test_client_wait_raises_on_error(server, monkeypatch):
     jid = c.solve({"mode": "apartment", "polygon": [[0, 0], [1, 0], [1, 1]], "entry": [0, 0], "mtype": "M2"})
     with pytest.raises(RuntimeError, match="zły obrys"):
         c.wait(jid, timeout=5)
+
+
+def test_unexpected_exception_is_500(server, monkeypatch):
+    import service.app as app
+    monkeypatch.setattr(app, "export_contract",
+                        lambda contract, port=None: (_ for _ in ()).throw(RuntimeError("boom")))
+    r = urllib.request.Request(f"{server.url}/export", data=json.dumps({"contract": {}}).encode(),
+                               headers={"Content-Type": "application/json"}, method="POST")
+    with pytest.raises(urllib.error.HTTPError) as ei:
+        urllib.request.urlopen(r, timeout=5)
+    assert ei.value.code == 500
+    body = json.loads(ei.value.read())
+    ei.value.close()
+    assert body["error"] == "Błąd wewnętrzny serwisu."
+
+
+@pytest.mark.parametrize("length", ["abc", "-5"])
+def test_bad_content_length_is_400(server, length):
+    r = urllib.request.Request(f"{server.url}/solve", data=b"{}", method="POST",
+                               headers={"Content-Type": "application/json", "Content-Length": length})
+    with pytest.raises(urllib.error.HTTPError) as ei:
+        urllib.request.urlopen(r, timeout=5)
+    assert ei.value.code == 400
+    body = json.loads(ei.value.read())
+    ei.value.close()
+    assert body["error"] == "Nagłówek Content-Length jest niepoprawny."
+
+
+def test_health_ignores_query_string(server):
+    with urllib.request.urlopen(f"{server.url}/health?x=1", timeout=5) as r:
+        body = json.loads(r.read())
+    assert r.status == 200 and body["status"] == "ok"
+
+
+def test_job_id_ignores_query_string(server):
+    from service.client import ServiceClient
+    c = ServiceClient(server.url)
+    jid = c.solve({"mode": "apartment", "polygon": [[0, 0], [8, 0], [8, 6], [0, 6]], "entry": [4, 0], "mtype": "M2"})
+    c.wait(jid, timeout=5)
+    with urllib.request.urlopen(f"{server.url}/jobs/{jid}?x=1", timeout=5) as r:
+        body = json.loads(r.read())
+    assert r.status == 200 and body["id"] == jid

@@ -5,6 +5,7 @@ import json
 import logging
 import os
 import threading
+import urllib.parse
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 from service.jobs import JobStore
@@ -12,6 +13,7 @@ from service.solve_adapter import solve_request
 
 logger = logging.getLogger(__name__)
 VERSION = os.environ.get("FLOORFORGE_VERSION", "dev")
+MAX_BODY_BYTES = 16 * 1024 * 1024  # twardy limit body — lokalny serwis, nie proxy
 
 
 def export_contract(contract: dict, port: int | None = None) -> dict:
@@ -32,15 +34,29 @@ class _Handler(BaseHTTPRequestHandler):
         logger.debug("http: " + fmt, *args)
 
     def _json(self, code: int, body: dict):
-        data = json.dumps(body, ensure_ascii=False).encode("utf-8")
+        # default=str: wynik joba może zawierać typ spoza JSON-a; lepiej odpowiedzieć
+        # niż wysypać handler w trakcie serializacji (nagłówki jeszcze nie poszły).
+        data = json.dumps(body, ensure_ascii=False, default=str).encode("utf-8")
         self.send_response(code)
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Length", str(len(data)))
         self.end_headers()
         self.wfile.write(data)
 
+    def _internal_error(self):
+        """Ostatnia deska ratunku: klient dostaje JSON 500, nie zerwane połączenie."""
+        logger.exception("http: %s %s", self.command, self.path)
+        self._json(500, {"error": "Błąd wewnętrzny serwisu."})
+
     def _read_json(self) -> dict:
-        n = int(self.headers.get("Content-Length") or 0)
+        try:
+            n = int(self.headers.get("Content-Length") or 0)
+        except (TypeError, ValueError):
+            raise ValueError("Nagłówek Content-Length jest niepoprawny.") from None
+        if n < 0:
+            raise ValueError("Nagłówek Content-Length jest niepoprawny.")
+        if n > MAX_BODY_BYTES:
+            raise ValueError(f"Treść żądania jest za duża (limit {MAX_BODY_BYTES // (1024 * 1024)} MB).")
         raw = self.rfile.read(n) if n else b""
         try:
             body = json.loads(raw.decode("utf-8") or "{}")
@@ -51,29 +67,37 @@ class _Handler(BaseHTTPRequestHandler):
         return body
 
     def do_GET(self):
-        if self.path == "/health":
-            return self._json(200, {"status": "ok", "version": VERSION})
-        if self.path.startswith("/jobs/"):
-            job = self.store.get(self.path[len("/jobs/"):])
-            return self._json(200, job) if job else self._json(404, {"error": "Nieznany job."})
-        self._json(404, {"error": "Nieznana ścieżka."})
+        try:
+            path = urllib.parse.urlsplit(self.path).path
+            if path == "/health":
+                return self._json(200, {"status": "ok", "version": VERSION})
+            if path.startswith("/jobs/"):
+                job = self.store.get(path[len("/jobs/"):])
+                return self._json(200, job) if job else self._json(404, {"error": "Nieznany job."})
+            self._json(404, {"error": "Nieznana ścieżka."})
+        except Exception:
+            self._internal_error()
 
     def do_POST(self):
         try:
-            body = self._read_json()
-        except ValueError as e:
-            return self._json(400, {"error": str(e)})
-        if self.path == "/solve":
-            jid = self.store.submit(solve_request, body)
-            return self._json(202, {"job_id": jid})
-        if self.path == "/export":
+            path = urllib.parse.urlsplit(self.path).path
             try:
-                return self._json(200, export_contract(body.get("contract") or {}, body.get("port")))
-            except ConnectionError as e:
-                return self._json(503, {"error": str(e)})
-            except NotImplementedError as e:
-                return self._json(501, {"error": str(e)})
-        self._json(404, {"error": "Nieznana ścieżka."})
+                body = self._read_json()
+            except ValueError as e:
+                return self._json(400, {"error": str(e)})
+            if path == "/solve":
+                jid = self.store.submit(solve_request, body)
+                return self._json(202, {"job_id": jid})
+            if path == "/export":
+                try:
+                    return self._json(200, export_contract(body.get("contract") or {}, body.get("port")))
+                except ConnectionError as e:
+                    return self._json(503, {"error": str(e)})
+                except NotImplementedError as e:
+                    return self._json(501, {"error": str(e)})
+            self._json(404, {"error": "Nieznana ścieżka."})
+        except Exception:
+            self._internal_error()
 
 
 class ServiceHandle:
