@@ -1,7 +1,39 @@
-"""Pasek statusu ArchiCAD w GUI: brak AC / port+projekt+kondygnacja / odporność na wyjątek."""
+"""Pasek statusu ArchiCAD w GUI.
+
+Zakres: brak AC / port+projekt+kondygnacja / odporność na wyjątek /
+NIE przestawia portu singletona TapirConnection (cel eksportu z pickera).
+"""
 import pytest
 
 pytest.importorskip("PyQt5")
+
+STORIES = {
+    "actStory": 1,
+    "firstStory": 0,
+    "lastStory": 1,
+    "stories": [{"index": 0, "name": "Parter"}, {"index": 1, "name": "Poddasze"}],
+}
+
+
+class _FakeTypes:
+    def AddOnCommandId(self, namespace, name):
+        return (namespace, name)
+
+
+class _FakeCommands:
+    def __init__(self, result):
+        self._result = result
+
+    def ExecuteAddOnCommand(self, command_id, params):
+        return self._result
+
+
+class _FakeConn:
+    """Świeże połączenie per port — tak jak zwraca TapirConnection._try_connect()."""
+
+    def __init__(self, result=None):
+        self.types = _FakeTypes()
+        self.commands = _FakeCommands(STORIES if result is None else result)
 
 
 def test_status_no_archicad(qapp, monkeypatch):
@@ -18,10 +50,7 @@ def test_status_shows_port_project_story(qapp, monkeypatch):
     import bridge.tapir_connection as tc
     monkeypatch.setattr(tc.TapirConnection, "list_instances",
                         classmethod(lambda cls, **k: [{"port": 19723, "projectName": "Dom K", "projectPath": ""}]))
-    monkeypatch.setattr(tc.TapirConnection, "use_port", lambda self, p: True)
-    monkeypatch.setattr(tc.TapirConnection, "get_stories",
-                        lambda self: {"actStory": 1, "firstStory": 0, "lastStory": 1,
-                                      "stories": [{"index": 0, "name": "Parter"}, {"index": 1, "name": "Poddasze"}]})
+    monkeypatch.setattr(tc.TapirConnection, "_try_connect", staticmethod(lambda port: _FakeConn()))
     from ui.ac_status_widget import AcStatusWidget
     w = AcStatusWidget()
     w.refresh()
@@ -37,3 +66,46 @@ def test_status_survives_exception(qapp, monkeypatch):
     w = AcStatusWidget()
     w.refresh()
     assert "Brak połączenia" in w.label.text()
+
+
+def test_refresh_does_not_retarget_singleton(qapp, monkeypatch):
+    """Odśwież NIE może przestawić portu singletona — user wybrał cel w pickerze."""
+    import bridge.tapir_connection as tc
+    monkeypatch.setattr(tc.TapirConnection, "list_instances", classmethod(lambda cls, **k: [
+        {"port": 19723, "projectName": "Dom K", "projectPath": ""},
+        {"port": 19724, "projectName": "Inny", "projectPath": ""},
+    ]))
+    monkeypatch.setattr(tc.TapirConnection, "_try_connect", staticmethod(lambda port: _FakeConn()))
+
+    singleton = tc.TapirConnection()
+    monkeypatch.setattr(singleton, "_active_port", 19730, raising=False)
+    monkeypatch.setattr(singleton, "_conn", "sentinel-conn", raising=False)
+
+    from ui.ac_status_widget import AcStatusWidget
+    w = AcStatusWidget()
+    w.refresh()
+
+    assert "(+1 inne)" in w.label.text()
+    assert tc.TapirConnection()._active_port == 19730
+    assert tc.TapirConnection()._conn == "sentinel-conn"
+
+
+def test_refresh_marks_button_busy_and_restores_it(qapp, monkeypatch):
+    """Na czas skanu portów przycisk jest nieaktywny („Sprawdzam…"), potem wraca — nawet po wyjątku."""
+    import bridge.tapir_connection as tc
+    seen = {}
+
+    def _during(cls, **k):
+        seen["text"] = w.refresh_btn.text()
+        seen["enabled"] = w.refresh_btn.isEnabled()
+        raise OSError("boom")
+
+    monkeypatch.setattr(tc.TapirConnection, "list_instances", classmethod(_during))
+    from ui.ac_status_widget import AcStatusWidget
+    w = AcStatusWidget()
+    w.refresh()
+
+    assert seen["text"] == "Sprawdzam…"
+    assert seen["enabled"] is False
+    assert w.refresh_btn.text() == "Odśwież"
+    assert w.refresh_btn.isEnabled()

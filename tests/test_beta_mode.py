@@ -25,6 +25,26 @@ def test_default_mode_unchanged(qapp, monkeypatch):
     w = MainWindow()
     assert w.tabs.count() >= 2
     assert w.windowTitle() == "FloorPlan6 — Apartment Layout Generator"
+    # Pasek statusu AC jest w OBU trybach (dialog AC-offline mówi „kliknij Odśwież").
+    assert hasattr(w, "ac_status")
+
+
+def test_beta_labels_survive_button_resets(qapp, monkeypatch):
+    """Etykiety wracają po polsku — resety przycisków nie mogą wstawiać angielskiego."""
+    monkeypatch.setenv("FLOORFORGE_BETA", "1")
+    from PyQt5.QtWidgets import QMessageBox
+    monkeypatch.setattr(QMessageBox, "critical", staticmethod(lambda *a, **k: None))
+    from ui.main_window import MainWindow
+    w = MainWindow()
+
+    assert w.import_btn.text() == "Wczytaj obrys z ArchiCAD"
+    w.import_btn.setText("cokolwiek")
+    w._reset_import_button()
+    assert w.import_btn.text() == "Wczytaj obrys z ArchiCAD"
+
+    w._on_error(RuntimeError("x"))
+    assert w.generate_btn.text() == "3. Generuj układy"
+    assert w.generate_btn.isEnabled()
 
 
 def test_beta_mode_does_not_import_frozen_stages():

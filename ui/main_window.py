@@ -220,8 +220,17 @@ class MainWindow(QMainWindow):
         else:
             self.setWindowTitle("FloorPlan6 — Apartment Layout Generator")
         self.setMinimumSize(1100, 700)
-        # Etykieta przycisku "Generuj" — używana też przy resetach po zakończeniu workera.
+        # Etykiety przycisków — używane też przy resetach po zakończeniu workera/nasłuchu,
+        # żeby w becie nie wracał angielski tekst.
         self._generate_label = "3. Generuj układy" if is_beta() else "3. Generate layouts"
+        self._generating_label = "Generowanie..." if is_beta() else "Generating..."
+        self._import_label = (
+            "Wczytaj obrys z ArchiCAD" if is_beta() else "Load outline from ArchiCAD"
+        )
+        self._import_listen_label = (
+            "Przerwij nasłuch (kliknij w AC)" if is_beta()
+            else "Cancel listening (click in AC)"
+        )
 
         self.variants: list[FloorPlan] = []
         self.current_idx = 0
@@ -313,9 +322,7 @@ class MainWindow(QMainWindow):
         step1 = QGroupBox("1. Outline")
         step1_lay = QVBoxLayout(step1)
 
-        self.import_btn = QPushButton(
-            "Wczytaj obrys z ArchiCAD" if is_beta() else "Load outline from ArchiCAD"
-        )
+        self.import_btn = QPushButton(self._import_label)
         self.import_btn.setMinimumHeight(36)
         self.import_btn.setStyleSheet("font-weight: bold;")
         self.import_btn.clicked.connect(self._import_from_archicad)
@@ -506,7 +513,8 @@ class MainWindow(QMainWindow):
         nav_lay.addWidget(self.next_btn)
         step4_lay.addLayout(nav_lay)
 
-        export_lay = QHBoxLayout()
+        # W becie pionowo — polskie etykiety nie mieszczą się obok siebie w wąskim panelu.
+        export_lay = QVBoxLayout() if is_beta() else QHBoxLayout()
         self.export_btn = QPushButton("Zapisz PNG" if is_beta() else "Export PNG")
         self.export_btn.clicked.connect(self._export_png)
         self.export_btn.setEnabled(False)
@@ -663,7 +671,7 @@ class MainWindow(QMainWindow):
         polygon, (ex, ey), wall_types = self._input_polygon_entry()
 
         self.generate_btn.setEnabled(False)
-        self.generate_btn.setText("Generating...")
+        self.generate_btn.setText(self._generating_label)
         self.progress_bar.setRange(0, 100)
         self.progress_bar.setValue(0)
         self.progress_bar.setVisible(True)
@@ -685,7 +693,7 @@ class MainWindow(QMainWindow):
         polygon, entry, _wall_types = self._input_polygon_entry()
         self._with_furniture = self.furniture_check.isChecked()
         self.generate_btn.setEnabled(False)
-        self.generate_btn.setText("Generating...")
+        self.generate_btn.setText(self._generating_label)
         self.progress_bar.setRange(0, 0)   # busy — generate_house nie ma callbacku
         self.progress_bar.setVisible(True)
         self.statusBar().showMessage("Generating house (parter + piętro)...")
@@ -1363,7 +1371,7 @@ class MainWindow(QMainWindow):
             return
 
         # Change button to "Cancel" and start polling
-        self.import_btn.setText("Cancel listening (click in AC)")
+        self.import_btn.setText(self._import_listen_label)
         self.import_btn.clicked.disconnect()
         self.import_btn.clicked.connect(self._cancel_import_polling)
 
@@ -1453,7 +1461,7 @@ class MainWindow(QMainWindow):
         self.statusBar().showMessage("Listening cancelled")
 
     def _reset_import_button(self):
-        self.import_btn.setText("Load outline from ArchiCAD")
+        self.import_btn.setText(self._import_label)
         try:
             self.import_btn.clicked.disconnect()
         except Exception:
