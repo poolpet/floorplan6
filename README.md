@@ -5,8 +5,9 @@
 [![Tests](https://github.com/poolpet/floorplan6/actions/workflows/test.yml/badge.svg)](https://github.com/poolpet/floorplan6/actions/workflows/test.yml)
 [![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](./CONTRIBUTING.md)
 
-> **Status:** active development. Stage 4 (apartment layout) and Stage 3
-> (floor layout) are functional MVPs. Stages 1 & 2 are open for contributors.
+> **Status:** active development. Stages 1–3 are frozen (Stage 2 was dropped
+> from the roadmap); **Stage 4 — apartments + houses — is the active line**,
+> see [`docs/ROADMAP_domy.md`](docs/ROADMAP_domy.md).
 >
 > **License:** AGPL-3.0 — see [LICENSE](./LICENSE). Any modified version
 > distributed (including hosted as a web service) must remain open-source
@@ -31,13 +32,14 @@ to ArchiCAD as native Zone objects via the Tapir Add-On.
 | 3. Floor layout | `core/floor_layout.py` | ✅ MVP for rectangular floors — frozen |
 | 4. Apartment + house layout | `core/cpsat_solver.py`, `core/house_layout.py` | ✅ apartments M1–M5, houses (single/2-storey) with furniture, export to AC (zones, walls, doors, windows, labels) |
 
-### Stage 4 — apartment layout
+### Stage 4 — apartment + house layout
 - CP-SAT solver places rooms inside an outline read from ArchiCAD
 - Hard rules: 100% coverage, bathroom ≤ 5 m², WC ≤ 3 m², hub ≤ 15 %
 - Q6 area distribution: living room takes 80 % of excess, bedrooms 20 %
 - Manual facade / entry editor (click + Shift+click on canvas)
 - Variant filter by quality score; export to PNG or back to ArchiCAD
-- 80/80 unit tests + regression suite passing
+- 600+ unit tests + regression suite passing (full suite ~70 min; see
+  [`docs/STATE.md`](docs/STATE.md))
 
 ### Stage 3 — floor layout
 - Deterministic geometry: stairwell at chosen facade for daylight, central
@@ -103,6 +105,24 @@ PYTHONPATH=. python run_archicad.py --manual --type M3 --width 10 --height 8
 3. In FloorPlan6 GUI: **Stage 4 → "Load outline from ArchiCAD"**.
 4. In ArchiCAD: pick a Zone (created via Tools → Zone → Inner Edge) or
    a closed wall loop. The GUI auto-detects it.
+
+## Beta (macOS + ArchiCAD 29)
+
+A frozen app for testers, so they need no Python environment:
+`packaging/build_release.sh` → `packaging/dist/FloorForge-beta-<ver>.zip`
+(`FloorForge.app` + a custom Tapir build + `INSTALACJA.md` + `Uruchom.command` +
+`VERSION`). After a build the runnable app is
+`packaging/dist/FloorForge-beta-<ver>/FloorForge.app`.
+
+Beta mode is `FLOORFORGE_BETA=1`: a single "Podział rzutu" tab, Polish messages, and a
+technical log in `~/Library/Logs/FloorForge/`. `packaging/smoke_frozen.sh` runs
+`--selftest` on the binary unpacked **from the zip** — the zip is what a tester gets.
+The build is ad-hoc signed, not notarized, so the first launch goes through
+System Settings → Privacy & Security → "Open Anyway" (see `packaging/INSTALACJA.md`).
+
+Release gate before the zip goes out: [`packaging/CHECKLIST_TEST.md`](packaging/CHECKLIST_TEST.md)
+on a clean macOS account. Spec:
+`docs/superpowers/specs/2026-09-14-beta-dystrybucja-macos-design.md`.
 
 ## Documentation
 
