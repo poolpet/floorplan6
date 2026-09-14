@@ -7,9 +7,6 @@ import pytest
 
 pytest.importorskip("PyQt5")
 
-# Testy GUI muszą działać bez ekranu (CI / sesja ssh).
-os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
-
 
 def test_beta_mode_single_polish_tab(qapp, monkeypatch):
     monkeypatch.setenv("FLOORFORGE_BETA", "1")
@@ -74,6 +71,7 @@ def test_left_panel_scrolls_at_minimum_window_size(qapp, monkeypatch, beta):
     else:
         monkeypatch.delenv("FLOORFORGE_BETA", raising=False)
 
+    from PyQt5.QtCore import Qt
     from PyQt5.QtWidgets import QScrollArea
     from ui.main_window import MainWindow
 
@@ -91,6 +89,11 @@ def test_left_panel_scrolls_at_minimum_window_size(qapp, monkeypatch, beta):
         inner = w.left_scroll.widget()
         assert inner is not None
         assert inner.sizeHint().height() > w.left_scroll.viewport().height()
+
+        # (b2) w poziomie NIE przewijamy, więc treść musi mieścić się w viewport —
+        # to uzasadnia kolumnę 299 px (280 treści + pasek) zamiast 280 px.
+        assert w.left_scroll.horizontalScrollBarPolicy() == Qt.ScrollBarAlwaysOff
+        assert inner.width() <= w.left_scroll.viewport().width()
 
         # (c) komunikat o statusie ArchiCAD nie jest zgnieciony
         label = w.ac_status.label
