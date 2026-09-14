@@ -27,8 +27,12 @@ def tap(conn, name, params=None):
     return conn.commands.ExecuteAddOnCommand(cid, params or {}) or {}
 
 
-def story_navitems(conn):
-    """ProjectMap → StoryItems (top-down) → reversed = idx rosnące (Parter=idx0). Zwraca {idx: guid}."""
+def story_navitems(conn, first=0):
+    """ProjectMap → StoryItems (top-down) → reversed = idx rosnące. Zwraca {idx: guid}.
+
+    Klucze w PRZESTRZENI INDEKSÓW AC (`first` = `GetStories.firstStory`) — ta sama
+    konwencja co `TapirConnection.story_navitems`: przy piwnicy first = -1.
+    """
     acc, act = conn.commands, conn.types
     tid = act.NavigatorTreeId(type="ProjectMap")
     tree = acc.GetNavigatorItemTree(tid)
@@ -43,7 +47,7 @@ def story_navitems(conn):
             walk(getattr(ch, "navigatorItem", ch))
 
     walk(getattr(tree, "rootItem", tree))
-    return {i: g for i, g in enumerate(reversed(guids_top_down))}
+    return {first + i: g for i, g in enumerate(reversed(guids_top_down))}
 
 
 def main():
@@ -59,7 +63,7 @@ def main():
     if act0 is None or last == first:
         print("Brak ≥2 kondygnacji do testu przełączenia."); return
 
-    idx2guid = story_navitems(conn)
+    idx2guid = story_navitems(conn, int(first if first is not None else 0))
     print(f"idx→navigatorItemId: {idx2guid}")
     target = next(i for i in idx2guid if isinstance(i, int) and i != act0)
     g = idx2guid[target]
@@ -86,17 +90,20 @@ def main():
             print(f"   [err] {label:34s} → {e!r}"[:160])
 
     # PRZYWRÓĆ pierwotną story (najlepszym znanym kształtem).
-    if winner:
+    back = idx2guid.get(act0)
+    if winner and back:
         _, wparams = winner
         restore = dict(wparams)
-        if "navigatorItemId" in restore:
-            restore = {"navigatorItemId": dict(restore["navigatorItemId"], guid=idx2guid[act0])}
-        elif "guid" in restore:
-            restore = dict(restore, guid=idx2guid[act0])
         try:
+            if "navigatorItemId" in restore:
+                restore = {"navigatorItemId": dict(restore["navigatorItemId"], guid=back)}
+            elif "guid" in restore:
+                restore = dict(restore, guid=back)
             tap(conn, "ChangeWindow", restore)
-        except Exception:
-            pass
+        except Exception as e:
+            print(f"   [err] przywrócenie story {act0} nie poszło: {e!r}"[:160])
+    elif winner:
+        print(f"   [uwaga] brak nav-itemu dla story {act0} — nie przywracam automatycznie.")
     print(f"\nactStory po przywróceniu: {tap(conn, 'GetStories').get('actStory')} (oczekiwane {act0})")
     print(f"\nZWYCIĘZCA: {winner[0] if winner else 'BRAK — żaden kształt nie przełączył (zgłoś, spróbujemy floorIndex retarget)'}")
 

@@ -1147,16 +1147,21 @@ class MainWindow(QMainWindow):
             st = tapir.get_stories() or {}
             first = int(st.get("firstStory", 0))
             last = int(st.get("lastStory", 0))
-            # Projekt AC 1-kondygnacyjny: blokuj PRZED jakimkolwiek zapisem (inaczej
+            # Parter to indeks 0 w przestrzeni AC (gdy istnieje) — NIE `firstStory`:
+            # przy piwnicy firstStory = -1 i parter leży o jeden wyżej.
+            parter_idx = 0 if first <= 0 <= last else first
+            poddasze_idx = parter_idx + 1
+            # Brak kondygnacji nad parterem: blokuj PRZED jakimkolwiek zapisem (inaczej
             # parter wszedłby, poddasze nie — i ponowna próba zdublowałaby parter).
-            if both and last == first:
+            if both and poddasze_idx > last:
                 QMessageBox.warning(
                     self, "Kondygnacja AC",
-                    "Projekt w AC ma tylko jedną kondygnację — dodaj kondygnację w AC "
-                    "albo odznacz 'Wstaw obie kondygnacje'.",
+                    f"Projekt w AC nie ma kondygnacji nad parterem (indeks {poddasze_idx}) — "
+                    f"dodaj kondygnację w AC albo odznacz 'Wstaw obie kondygnacje'.",
                 )
                 return
-            plan_storeys = [("parter", first), ("poddasze", first + 1)] if both else [(storey, None)]
+            plan_storeys = ([("parter", parter_idx), ("poddasze", poddasze_idx)]
+                            if both else [(storey, None)])
 
             totals = {"zones": 0, "walls": 0, "doors": 0, "windows": 0, "labels": 0}
             inserted: list[str] = []

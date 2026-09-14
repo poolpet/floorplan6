@@ -184,4 +184,43 @@ def test_house_export_both_storeys_blocked_when_ac_project_single_storey(qapp, m
     w._export_to_archicad()
     assert cap["export"] == 0
     assert switched == []                        # nawet nie próbujemy przełączać
-    assert warned and "jedną kondygnację" in warned[0][2]
+    assert warned and "nie ma kondygnacji nad parterem" in warned[0][2]
+
+
+def test_house_export_both_storeys_with_basement_targets_parter_and_poddasze(qapp, monkeypatch):
+    """Piwnica w AC (firstStory=-1): parter = idx 0, poddasze = idx 1 — NIE -1/0."""
+    import bridge.tapir_connection as tc
+    cap = _wire(monkeypatch,
+                instances=[{"port": 19724, "projectName": "K", "projectPath": ""}],
+                act_story=0, first=-1, last=1)
+    switched = []
+    monkeypatch.setattr(tc.TapirConnection, "activate_story",
+                        lambda self, i: switched.append(i) or True)
+    w = _mainwindow(monkeypatch, "Parter")
+    w._house_layout = type("L", (), {"pietro_rooms": [object()]})()
+    w.house_both_storeys_check.setChecked(True)
+    w._export_to_archicad()
+    assert switched == [0, 1]                    # piwnica (-1) nietknięta
+    assert cap["storeys"] == ["parter", "poddasze"]
+
+
+def test_house_export_both_storeys_blocked_when_basement_but_no_upper_storey(qapp, monkeypatch):
+    """Piwnica + parter, brak poddasza (first=-1, last=0) → blok przed zapisem."""
+    from PyQt5.QtWidgets import QMessageBox
+    import bridge.tapir_connection as tc
+    cap = _wire(monkeypatch,
+                instances=[{"port": 19724, "projectName": "K", "projectPath": ""}],
+                act_story=0, first=-1, last=0)
+    switched = []
+    monkeypatch.setattr(tc.TapirConnection, "activate_story",
+                        lambda self, i: switched.append(i) or True)
+    warned = []
+    monkeypatch.setattr(QMessageBox, "warning",
+                        staticmethod(lambda *a, **k: warned.append(a) or QMessageBox.Cancel))
+    w = _mainwindow(monkeypatch, "Parter")
+    w._house_layout = type("L", (), {"pietro_rooms": [object()]})()
+    w.house_both_storeys_check.setChecked(True)
+    w._export_to_archicad()
+    assert cap["export"] == 0
+    assert switched == []
+    assert warned and "nie ma kondygnacji nad parterem" in warned[0][2]
