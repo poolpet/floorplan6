@@ -32,3 +32,4 @@ ipywidgets>=8.0
 
 # Code-pack schema validation (rules/PL/, rules/*.json)
 pydantic>=2.0
+PyYAML>=6.0  # rules/_loader.py — do tej pory wchodziło tylko tranzytywnie z jupytera

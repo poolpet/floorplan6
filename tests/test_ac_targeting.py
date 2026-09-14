@@ -5,7 +5,11 @@ Wszystko offline — `ACConnection`/`_execute_tapir` mockowane. Bez żywego Arch
 import pytest
 
 import bridge.tapir_connection as tc
-from bridge.tapir_connection import TapirConnection, check_active_story
+from bridge.tapir_connection import (
+    TapirConnection,
+    check_active_story,
+    parter_story_index,
+)
 
 
 @pytest.fixture(autouse=True)
@@ -29,11 +33,47 @@ def _reset_singleton():
     (0, 0, 2, "poddasze", False),   # poddasze, ale aktywny parter
     (0, 0, 0, "poddasze", False),   # projekt 1-kondygnacyjny → brak poddasza
     (0, 0, 0, "parter", True),      # parterowiec OK
+    # --- piwnica: firstStory = -1, parter NIE jest kondygnacją bazową ---
+    (0, -1, 1, "parter", True),     # parter = idx 0 (nie -1!)
+    (-1, -1, 1, "parter", False),   # aktywna piwnica, wybrany parter → mismatch
+    (1, -1, 1, "poddasze", True),   # poddasze = parter+1 = idx 1
+    (0, -1, 1, "poddasze", False),  # aktywny parter, wybrane poddasze
+    (0, -1, 0, "poddasze", False),  # piwnica+parter, brak kondygnacji nad parterem
+    # --- projekt zaczynający się nad zerem: parter = firstStory ---
+    (1, 1, 2, "parter", True),
 ])
 def test_check_active_story(act, first, last, gui, ok):
     res, msg = check_active_story(act, first, last, gui)
     assert res is ok
     assert (msg == "") is ok          # komunikat tylko gdy mismatch
+
+
+@pytest.mark.parametrize("first,last,expected", [
+    (0, 2, 0),      # bez piwnicy: parter = 0
+    (-1, 1, 0),     # z piwnicą: parter nadal 0, NIE firstStory (-1)
+    (-2, 3, 0),     # dwie kondygnacje podziemne
+    (0, 0, 0),      # parterowiec
+    (1, 3, 1),      # projekt bez indeksu 0 → parterem jest kondygnacja bazowa
+])
+def test_parter_story_index(first, last, expected):
+    assert parter_story_index(first, last) == expected
+
+
+def test_check_active_story_basement_points_at_ground_floor_not_basement():
+    """Regresja: przy piwnicy komunikat musi kierować na idx 0 (parter), nie -1."""
+    ok, msg = check_active_story(-1, -1, 1, "parter")
+    assert ok is False
+    assert "idx 0" in msg, msg          # cel = parter
+    assert "idx -1" not in msg.split("wybrałeś")[1], msg
+
+
+def test_check_active_story_matches_gui_export_target():
+    """Guard i ścieżka eksportu w GUI liczą TEN SAM indeks parteru."""
+    for first, last in [(0, 2), (-1, 1), (-2, 3), (0, 0), (1, 3)]:
+        parter_idx = parter_story_index(first, last)
+        assert check_active_story(parter_idx, first, last, "parter")[0] is True
+        if parter_idx + 1 <= last:
+            assert check_active_story(parter_idx + 1, first, last, "poddasze")[0] is True
 
 
 # ───────────────────────────── list_instances ───────────────────────────────

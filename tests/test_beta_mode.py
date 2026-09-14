@@ -17,6 +17,33 @@ def test_beta_mode_single_polish_tab(qapp, monkeypatch):
     assert w.tabs.tabText(0) == "Podział rzutu"
     assert w.windowTitle() == "FloorForge beta-test"
     assert hasattr(w, "ac_status")
+    # Pusty podgląd musi nazywać przyciski tak, jak są podpisane w becie —
+    # „Generate"/„Load outline" w tym oknie nie istnieją.
+    placeholder = w.image_label.text()
+    assert "Generuj układy" in placeholder, placeholder
+    assert "Wczytaj obrys z ArchiCAD" in placeholder, placeholder
+    assert "Generate" not in placeholder and "Load outline" not in placeholder
+
+
+def test_beta_house_mode_placeholder_uses_real_button_label(qapp, monkeypatch):
+    """Po przełączeniu na tryb domu komunikat też cytuje realną etykietę przycisku."""
+    monkeypatch.setenv("FLOORFORGE_BETA", "1")
+    from ui.main_window import MainWindow
+    w = MainWindow()
+    w.mode_house_radio.setChecked(True)
+    txt = w.image_label.text()
+    assert "Generuj układy" in txt, txt
+    assert "'Generate'" not in txt, txt
+
+
+def test_default_mode_placeholder_uses_real_button_labels(qapp, monkeypatch):
+    """W trybie domyślnym etykiety są angielskie, ale też muszą się zgadzać z przyciskami."""
+    monkeypatch.delenv("FLOORFORGE_BETA", raising=False)
+    from ui.main_window import MainWindow
+    w = MainWindow()
+    txt = w.image_label.text()
+    assert w.import_btn.text() in txt, txt
+    assert w.generate_btn.text() in txt, txt
 
 
 def test_default_mode_unchanged(qapp, monkeypatch):

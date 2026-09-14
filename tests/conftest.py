@@ -1,7 +1,8 @@
 """Shared test fixtures for FloorPlan6.
 
-- _isolated_log_dir: autouse — FLOORFORGE_LOG_DIR -> tmp_path (log aplikacji
-  nigdy nie trafia do prawdziwego ~/Library/Logs).
+- _isolated_env: autouse — FLOORFORGE_LOG_DIR -> tmp_path (log aplikacji nigdy
+  nie trafia do prawdziwego ~/Library/Logs) + kasuje FLOORFORGE_BETA, żeby tryb
+  beta nie wyciekał między testami.
 - qapp: session-scoped QApplication for PyQt5 dialog tests.
 - isolated_qsettings: redirects QSettings file storage to tmp_path so tests
   do not pollute the user's real ~/.config/FloorPlan6/Stage1Report.conf.
@@ -26,9 +27,18 @@ from core.plot_model import (
 
 
 @pytest.fixture(autouse=True)
-def _isolated_log_dir(tmp_path, monkeypatch):
-    """Nigdy nie pisz logu aplikacji do prawdziwego ~/Library/Logs podczas testów."""
+def _isolated_env(tmp_path, monkeypatch):
+    """Izoluj środowisko procesu testowego przed każdym testem.
+
+    1. FLOORFORGE_LOG_DIR -> tmp_path: nigdy nie pisz logu aplikacji do
+       prawdziwego ~/Library/Logs podczas testów.
+    2. Skasuj FLOORFORGE_BETA: `floorforge_app.main()` robi
+       `os.environ.setdefault("FLOORFORGE_BETA", "1")` na PRAWDZIWYM środowisku,
+       więc bez tego każdy test po `tests/test_selftest.py` leciałby w trybie
+       beta (polskie etykiety, jedna zakładka) i sypał się w pełnym przebiegu.
+    """
     monkeypatch.setenv("FLOORFORGE_LOG_DIR", str(tmp_path))
+    monkeypatch.delenv("FLOORFORGE_BETA", raising=False)
 
 
 @pytest.fixture(scope="session")

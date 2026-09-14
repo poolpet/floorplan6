@@ -1,11 +1,16 @@
 """
 FloorPlan6 — PyQt5 GUI.
 
-Main window with two tabs:
-  - Apartment Layout (Stage 4): per-apartment room layout
-  - Floor Layout (Stage 3): divide a building floor into apartments + circulation
-
-All UI strings in English to allow international collaboration.
+Jedno okno w dwóch wariantach, przełączane zmienną środowiskową
+FLOORFORGE_BETA (patrz `is_beta()`):
+  - domyślnie (praca nad repo): 4 zakładki — "Stage 1: Plot Analyser",
+    "Stage 2: Volume Generator" (placeholder), "Stage 3: Floor Layout" oraz
+    "Stage 4: Apartment Layout". Stringi UI po angielsku.
+  - beta (FLOORFORGE_BETA=1, paczka dla testerów): JEDNA zakładka
+    "Podział rzutu" (tylko Stage 4 — zamrożone etapy 1-3 nie są nawet
+    importowane), przyciski i komunikaty po polsku. Nagłówki sekcji
+    (`1. Outline`, `2. Type and options`, `4. Result`) są jeszcze po
+    angielsku — patrz packaging/INSTALACJA.md.
 """
 from __future__ import annotations
 
@@ -569,7 +574,7 @@ class MainWindow(QMainWindow):
         self.image_label.setAlignment(Qt.AlignCenter)
         self.image_label.setMinimumSize(600, 500)
         self.image_label.setStyleSheet("background-color: white; border: 1px solid #ccc;")
-        self.image_label.setText("Click 'Load outline' or 'Generate layouts' to start")
+        self.image_label.setText(self._placeholder_text(house=False))
 
         self.preview_fig = Figure(figsize=(10, 8))
         self.preview_canvas = FigureCanvasQTAgg(self.preview_fig)
@@ -594,6 +599,23 @@ class MainWindow(QMainWindow):
 
         self.width_spin.valueChanged.connect(_on_width_changed)
         self.height_spin.valueChanged.connect(lambda v: self._clear_import())
+
+    def _placeholder_text(self, house: bool) -> str:
+        """Tekst pustego podglądu — MUSI nazywać przyciski tak, jak są podpisane.
+
+        Etykiety biorą się z `self._import_label` / `self._generate_label`, więc
+        w becie (polskie napisy) komunikat wskazuje „Wczytaj obrys z ArchiCAD" /
+        „3. Generuj układy", a nie nieistniejące „Load outline" / „Generate".
+        """
+        if is_beta():
+            if house:
+                return (f"Tryb domu — kliknij „{self._generate_label}” "
+                        f"(obrys + wejście z kroku 1).")
+            return f"Kliknij „{self._import_label}” albo „{self._generate_label}”"
+        if house:
+            return (f"House mode — click '{self._generate_label}' "
+                    f"(outline + entry from step 1).")
+        return f"Click '{self._import_label}' or '{self._generate_label}' to start"
 
     def _edit_facades(self, auto_open=False):
         """Open manual wall classification dialog."""
@@ -630,10 +652,7 @@ class MainWindow(QMainWindow):
         self.archicad_btn.setEnabled(False)
         self.variant_label.setText("—")
         self.details.clear()
-        self.image_label.setText(
-            "Tryb domu — kliknij 'Generate' (obrys + entry z kroku 1)." if house
-            else "Click 'Load outline' or 'Generate layouts' to start"
-        )
+        self.image_label.setText(self._placeholder_text(house=house))
         self.preview_stack.setCurrentWidget(self.image_label)
         self.archicad_btn.setToolTip(
             "Wstaw wybraną kondygnację do AKTYWNEJ kondygnacji ArchiCAD." if house else ""
@@ -1160,7 +1179,9 @@ class MainWindow(QMainWindow):
         if layout is None:
             return
         storey = "poddasze" if self.house_storey_combo.currentText() == "Poddasze" else "parter"
-        from bridge.tapir_connection import TapirConnection, check_active_story
+        from bridge.tapir_connection import (
+            TapirConnection, check_active_story, parter_story_index,
+        )
         from bridge.house_writer import export_house_to_archicad
 
         # 1. Wykryj instancje AC (deterministyczny cel).
@@ -1199,8 +1220,9 @@ class MainWindow(QMainWindow):
             first = int(st.get("firstStory", 0))
             last = int(st.get("lastStory", 0))
             # Parter to indeks 0 w przestrzeni AC (gdy istnieje) — NIE `firstStory`:
-            # przy piwnicy firstStory = -1 i parter leży o jeden wyżej.
-            parter_idx = 0 if first <= 0 <= last else first
+            # przy piwnicy firstStory = -1 i parter leży o jeden wyżej. Ta sama
+            # reguła co w `check_active_story` (jedno źródło prawdy).
+            parter_idx = parter_story_index(first, last)
             poddasze_idx = parter_idx + 1
             # Brak kondygnacji nad parterem: blokuj PRZED jakimkolwiek zapisem (inaczej
             # parter wszedłby, poddasze nie — i ponowna próba zdublowałaby parter).

@@ -534,25 +534,42 @@ class TapirConnection:
         return []
 
 
+def parter_story_index(first_story: int, last_story: int) -> int:
+    """Indeks parteru w przestrzeni indeksów AC — JEDNO źródło prawdy.
+
+    Parter to indeks 0, o ile taka kondygnacja w projekcie istnieje: przy piwnicy
+    `firstStory = -1`, a parter leży o jeden wyżej (NIE na `firstStory`). Dopiero
+    gdy projekt w ogóle nie obejmuje indeksu 0 (np. zaczyna się od 1), parterem
+    jest kondygnacja bazowa `firstStory`.
+
+    Używane zarówno przez `check_active_story` (ostrzeżenie), jak i przez ścieżkę
+    eksportu w GUI (auto-przełączanie) — obie muszą wskazywać tę samą kondygnację.
+    """
+    return 0 if first_story <= 0 <= last_story else first_story
+
+
 def check_active_story(act_story: int, first_story: int, last_story: int,
                        gui_storey: str) -> tuple[bool, str]:
     """Czy aktywna kondygnacja AC pasuje do wyboru w GUI (czysta logika, bez AC).
 
-    Mapowanie po INDEKSIE (nazwy story bywają puste): "parter" ↔ kondygnacja bazowa
-    (firstStory); "poddasze" ↔ kondygnacja powyżej (idx > firstStory). Zwraca
-    (ok, komunikat) — komunikat tylko gdy mismatch (ok=False).
+    Mapowanie po INDEKSIE (nazwy story bywają puste): "parter" ↔
+    `parter_story_index(first, last)`; "poddasze" ↔ kondygnacja bezpośrednio nad
+    parterem lub wyżej. Zwraca (ok, komunikat) — komunikat tylko gdy mismatch
+    (ok=False).
     """
+    parter_idx = parter_story_index(first_story, last_story)
+    poddasze_idx = parter_idx + 1
     if gui_storey == "poddasze":
-        if last_story == first_story:
-            return False, ("Projekt jednokondygnacyjny — nie ma poddasza. "
-                           "Wybierz 'Parter' albo dodaj kondygnację w AC.")
-        if act_story > first_story:
+        if poddasze_idx > last_story:
+            return False, (f"Projekt nie ma kondygnacji nad parterem (idx {poddasze_idx}) "
+                           f"— nie ma poddasza. Wybierz 'Parter' albo dodaj kondygnację w AC.")
+        if act_story >= poddasze_idx:
             return True, ""
-        return False, (f"Aktywna kondygnacja AC = parter (idx {act_story}), "
-                       f"a wybrałeś 'Poddasze'. Przełącz w AC kondygnację na poddasze "
-                       f"(idx > {first_story}) i spróbuj ponownie.")
+        return False, (f"Aktywna kondygnacja AC = idx {act_story}, a wybrałeś 'Poddasze' "
+                       f"(idx {poddasze_idx}). Przełącz w AC kondygnację na poddasze "
+                       f"i spróbuj ponownie.")
     # parter (domyślnie)
-    if act_story == first_story:
+    if act_story == parter_idx:
         return True, ""
     return False, (f"Aktywna kondygnacja AC = idx {act_story}, a wybrałeś 'Parter' "
-                   f"(idx {first_story}). Przełącz w AC kondygnację na parter.")
+                   f"(idx {parter_idx}). Przełącz w AC kondygnację na parter.")

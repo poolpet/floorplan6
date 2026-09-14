@@ -36,6 +36,10 @@ jobs:
           pip install -r requirements.txt
 
       - name: Run pytest (without GUI tests)
+        env:
+          # Runnery GH nie mają serwera X — moduły testowe inne niż test_gui.py
+          # też budują widgety Qt i bez offscreen padają na starcie QApplication.
+          QT_QPA_PLATFORM: offscreen
         run: |
           PYTHONPATH=. pytest tests/ -v --tb=short \
             --ignore=tests/test_gui.py \
@@ -43,5 +47,7 @@ jobs:
 
       - name: Run regression tests (slow)
         if: matrix.python-version == '3.13'
+        env:
+          QT_QPA_PLATFORM: offscreen
         run: |
           PYTHONPATH=. pytest tests/test_regression_lazienka.py -v --tb=short
