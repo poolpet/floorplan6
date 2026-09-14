@@ -124,9 +124,11 @@ Nowy katalog `packaging/`:
    wpięcie `activate_story` (1-klik obie kondygnacje) wg
    `2026-06-22-dom-ac-story-target-multi-instance-design.md`. Bez tego domy w becie
    działają tylko na aktywnej kondygnacji.
-2. **Tryb beta GUI** (sekcja 3) + błędy i log (sekcja 4).
-3. **Pakowanie** (sekcja 5) + smoke (sekcja 6).
-4. **Test na czystym koncie** → poprawki → wysyłka do 2–3 osób z prośbą o log przy błędzie.
+2. **Serwis HTTP mózgu** (korekta w sekcji 2): `service/app.py`, `/solve` z job_id
+   i postępem, GUI przepięte na klienta HTTP; ścieżka bezpośrednia zostaje dla testów.
+3. **Tryb beta GUI** (sekcja 3) + błędy i log (sekcja 4).
+4. **Pakowanie** (sekcja 5) + smoke (sekcja 6).
+5. **Test na czystym koncie** → poprawki → wysyłka do 2–3 osób z prośbą o log przy błędzie.
 
 ## 8. Otwarte decyzje (nie blokują bety)
 
