@@ -66,3 +66,6 @@ Raport_*.pdf
 
 # Reference plans / renders kept local only (decyzja Dawida 2026-06-22 — 19MB binariów)
 rzuty/
+
+# Duplikaty tworzone przez sync (iCloud/Finder) — nigdy nie wersjonować
+* 2.*
