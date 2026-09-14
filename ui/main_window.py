@@ -9,6 +9,7 @@ All UI strings in English to allow international collaboration.
 """
 from __future__ import annotations
 
+import logging
 import sys
 import io
 from pathlib import Path
@@ -43,6 +44,10 @@ from core.house_layout import generate_house
 from core.models import FloorPlan, WallType
 from viz.plan_renderer import render_floor_plan
 from viz.house_preview import render_house_figure, house_details_text
+from ui.app_logging import setup_logging
+from ui.user_errors import describe
+
+logger = logging.getLogger(__name__)
 
 
 class FacadeDialog(QDialog):
@@ -149,7 +154,7 @@ class FacadeDialog(QDialog):
 class GenerateWorker(QThread):
     """Worker thread for variant generation (keeps GUI responsive)."""
     finished = pyqtSignal(list)  # lista FloorPlan
-    error = pyqtSignal(str)
+    error = pyqtSignal(object)  # wyjątek — GUI tłumaczy go przez describe()
     progress = pyqtSignal(int)  # 0-100%
 
     def __init__(self, polygon, entry_point, mtype, max_variants,
@@ -180,13 +185,13 @@ class GenerateWorker(QThread):
             self.progress.emit(100)
             self.finished.emit(variants)
         except Exception as e:
-            self.error.emit(str(e))
+            self.error.emit(e)
 
 
 class HouseGenerateWorker(QThread):
     """Worker thread: generuje dom 2-kondygnacyjny (generate_house). 1 układ."""
     finished = pyqtSignal(object)  # TwoStoreyLayout
-    error = pyqtSignal(str)
+    error = pyqtSignal(object)  # wyjątek — GUI tłumaczy go przez describe()
 
     def __init__(self, polygon, entry_point):
         super().__init__()
@@ -198,7 +203,7 @@ class HouseGenerateWorker(QThread):
             layout = generate_house(self.polygon, self.entry_point)
             self.finished.emit(layout)
         except Exception as e:
-            self.error.emit(str(e))
+            self.error.emit(e)
 
 
 class MainWindow(QMainWindow):
@@ -757,13 +762,17 @@ class MainWindow(QMainWindow):
         self.statusBar().showMessage(msg)
         self._show_variant(0)
 
-    def _on_error(self, msg: str):
+    def _on_error(self, exc):
         self.generate_btn.setEnabled(True)
         self.generate_btn.setText("3. Generate layouts")
         self.progress_bar.setRange(0, 100)
         self.progress_bar.setVisible(False)
-        self.statusBar().showMessage(f"Error: {msg}")
-        QMessageBox.critical(self, "Error", msg)
+        if not isinstance(exc, BaseException):
+            exc = RuntimeError(str(exc))
+        logger.error("generowanie: %r", exc)
+        title, text = describe(exc)
+        self.statusBar().showMessage(f"Błąd: {title}")
+        QMessageBox.critical(self, title, text)
 
     def _show_variant(self, idx: int):
         if not self.variants:
@@ -1082,11 +1091,9 @@ class MainWindow(QMainWindow):
                 f"Numery stref: {apt_id}-001…{apt_id}-{n_zones:03d}"
             )
         except Exception as e:
-            QMessageBox.warning(
-                self, "ArchiCAD",
-                f"Cannot connect to ArchiCAD:\n{e}\n\n"
-                "Make sure ArchiCAD is running with Tapir Add-On."
-            )
+            logger.exception("eksport mieszkania do AC")
+            title, text = describe(e)
+            QMessageBox.warning(self, title, text)
 
     def _pick_ac_instance(self, instances):
         """Picker: gdy >1 instancja AC, user wskazuje dokument-cel. Zwraca port lub None."""
@@ -1118,7 +1125,9 @@ class MainWindow(QMainWindow):
         try:
             instances = TapirConnection.list_instances()
         except Exception as e:
-            QMessageBox.warning(self, "ArchiCAD", f"Nie udało się wykryć instancji AC:\n{e}")
+            logger.exception("wykrywanie instancji AC")
+            title, text = describe(e)
+            QMessageBox.warning(self, title, text)
             return
         if not instances:
             QMessageBox.warning(
@@ -1226,11 +1235,9 @@ class MainWindow(QMainWindow):
                 + ("" if both else "\n\nDruga kondygnacja: przełącz kondygnację w AC, wybierz ją tutaj, kliknij ponownie."),
             )
         except Exception as e:
-            QMessageBox.warning(
-                self, "ArchiCAD",
-                f"Nie udało się wstawić domu do ArchiCAD:\n{e}\n\n"
-                "Upewnij się, że ArchiCAD działa z Tapir Add-On."
-            )
+            logger.exception("eksport domu do AC")
+            title, text = describe(e)
+            QMessageBox.warning(self, title, text)
 
     def _import_from_inner_edge(self):
         """Auto-detect z natywnego Inner Edge w AC.
@@ -1247,19 +1254,18 @@ class MainWindow(QMainWindow):
             tapir = TapirConnection()
             tapir.connect()
         except Exception as e:
-            QMessageBox.warning(
-                self, "ArchiCAD",
-                f"Cannot connect to ArchiCAD:\n{e}\n\n"
-                "Check that AC is running and Tapir Add-On is installed."
-            )
+            logger.exception("połączenie z AC")
+            title, text = describe(e)
+            QMessageBox.warning(self, title, text)
             return
 
         # 1. Snapshot - jakie Zone juz istnieja PRZED user actions
         try:
             pre_zones = tapir.get_elements_by_type("Zone") or []
         except Exception as e:
-            QMessageBox.warning(self, "ArchiCAD",
-                                f"Nie udalo sie pobrac listy Zone:\n{e}")
+            logger.exception("pobieranie listy Zone z AC")
+            title, text = describe(e)
+            QMessageBox.warning(self, title, text)
             return
 
         pre_guids: set[str] = set()
@@ -1298,8 +1304,9 @@ class MainWindow(QMainWindow):
             self.statusBar().showMessage("Auto-detect failed.")
             return
         except Exception as e:
-            QMessageBox.critical(self, "Auto-detect",
-                                 f"Unexpected error:\n{type(e).__name__}: {e}")
+            logger.exception("auto-detect obrysu z AC")
+            title, text = describe(e)
+            QMessageBox.critical(self, title, text)
             return
 
         self._apply_imported_boundary(polygon, entry_point, wall_types)
@@ -1317,11 +1324,9 @@ class MainWindow(QMainWindow):
             tapir = TapirConnection()
             tapir.connect()
         except Exception as e:
-            QMessageBox.warning(
-                self, "ArchiCAD",
-                f"Cannot connect to ArchiCAD:\n{e}\n\n"
-                "Check that AC is running and Tapir Add-On is installed."
-            )
+            logger.exception("połączenie z AC")
+            title, text = describe(e)
+            QMessageBox.warning(self, title, text)
             return
 
         # Snapshot aktualnie zaznaczonych — żeby wykryć NOWE elementy
@@ -1442,11 +1447,9 @@ class MainWindow(QMainWindow):
             self._apply_imported_boundary(polygon, entry_point, wall_types)
 
         except Exception as e:
-            QMessageBox.warning(
-                self, "ArchiCAD",
-                f"Cannot load outline:\n{e}\n\n"
-                "Select outline walls in ArchiCAD and try again."
-            )
+            logger.exception("wczytanie obrysu z AC")
+            title, text = describe(e)
+            QMessageBox.warning(self, title, text)
 
     def _apply_imported_boundary(self, polygon, entry_point, wall_types):
         """Aplikuje wczytany boundary do GUI — wspólne dla wszystkich źródeł
@@ -1509,6 +1512,7 @@ class MainWindow(QMainWindow):
 
 
 def run_gui():
+    setup_logging()
     app = QApplication(sys.argv)
     app.setStyle("Fusion")
     window = MainWindow()

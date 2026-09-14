@@ -1,5 +1,7 @@
 """Shared test fixtures for FloorPlan6.
 
+- _isolated_log_dir: autouse — FLOORFORGE_LOG_DIR -> tmp_path (log aplikacji
+  nigdy nie trafia do prawdziwego ~/Library/Logs).
 - qapp: session-scoped QApplication for PyQt5 dialog tests.
 - isolated_qsettings: redirects QSettings file storage to tmp_path so tests
   do not pollute the user's real ~/.config/FloorPlan6/Stage1Report.conf.
@@ -21,6 +23,12 @@ from core.plot_model import (
     Plot,
     PlotBoundary,
 )
+
+
+@pytest.fixture(autouse=True)
+def _isolated_log_dir(tmp_path, monkeypatch):
+    """Nigdy nie pisz logu aplikacji do prawdziwego ~/Library/Logs podczas testów."""
+    monkeypatch.setenv("FLOORFORGE_LOG_DIR", str(tmp_path))
 
 
 @pytest.fixture(scope="session")
