@@ -39,10 +39,18 @@ fi
 # z providerem — dlatego podpisujemy, pakujemy i WERYFIKUJEMY w $TMPDIR, a do
 # packaging/dist wracają dopiero sprawdzone artefakty.
 WORK="$(mktemp -d "${TMPDIR:-/tmp}/floorforge-release.XXXXXX")"
-cleanup() { rm -rf "$WORK"; }
-trap cleanup EXIT
+# Katalog roboczy znika TYLKO po pełnym sukcesie (patrz koniec skryptu). Przy
+# porażce bramki zostaje na dysku — inaczej nie ma czego obejrzeć po fakcie.
+keep_work() {
+  rc=$?
+  [ "$rc" -eq 0 ] || echo "== katalog roboczy ZOSTAJE do analizy: $WORK"
+  exit $rc
+}
+trap keep_work EXIT
 
-rm -rf "$HERE/build" "$HERE/dist"
+# `packaging/dist` NIE jest tu kasowany: nieudany build nie może zniszczyć
+# ostatniej dobrej paczki. Stare artefakty lecą dopiero po przejściu bramki.
+rm -rf "$HERE/build"
 mkdir -p "$HERE/dist"
 (cd "$ROOT" && "$VENV/bin/pyinstaller" --noconfirm --clean --distpath "$WORK/dist" --workpath "$HERE/build" "$HERE/floorforge.spec")
 
@@ -64,11 +72,18 @@ chmod +x "$STAGE/Uruchom.command"
 # z Findera, a binarka odpalona z shella dziedziczy środowisko terminala.
 printf '%s\n' "$FLOORFORGE_VERSION" > "$STAGE/VERSION"
 ZIP="$WORK/dist/FloorForge-beta-$FLOORFORGE_VERSION.zip"
-(cd "$WORK/dist" && ditto -c -k --keepParent "FloorForge-beta-$FLOORFORGE_VERSION" "FloorForge-beta-$FLOORFORGE_VERSION.zip")
+# --norsrc/--noextattr: bez nich ditto wkłada do zipa pliki AppleDouble (`._*`)
+# z xattr, które tester widzi po rozpakowaniu byle czym innym niż Finder.
+(cd "$WORK/dist" && ditto -c -k --keepParent --norsrc --noextattr "FloorForge-beta-$FLOORFORGE_VERSION" "FloorForge-beta-$FLOORFORGE_VERSION.zip")
 
 # BRAMKA: sprawdzamy dokładnie to, co pojedzie do testera — .app rozpakowany
 # z zipa, nie oryginał z dist. Obie kontrole są fatalne.
 echo "== weryfikacja paczki"
+AD="$(unzip -l "$ZIP" | grep -c '/\._' || true)"
+if [ "$AD" -ne 0 ]; then
+  echo "PACZKA FAIL: w zipie jest $AD plików AppleDouble (._*)"; exit 1
+fi
+echo "AppleDouble w zipie: 0 OK"
 VERIFY="$WORK/verify"
 mkdir -p "$VERIFY"
 ditto -x -k "$ZIP" "$VERIFY"
@@ -82,9 +97,14 @@ echo "$VOUT"
 echo "$VOUT" | grep -q "SELFTEST OK" || { echo "PACZKA FAIL: selftest z zipa nie przeszedł"; exit 1; }
 echo "selftest z paczki OK"
 
-# Do repo trafia zip (produkt) + staging (podglądowa, uruchamialna kopia).
-# Gołego .appa NIE kopiujemy: file provider i tak by go ostemplował, a to drugie
-# 200 MB tego samego.
+# Bramka przeszła — DOPIERO TERAZ ruszamy packaging/dist. Do repo trafia zip
+# (produkt) + staging (podglądowa, uruchamialna kopia). Gołego .appa NIE
+# kopiujemy: file provider i tak by go ostemplował, a to drugie 200 MB tego samego.
+rm -rf "$HERE"/dist/FloorForge-beta-*
 cp "$ZIP" "$HERE/dist/"
 cp -R "$STAGE" "$HERE/dist/"
+
+# Sukces — dopiero tu wolno skasować katalog roboczy.
+trap - EXIT
+rm -rf "$WORK"
 echo "== GOTOWE: $HERE/dist/FloorForge-beta-$FLOORFORGE_VERSION.zip"
