@@ -25,12 +25,28 @@ Etap 2/3, zmiana licencji AGPL (decyzja przed sprzedażą, nie przed betą).
 Podział mózg/powłoka bez zmian (`docs/ROADMAP_domy.md`): mózg w Pythonie, powłoka =
 Tapir. Aplikacja i AC rozmawiają przez localhost (porty 19723–19730) jak dotąd.
 
+**Korekta 2026-09-14 (skala):** mózg wystawiony jako **lokalny serwer HTTP** za kontraktem
+JSON, a GUI jest jego pierwszym klientem. Dzięki temu przyszła powłoka (własny add-on
+C++ lub chmura) różni się tylko adresem URL.
+
+- Nowy moduł `service/app.py` (stdlib `http.server` lub FastAPI — decyzja w planie;
+  preferencja: stdlib, żeby nie rozszerzać zależności PyInstallera).
+- Endpointy: `POST /solve` (wejście: obrys + typ + opcje → wyjście: lista wariantów w
+  formacie `plan_to_contract`), `GET /health` (wersja, status), `POST /export` (wariant →
+  AC przez istniejący `plan_writer`; w wersji lokalnej serwer sam gada z Tapirem).
+- Serwer startuje w tle razem z GUI na losowym wolnym porcie `127.0.0.1`; GUI wywołuje
+  go zamiast bezpośrednio `generate_variants`/`generate_house`. Ścieżka bezpośrednia
+  zostaje dla testów i CLI.
+- Długie solve'y: `POST /solve` zwraca `job_id`, `GET /jobs/{id}` daje postęp i wyniki
+  częściowe (dziś progress callback w `variant_generator`). GUI pokazuje pasek postępu
+  i pierwsze warianty zanim skończą się wszystkie.
+
 Zawartość `FloorForge-beta-<wersja>.zip`:
 
 | Plik | Źródło |
 |---|---|
 | `FloorForge.app` | PyInstaller onedir z `ui/main_window.py` jako entry point |
-| `TapirAddOn_AC29_Mac.bundle` | build z `tapir-custom/` (CreateDoors z `libraryPart`/`oSide`/`reflected`) |
+| `TapirAddOn_AC29_Mac.bundle` | build z `tapir-custom/` (CreateDoors z `libraryPart`/`oSide`/`reflected`). **Tymczasowy** — patrz sekcja 9 |
 | `INSTALACJA.md` | 1 strona: gdzie skopiować bundle, jak otworzyć .app mimo Gatekeepera, jak zgłosić błąd |
 | `Uruchom.command` | awaryjne uruchomienie binarki z terminala (widać stack trace) |
 
@@ -118,3 +134,26 @@ Nowy katalog `packaging/`:
   sprzedażą. Do rozstrzygnięcia przed wersją publiczną.
 - Stock Tapir vs custom: beta wymaga custom builda (drzwi). Jeśli upstream Tapir przyjmie
   parametry drzwi, wrócić do stocka.
+
+## 9. Kolejka po becie (decyzje strategiczne z 2026-09-14, poza zakresem bety)
+
+Kolejność wg wpływu na adopcję i skalę. Nic z tego nie blokuje wysyłki bety; beta ma
+zweryfikować punkt 1.
+
+1. **Interaktywność:** przypnij pokój / zablokuj ścianę / wymuś drzwi → generuj ponownie.
+   Każda blokada = dodatkowe ograniczenie CP-SAT. Pierwsza praca po becie, przed
+   jakimkolwiek strojeniem benchmarku.
+2. **Własna cienka powłoka zamiast forka Tapira.** Custom Tapir = utrzymanie C++ per
+   wersja AC × OS bez natywności i bez obrotu obiektów (meble zamrożone). FP4_CPP ma
+   gotowe: `BoundaryReader`, `PlanWriter` (ściany z kompozytem, drzwi z orientacją, otwory,
+   undo), paletę. Docelowo: powłoka z FP4_CPP jako klient HTTP mózgu (sekcja 2).
+   Alternatywa tańsza: upstream parametrów drzwi do Tapira (MIT, aktywny) i powrót do stocka.
+3. **Mózg w chmurze** — ten sam `service/app.py` za HTTPS: znika PyInstaller, podpisy,
+   Windows-build, licencjonowanie w kliencie; więcej rdzeni dla domów. Wymaga zmiany
+   licencji (AGPL a hosting) i decyzji o prywatności rzutów.
+4. **Czas i determinizm solvera:** stałe ziarno + 1 wątek w trybie reprodukcji, wyniki
+   częściowe (pkt 1 sekcji 2), granica MVP ~160 m²/kondygnację z jasnym komunikatem.
+5. **Szablony z własnych projektów biura** („User Library Mode" — spec w FP4_CPP,
+   commit `b41475a`): import rzutów użytkownika jako szablony, na bazie `refs_geo`.
+6. **Odchudzenie repo:** `core/` jako pakiet z testami <3 min; zamrożone etapy 1/2/3 i
+   raport PDF do osobnego pakietu; `ui/main_window.py` (1475 linii) podzielony per zakładka.
