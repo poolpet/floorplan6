@@ -103,3 +103,39 @@ def test_house_export_no_instance_warns_no_export(qapp, monkeypatch):
     w = _mainwindow(monkeypatch, "Parter")
     w._export_to_archicad()
     assert cap["export"] == 0
+
+
+def test_house_export_both_storeys_switches_and_exports_twice(qapp, monkeypatch):
+    """Checkbox 'obie' → activate_story(0)+export parter, activate_story(1)+export poddasze."""
+    import bridge.tapir_connection as tc
+    cap = _wire(monkeypatch,
+                instances=[{"port": 19724, "projectName": "K", "projectPath": ""}],
+                act_story=0)
+    switched = []
+    monkeypatch.setattr(tc.TapirConnection, "activate_story",
+                        lambda self, i: switched.append(i) or True)
+    w = _mainwindow(monkeypatch, "Parter")
+    w._house_layout = type("L", (), {"pietro_rooms": [object()]})()   # 2-kond.
+    w.house_both_storeys_check.setChecked(True)
+    w._export_to_archicad()
+    assert switched == [0, 1]
+    assert cap["export"] == 2
+
+
+def test_house_export_both_storeys_falls_back_to_guard_when_switch_fails(qapp, monkeypatch):
+    """activate_story False → NIE eksportuje na ślepo; pokazuje ostrzeżenie."""
+    from PyQt5.QtWidgets import QMessageBox
+    import bridge.tapir_connection as tc
+    cap = _wire(monkeypatch,
+                instances=[{"port": 19724, "projectName": "K", "projectPath": ""}],
+                act_story=0)
+    monkeypatch.setattr(tc.TapirConnection, "activate_story", lambda self, i: False)
+    warned = []
+    monkeypatch.setattr(QMessageBox, "warning",
+                        staticmethod(lambda *a, **k: warned.append(a) or QMessageBox.Cancel))
+    w = _mainwindow(monkeypatch, "Parter")
+    w._house_layout = type("L", (), {"pietro_rooms": [object()]})()
+    w.house_both_storeys_check.setChecked(True)
+    w._export_to_archicad()
+    assert cap["export"] == 0
+    assert warned

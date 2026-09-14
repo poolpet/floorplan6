@@ -430,6 +430,13 @@ class MainWindow(QMainWindow):
             "Którą kondygnację wstawić. Ustaw TĘ SAMĄ aktywną kondygnację w ArchiCAD."
         )
         house_opt_lay.addWidget(self.house_storey_combo)
+        self.house_both_storeys_check = QCheckBox("Wstaw obie kondygnacje (auto-przełączanie w AC)")
+        self.house_both_storeys_check.setChecked(False)
+        self.house_both_storeys_check.setToolTip(
+            "Jednym kliknięciem: FloorPlan sam przełącza kondygnację w AC i wstawia "
+            "parter, a potem poddasze."
+        )
+        house_opt_lay.addWidget(self.house_both_storeys_check)
         step2_lay.addWidget(self.house_options)
         self.house_options.setVisible(False)
 
@@ -1135,40 +1142,51 @@ class MainWindow(QMainWindow):
             tapir = TapirConnection()
             tapir.use_port(port)
 
-            # 3. Story-guard — twarde ostrzeżenie gdy aktywna kondygnacja ≠ wybór.
+            # 3. Plan kondygnacji: "obie" (auto-switch) albo jedna (story-guard).
+            both = self.house_both_storeys_check.isChecked() and bool(getattr(layout, "pietro_rooms", None))
             st = tapir.get_stories() or {}
-            ok, msg = check_active_story(
-                int(st.get("actStory", 0)), int(st.get("firstStory", 0)),
-                int(st.get("lastStory", 0)), storey,
-            )
-            if not ok:
-                reply = QMessageBox.warning(
-                    self, "Kondygnacja AC",
-                    f"{msg}\n\nWstawić MIMO TO?",
-                    QMessageBox.Yes | QMessageBox.Cancel, QMessageBox.Cancel,
-                )
-                if reply != QMessageBox.Yes:
-                    return
+            first = int(st.get("firstStory", 0))
+            plan_storeys = [("parter", first), ("poddasze", first + 1)] if both else [(storey, None)]
 
-            # 4. Eksport do wybranej instancji.
-            result = export_house_to_archicad(
-                layout, storey=storey, tapir=tapir, offset=self._archicad_offset,
-            )
-            n_zones = len(result.get("zones", []))
-            n_walls = len(result.get("walls", []))
-            n_doors = len(result.get("doors", []))
-            n_windows = len(result.get("windows", []))
-            n_labels = len(result.get("labels", []))
+            totals = {"zones": 0, "walls": 0, "doors": 0, "windows": 0, "labels": 0}
+            for st_name, target_idx in plan_storeys:
+                if target_idx is not None:
+                    if not tapir.activate_story(target_idx):
+                        QMessageBox.warning(
+                            self, "Kondygnacja AC",
+                            f"Nie udało się automatycznie przełączyć AC na kondygnację {target_idx} "
+                            f"('{st_name}').\n\nPrzełącz kondygnację ręcznie w AC, odznacz "
+                            f"'Wstaw obie kondygnacje' i wstaw każdą osobno.",
+                        )
+                        return
+                else:
+                    ok, msg = check_active_story(
+                        int(st.get("actStory", 0)), first, int(st.get("lastStory", 0)), st_name,
+                    )
+                    if not ok:
+                        reply = QMessageBox.warning(
+                            self, "Kondygnacja AC", f"{msg}\n\nWstawić MIMO TO?",
+                            QMessageBox.Yes | QMessageBox.Cancel, QMessageBox.Cancel,
+                        )
+                        if reply != QMessageBox.Yes:
+                            return
+                result = export_house_to_archicad(
+                    layout, storey=st_name, tapir=tapir, offset=self._archicad_offset,
+                )
+                for k in totals:
+                    totals[k] += len(result.get(k, []))
+
+            done = ", ".join(s for s, _ in plan_storeys)
             self.statusBar().showMessage(
-                f"Dom [{storey}] → port {port} ({name}): {n_zones} stref + {n_walls} ścian "
-                f"+ {n_doors} drzwi + {n_windows} okien + {n_labels} etykiet"
+                f"Dom [{done}] → port {port} ({name}): {totals['zones']} stref + {totals['walls']} ścian "
+                f"+ {totals['doors']} drzwi + {totals['windows']} okien + {totals['labels']} etykiet"
             )
             QMessageBox.information(
                 self, "ArchiCAD",
-                f"Kondygnacja '{storey}' → {name} (port {port}):\n\n"
-                f"{n_zones} stref + {n_walls} ścianek + {n_doors} drzwi + {n_windows} okien "
-                f"+ {n_labels} etykiet.\n\n"
-                f"Druga kondygnacja: przełącz kondygnację w AC, wybierz ją tutaj, kliknij ponownie."
+                f"Kondygnacje: {done} → {name} (port {port}):\n\n"
+                f"{totals['zones']} stref + {totals['walls']} ścianek + {totals['doors']} drzwi "
+                f"+ {totals['windows']} okien + {totals['labels']} etykiet."
+                + ("" if both else "\n\nDruga kondygnacja: przełącz kondygnację w AC, wybierz ją tutaj, kliknij ponownie."),
             )
         except Exception as e:
             QMessageBox.warning(

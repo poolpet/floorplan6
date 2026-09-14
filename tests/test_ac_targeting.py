@@ -123,3 +123,77 @@ def test_get_project_info_passthrough(monkeypatch):
     monkeypatch.setattr(t, "_execute_tapir",
                         lambda cmd, params=None: {"projectName": "K"} if cmd == "GetProjectInfo" else {})
     assert t.get_project_info()["projectName"] == "K"
+
+
+# ─────────────────── story_navitems / activate_story (auto-switch) ───────────
+class _FakeNav:
+    """Minimalny obiekt drzewa nawigatora: StoryItem'y top-down (Poddasze, Parter)."""
+    def __init__(self, guids_top_down):
+        self.rootItem = self
+        self.type = "Root"
+        self.navigatorItemId = None
+        self.children = [
+            type("N", (), {"navigatorItem": type("I", (), {
+                "type": "StoryItem",
+                "navigatorItemId": type("G", (), {"guid": g})(),
+                "children": [],
+            })()})()
+            for g in guids_top_down
+        ]
+
+
+def _conn_with_stories(monkeypatch, act_story_seq):
+    """TapirConnection z podmienionym połączeniem: GetStories zwraca kolejne actStory z listy."""
+    conn = tc.TapirConnection()
+    calls = {"change_window": []}
+    seq = list(act_story_seq)
+
+    class _Cmds:
+        def GetNavigatorItemTree(self, tid):
+            return _FakeNav(["guid-poddasze", "guid-parter"])
+
+        def ExecuteAddOnCommand(self, cid, params):
+            name = cid.name if hasattr(cid, "name") else str(cid)
+            if "GetStories" in name:
+                return {"actStory": seq[0] if len(seq) == 1 else seq.pop(0),
+                        "firstStory": 0, "lastStory": 1}
+            if "ChangeWindow" in name:
+                calls["change_window"].append(params)
+                return {}
+            return {}
+
+    class _Types:
+        def NavigatorTreeId(self, type):
+            return ("tree", type)
+
+        def AddOnCommandId(self, ns, name):
+            return type("Cid", (), {"name": name})()
+
+    monkeypatch.setattr(conn, "_conn",
+                        type("C", (), {"commands": _Cmds(), "types": _Types()})(),
+                        raising=False)
+    return conn, calls
+
+
+def test_story_navitems_maps_index_to_guid_bottom_up(monkeypatch):
+    conn, _ = _conn_with_stories(monkeypatch, [0])
+    assert conn.story_navitems() == {0: "guid-parter", 1: "guid-poddasze"}
+
+
+def test_activate_story_true_when_act_story_changes(monkeypatch):
+    conn, calls = _conn_with_stories(monkeypatch, [0, 1])   # przed: 0, po ChangeWindow: 1
+    assert conn.activate_story(1) is True
+    assert calls["change_window"], "ChangeWindow powinno być wywołane"
+    assert calls["change_window"][0]["navigatorItemId"]["guid"] == "guid-poddasze"
+
+
+def test_activate_story_false_when_no_shape_switches(monkeypatch):
+    conn, calls = _conn_with_stories(monkeypatch, [0])      # actStory nigdy się nie zmienia
+    assert conn.activate_story(1) is False
+    assert len(calls["change_window"]) == len(conn.CHANGE_WINDOW_SHAPES)
+
+
+def test_activate_story_noop_when_already_active(monkeypatch):
+    conn, calls = _conn_with_stories(monkeypatch, [1])
+    assert conn.activate_story(1) is True
+    assert calls["change_window"] == []

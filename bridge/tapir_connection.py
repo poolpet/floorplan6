@@ -13,10 +13,13 @@ Komendy Tapir:
 """
 from __future__ import annotations
 
+import logging
 import time
 from typing import List, Optional, Tuple
 
 from archicad import ACConnection
+
+logger = logging.getLogger(__name__)
 
 ARCHICAD_PORT_START = 19723
 ARCHICAD_PORT_RANGE = 8                # scan 19723..19730
@@ -164,6 +167,55 @@ class TapirConnection:
     def get_project_info(self) -> dict:
         """Info projektu: {projectName, projectPath, ...} (Tapir GetProjectInfo)."""
         return self._execute_tapir("GetProjectInfo", {})
+
+    # Kandydaci na kształt param ChangeWindow (kolejność = notebooks/ac_story_switch_probe.py).
+    # Zwycięzca z live-testu przesuwany na początek listy.
+    CHANGE_WINDOW_SHAPES = [
+        ("navigatorItemId:{guid}",      lambda g: {"navigatorItemId": {"guid": g}}),
+        ("navigatorItemId:{guid,type}", lambda g: {"navigatorItemId": {"guid": g, "type": "StoryItem"}}),
+        ("{guid}",                      lambda g: {"guid": g}),
+        ("databaseId+FloorPlan",        lambda g: {"databaseId": {"guid": g}, "windowType": "FloorPlan"}),
+    ]
+
+    def story_navitems(self) -> dict[int, str]:
+        """idx kondygnacji → navigatorItemId.guid. ProjectMap listuje story top-down,
+        więc reversed = indeksy rosnące (Parter = 0)."""
+        tree_id = self.types.NavigatorTreeId(type="ProjectMap")
+        tree = self.commands.GetNavigatorItemTree(tree_id)
+        guids_top_down: list[str] = []
+
+        def walk(node):
+            item = getattr(node, "navigatorItem", node)
+            nid = getattr(getattr(item, "navigatorItemId", None), "guid", None)
+            if getattr(item, "type", None) == "StoryItem" and nid:
+                guids_top_down.append(str(nid))
+            for ch in (getattr(item, "children", None) or []):
+                walk(ch)
+
+        walk(getattr(tree, "rootItem", tree))
+        return {i: g for i, g in enumerate(reversed(guids_top_down))}
+
+    def activate_story(self, target_index: int) -> bool:
+        """Ustaw aktywną kondygnację AC na `target_index`. True gdy GetStories.actStory == target."""
+        st = self.get_stories() or {}
+        if int(st.get("actStory", -1)) == target_index:
+            return True
+        guid = self.story_navitems().get(target_index)
+        if guid is None:
+            logger.warning("activate_story: brak nav-itemu dla story %s", target_index)
+            return False
+        for label, build in self.CHANGE_WINDOW_SHAPES:
+            try:
+                self._execute_tapir("ChangeWindow", build(guid))
+            except Exception as e:
+                logger.info("activate_story: kształt %s odrzucony: %r", label, e)
+                continue
+            now = int((self.get_stories() or {}).get("actStory", -1))
+            if now == target_index:
+                logger.info("activate_story: OK kształt=%s → actStory=%s", label, now)
+                return True
+        logger.warning("activate_story: żaden kształt nie przełączył na %s", target_index)
+        return False
 
     @property
     def active_port(self) -> Optional[int]:
