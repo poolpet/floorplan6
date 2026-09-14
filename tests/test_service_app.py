@@ -1,0 +1,70 @@
+import json
+import urllib.request
+import urllib.error
+import pytest
+
+
+@pytest.fixture
+def server(monkeypatch):
+    import service.app as app
+    monkeypatch.setattr(app, "solve_request",
+                        lambda req, progress=None: (progress and progress(1, 1)) or {"mode": req["mode"], "variants": []})
+    h = app.start_server(port=0)
+    yield h
+    h.stop()
+
+
+def _post(url, body):
+    data = json.dumps(body).encode()
+    r = urllib.request.Request(url, data=data, headers={"Content-Type": "application/json"}, method="POST")
+    with urllib.request.urlopen(r, timeout=5) as resp:
+        return resp.status, json.loads(resp.read())
+
+
+def test_health(server):
+    with urllib.request.urlopen(f"{server.url}/health", timeout=5) as r:
+        body = json.loads(r.read())
+    assert r.status == 200 and body["status"] == "ok" and "version" in body
+
+
+def test_solve_then_poll_job(server):
+    from service.client import ServiceClient
+    c = ServiceClient(server.url)
+    jid = c.solve({"mode": "apartment", "polygon": [[0, 0], [8, 0], [8, 6], [0, 6]], "entry": [4, 0], "mtype": "M2"})
+    j = c.wait(jid, timeout=5)
+    assert j["status"] == "done" and j["result"]["mode"] == "apartment"
+
+
+def test_bad_json_is_400(server):
+    r = urllib.request.Request(f"{server.url}/solve", data=b"{nie json", method="POST")
+    with pytest.raises(urllib.error.HTTPError) as ei:
+        urllib.request.urlopen(r, timeout=5)
+    assert ei.value.code == 400
+
+
+def test_unknown_job_is_404(server):
+    with pytest.raises(urllib.error.HTTPError) as ei:
+        urllib.request.urlopen(f"{server.url}/jobs/xyz", timeout=5)
+    assert ei.value.code == 404
+
+
+def test_export_without_archicad_is_503(server, monkeypatch):
+    import service.app as app
+    monkeypatch.setattr(app, "export_contract",
+                        lambda contract, port=None: (_ for _ in ()).throw(ConnectionError("brak AC")))
+    r = urllib.request.Request(f"{server.url}/export", data=json.dumps({"contract": {}}).encode(),
+                               headers={"Content-Type": "application/json"}, method="POST")
+    with pytest.raises(urllib.error.HTTPError) as ei:
+        urllib.request.urlopen(r, timeout=5)
+    assert ei.value.code == 503
+
+
+def test_client_wait_raises_on_error(server, monkeypatch):
+    import service.app as app
+    from service.client import ServiceClient
+    monkeypatch.setattr(app, "solve_request",
+                        lambda req, progress=None: (_ for _ in ()).throw(ValueError("zły obrys")))
+    c = ServiceClient(server.url)
+    jid = c.solve({"mode": "apartment", "polygon": [[0, 0], [1, 0], [1, 1]], "entry": [0, 0], "mtype": "M2"})
+    with pytest.raises(RuntimeError, match="zły obrys"):
+        c.wait(jid, timeout=5)
