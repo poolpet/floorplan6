@@ -10,6 +10,7 @@ All UI strings in English to allow international collaboration.
 from __future__ import annotations
 
 import logging
+import os
 import sys
 import io
 from pathlib import Path
@@ -48,6 +49,11 @@ from ui.app_logging import setup_logging
 from ui.user_errors import describe
 
 logger = logging.getLogger(__name__)
+
+
+def is_beta() -> bool:
+    """Tryb beta dla testerów: jedna zakładka, polskie etykiety (env FLOORFORGE_BETA)."""
+    return os.environ.get("FLOORFORGE_BETA", "").lower() in ("1", "true")
 
 
 class FacadeDialog(QDialog):
@@ -209,8 +215,13 @@ class HouseGenerateWorker(QThread):
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("FloorPlan6 — Apartment Layout Generator")
+        if is_beta():
+            self.setWindowTitle(f"FloorForge {os.environ.get('FLOORFORGE_VERSION', 'beta')}")
+        else:
+            self.setWindowTitle("FloorPlan6 — Apartment Layout Generator")
         self.setMinimumSize(1100, 700)
+        # Etykieta przycisku "Generuj" — używana też przy resetach po zakończeniu workera.
+        self._generate_label = "3. Generuj układy" if is_beta() else "3. Generate layouts"
 
         self.variants: list[FloorPlan] = []
         self.current_idx = 0
@@ -234,40 +245,43 @@ class MainWindow(QMainWindow):
         self.tabs = QTabWidget()
         self.setCentralWidget(self.tabs)
 
-        # Stage 1 — plot analyser (Mode A whole-plot + Mode B subdivision)
-        try:
-            from ui.stage1_window import Stage1Widget
-            self.stage1_widget = Stage1Widget(self)
-            self.tabs.addTab(self.stage1_widget, "Stage 1: Plot Analyser")
-            self.stage1_widget.apartment_layout_requested.connect(
-                self._populate_stage4_from_stage1
-            )
-        except Exception as e:
-            print(f"[WARN] Stage 1 tab unavailable: {e}")
-            self.stage1_widget = None
+        self.stage1_widget = None
+        # W becie zamrożone etapy 1-3 są ukryte (i nieimportowane).
+        if not is_beta():
+            # Stage 1 — plot analyser (Mode A whole-plot + Mode B subdivision)
             try:
-                from ui.stage_placeholder import Stage1PlotPlaceholder
-                self.tabs.addTab(Stage1PlotPlaceholder(self), "Stage 1: Plot Subdivision")
-            except Exception:
-                pass
+                from ui.stage1_window import Stage1Widget
+                self.stage1_widget = Stage1Widget(self)
+                self.tabs.addTab(self.stage1_widget, "Stage 1: Plot Analyser")
+                self.stage1_widget.apartment_layout_requested.connect(
+                    self._populate_stage4_from_stage1
+                )
+            except Exception as e:
+                print(f"[WARN] Stage 1 tab unavailable: {e}")
+                self.stage1_widget = None
+                try:
+                    from ui.stage_placeholder import Stage1PlotPlaceholder
+                    self.tabs.addTab(Stage1PlotPlaceholder(self), "Stage 1: Plot Subdivision")
+                except Exception:
+                    pass
 
-        # Stage 2 — volumetric generator (still placeholder)
-        try:
-            from ui.stage_placeholder import Stage2VolumePlaceholder
-            self.tabs.addTab(Stage2VolumePlaceholder(self), "Stage 2: Volume Generator")
-        except Exception as e:
-            print(f"[WARN] Stage 2 placeholder unavailable: {e}")
+            # Stage 2 — volumetric generator (still placeholder)
+            try:
+                from ui.stage_placeholder import Stage2VolumePlaceholder
+                self.tabs.addTab(Stage2VolumePlaceholder(self), "Stage 2: Volume Generator")
+            except Exception as e:
+                print(f"[WARN] Stage 2 placeholder unavailable: {e}")
 
-        # Stage 3 — floor layout
-        try:
-            from ui.floor_layout_window import FloorLayoutWidget
-            self.tabs.addTab(FloorLayoutWidget(self), "Stage 3: Floor Layout")
-        except Exception as e:
-            print(f"[WARN] Stage 3 tab unavailable: {e}")
+            # Stage 3 — floor layout
+            try:
+                from ui.floor_layout_window import FloorLayoutWidget
+                self.tabs.addTab(FloorLayoutWidget(self), "Stage 3: Floor Layout")
+            except Exception as e:
+                print(f"[WARN] Stage 3 tab unavailable: {e}")
 
         # Stage 4 — apartment layout (this is the existing implementation)
         self.apt_tab = QWidget()
-        self.tabs.addTab(self.apt_tab, "Stage 4: Apartment Layout")
+        self.tabs.addTab(self.apt_tab, "Podział rzutu" if is_beta() else "Stage 4: Apartment Layout")
         # Default to Stage 4 (the working part) so users see results immediately
         self.tabs.setCurrentWidget(self.apt_tab)
 
@@ -275,6 +289,11 @@ class MainWindow(QMainWindow):
 
         # --- Lewy panel ---
         left = QVBoxLayout()
+
+        # ══════════ Status połączenia z ArchiCAD ══════════
+        from ui.ac_status_widget import AcStatusWidget
+        self.ac_status = AcStatusWidget(self)
+        left.addWidget(self.ac_status)
 
         # ══════════ Tryb: mieszkanie / dom ══════════
         mode_group = QGroupBox("Tryb")
@@ -294,7 +313,9 @@ class MainWindow(QMainWindow):
         step1 = QGroupBox("1. Outline")
         step1_lay = QVBoxLayout(step1)
 
-        self.import_btn = QPushButton("Load outline from ArchiCAD")
+        self.import_btn = QPushButton(
+            "Wczytaj obrys z ArchiCAD" if is_beta() else "Load outline from ArchiCAD"
+        )
         self.import_btn.setMinimumHeight(36)
         self.import_btn.setStyleSheet("font-weight: bold;")
         self.import_btn.clicked.connect(self._import_from_archicad)
@@ -448,7 +469,7 @@ class MainWindow(QMainWindow):
         left.addWidget(step2)
 
         # ══════════ STEP 3: Generate ══════════
-        self.generate_btn = QPushButton("3. Generate layouts")
+        self.generate_btn = QPushButton(self._generate_label)
         self.generate_btn.setMinimumHeight(44)
         self.generate_btn.setStyleSheet(
             "font-size: 15px; font-weight: bold; "
@@ -486,12 +507,12 @@ class MainWindow(QMainWindow):
         step4_lay.addLayout(nav_lay)
 
         export_lay = QHBoxLayout()
-        self.export_btn = QPushButton("Export PNG")
+        self.export_btn = QPushButton("Zapisz PNG" if is_beta() else "Export PNG")
         self.export_btn.clicked.connect(self._export_png)
         self.export_btn.setEnabled(False)
         export_lay.addWidget(self.export_btn)
 
-        self.archicad_btn = QPushButton("To ArchiCAD")
+        self.archicad_btn = QPushButton("Wstaw do ArchiCAD" if is_beta() else "To ArchiCAD")
         self.archicad_btn.clicked.connect(self._export_to_archicad)
         self.archicad_btn.setEnabled(False)
         export_lay.addWidget(self.archicad_btn)
@@ -675,7 +696,7 @@ class MainWindow(QMainWindow):
 
     def _on_house_ready(self, layout):
         self.generate_btn.setEnabled(True)
-        self.generate_btn.setText("3. Generate layouts")
+        self.generate_btn.setText(self._generate_label)
         self.progress_bar.setRange(0, 100)
         self.progress_bar.setVisible(False)
         self.prev_btn.setEnabled(False)
@@ -721,7 +742,7 @@ class MainWindow(QMainWindow):
 
     def _on_variants_ready(self, variants: list[FloorPlan]):
         self.generate_btn.setEnabled(True)
-        self.generate_btn.setText("3. Generate layouts")
+        self.generate_btn.setText(self._generate_label)
         self.progress_bar.setVisible(False)
 
         threshold = getattr(self, "_min_score_threshold", 0.8)
@@ -764,12 +785,12 @@ class MainWindow(QMainWindow):
 
     def _on_error(self, exc):
         self.generate_btn.setEnabled(True)
-        self.generate_btn.setText("3. Generate layouts")
+        self.generate_btn.setText(self._generate_label)
         self.progress_bar.setRange(0, 100)
         self.progress_bar.setVisible(False)
         if not isinstance(exc, BaseException):
             exc = RuntimeError(str(exc))
-        logger.error("generowanie: %r", exc)
+        logger.error("generowanie: %r", exc, exc_info=exc)
         title, text = describe(exc)
         self.statusBar().showMessage(f"Błąd: {title}")
         QMessageBox.critical(self, title, text)
