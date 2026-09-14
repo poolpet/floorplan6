@@ -24,9 +24,12 @@
    - `Uruchom.command` po pobraniu jest objęty tą samą kwarantanną. Przy pierwszym
      dwukliku przejdź tą samą drogą, albo w Terminalu:
      `xattr -d com.apple.quarantine /ścieżka/do/Uruchom.command`
-3. Na górze okna zobaczysz `AC port 19723 · nazwa projektu · kondygnacja …`.
-   Jeśli „Brak połączenia z ArchiCAD…" — sprawdź, czy AC działa z dodatkiem Tapir,
-   i kliknij **Odśwież**.
+3. Na pasku statusu AC (w lewym panelu) zobaczysz jeden z trzech stanów:
+   - **`ArchiCAD: nie sprawdzono`** — stan startowy. Aplikacja **nie skanuje AC sama**;
+     ten napis widnieje do pierwszego kliknięcia **Odśwież**. To normalne, nie błąd.
+   - `AC port 19723 · nazwa projektu · kondygnacja …` — połączenie działa.
+   - „Brak połączenia z ArchiCAD…" — sprawdź, czy AC działa z dodatkiem Tapir,
+     i kliknij **Odśwież** ponownie.
 
 ## 3. Praca
 1. W AC zaznacz ściany obrysu mieszkania (albo strefę / płytę) → w FloorForge

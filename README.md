@@ -5,9 +5,12 @@
 [![Tests](https://github.com/poolpet/floorplan6/actions/workflows/test.yml/badge.svg)](https://github.com/poolpet/floorplan6/actions/workflows/test.yml)
 [![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](./CONTRIBUTING.md)
 
-> **Status:** active development. Stages 1–3 are frozen (Stage 2 was dropped
-> from the roadmap); **Stage 4 — apartments + houses — is the active line**,
-> see [`docs/ROADMAP_domy.md`](docs/ROADMAP_domy.md).
+> **Status:** active development. **Stage 4 — apartments + houses — is the
+> active line** (see [`docs/ROADMAP_domy.md`](docs/ROADMAP_domy.md)); Stages 1–3
+> are frozen *by the maintainer* — no work on them is planned here. That freeze
+> is not a closed door: **Stages 1 and 2 are open to contributors** who want to
+> pick them up — see
+> [Looking for someone to take this further?](#looking-for-someone-to-take-this-further).
 >
 > **License:** AGPL-3.0 — see [LICENSE](./LICENSE). Any modified version
 > distributed (including hosted as a web service) must remain open-source
@@ -38,7 +41,7 @@ to ArchiCAD as native Zone objects via the Tapir Add-On.
 - Q6 area distribution: living room takes 80 % of excess, bedrooms 20 %
 - Manual facade / entry editor (click + Shift+click on canvas)
 - Variant filter by quality score; export to PNG or back to ArchiCAD
-- 600+ unit tests + regression suite passing (full suite ~70 min; see
+- Test suite: 668 passed / 26 skipped / 1 xpassed (full suite ≈70 min; see
   [`docs/STATE.md`](docs/STATE.md))
 
 ### Stage 3 — floor layout
@@ -151,7 +154,9 @@ See [`CONTRIBUTING.md`](CONTRIBUTING.md) for the full guide. Short version:
 
 ## Looking for someone to take this further?
 
-These tabs in the UI are placeholders waiting for an architect-developer:
+Stages 1 and 2 are frozen only because the maintainer is working on Stage 4 —
+they are open for someone else to take over. These tabs in the UI are
+placeholders waiting for an architect-developer:
 
 - **Stage 1 — Plot subdivision** (MPZP zoning rules, sub-plot layout, road
   layout). MVP estimate: 2–3 weeks. Architectural decisions Q1–Q5 in
