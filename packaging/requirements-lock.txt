@@ -1,0 +1,47 @@
+# FloorForge beta — zamrożone zależności runtime (macOS, Python 3.13).
+# Wersje 1:1 z venv projektu (pip freeze, 2026-09-14). Tylko to, czego aplikacja
+# faktycznie używa w becie: solver + geometria + GUI + most do ArchiCADa.
+# NIE dokładamy reportlab/pypdf/jupyter/pytest — raport PDF jest poza betą.
+
+# solver
+ortools==9.15.6755
+absl-py==2.4.0
+immutabledict==4.3.1
+protobuf==6.33.6
+pandas==3.0.2
+numpy==2.4.4
+typing_extensions==4.15.0
+
+# geometria
+shapely==2.1.2
+networkx==3.6.1
+
+# podgląd / rendering
+matplotlib==3.10.9
+contourpy==1.3.3
+cycler==0.12.1
+fonttools==4.62.1
+kiwisolver==1.5.0
+packaging==26.2
+pillow==12.2.0
+pyparsing==3.3.2
+python-dateutil==2.9.0.post0
+six==1.17.0
+
+# GUI
+PyQt5==5.15.11
+PyQt5-Qt5==5.15.18
+PyQt5_sip==12.18.0
+
+# most do ArchiCADa
+archicad==29.3000
+
+# walidacja pakietów reguł (rules/_schema.py, rules/_loader.py)
+pydantic==2.13.4
+pydantic_core==2.46.4
+annotated-types==0.7.0
+typing-inspection==0.4.2
+PyYAML==6.0.3
+
+# packager
+pyinstaller==6.22.3

@@ -69,3 +69,11 @@ rzuty/
 
 # Duplikaty tworzone przez sync (iCloud/Finder) — nigdy nie wersjonować
 * 2.*
+
+# packaging (artefakty builda)
+packaging/.venv/
+packaging/build/
+packaging/dist/
+packaging/build.log
+packaging/icon.iconset/
+packaging/icon_1024.png
