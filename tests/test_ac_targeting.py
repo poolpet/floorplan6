@@ -142,21 +142,27 @@ class _FakeNav:
         ]
 
 
-def _conn_with_stories(monkeypatch, act_story_seq):
-    """TapirConnection z podmienionym połączeniem: GetStories zwraca kolejne actStory z listy."""
+def _conn_with_stories(monkeypatch, act_story_seq, first=0,
+                       guids_top_down=("guid-poddasze", "guid-parter")):
+    """TapirConnection z podmienionym połączeniem: GetStories zwraca kolejne actStory z listy.
+
+    `first` = `GetStories.firstStory` (przy piwnicy bywa ujemne), `guids_top_down` =
+    StoryItemy w kolejności ProjectMap (od góry).
+    """
     conn = tc.TapirConnection()
     calls = {"change_window": []}
     seq = list(act_story_seq)
+    last = first + len(guids_top_down) - 1
 
     class _Cmds:
         def GetNavigatorItemTree(self, tid):
-            return _FakeNav(["guid-poddasze", "guid-parter"])
+            return _FakeNav(list(guids_top_down))
 
         def ExecuteAddOnCommand(self, cid, params):
             name = cid.name if hasattr(cid, "name") else str(cid)
             if "GetStories" in name:
                 return {"actStory": seq[0] if len(seq) == 1 else seq.pop(0),
-                        "firstStory": 0, "lastStory": 1}
+                        "firstStory": first, "lastStory": last}
             if "ChangeWindow" in name:
                 calls["change_window"].append(params)
                 return {}
@@ -197,3 +203,20 @@ def test_activate_story_noop_when_already_active(monkeypatch):
     conn, calls = _conn_with_stories(monkeypatch, [1])
     assert conn.activate_story(1) is True
     assert calls["change_window"] == []
+
+
+def test_story_navitems_keys_in_ac_index_space_with_basement(monkeypatch):
+    """Piwnica (firstStory=-1) → klucze -1/0/1, NIE 0/1/2 (te same indeksy co actStory)."""
+    conn, _ = _conn_with_stories(
+        monkeypatch, [0], first=-1,
+        guids_top_down=("guid-poddasze", "guid-parter", "guid-piwnica"))
+    assert conn.story_navitems() == {-1: "guid-piwnica", 0: "guid-parter", 1: "guid-poddasze"}
+
+
+def test_activate_story_targets_parter_guid_when_basement_shifts_indices(monkeypatch):
+    """Z piwnicą activate_story(0) musi trafić w PARTER, nie w kondygnację wyżej."""
+    conn, calls = _conn_with_stories(
+        monkeypatch, [1, 0], first=-1,
+        guids_top_down=("guid-poddasze", "guid-parter", "guid-piwnica"))
+    assert conn.activate_story(0) is True
+    assert calls["change_window"][0]["navigatorItemId"]["guid"] == "guid-parter"

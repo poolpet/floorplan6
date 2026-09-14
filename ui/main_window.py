@@ -1146,22 +1146,53 @@ class MainWindow(QMainWindow):
             both = self.house_both_storeys_check.isChecked() and bool(getattr(layout, "pietro_rooms", None))
             st = tapir.get_stories() or {}
             first = int(st.get("firstStory", 0))
+            last = int(st.get("lastStory", 0))
+            # Projekt AC 1-kondygnacyjny: blokuj PRZED jakimkolwiek zapisem (inaczej
+            # parter wszedłby, poddasze nie — i ponowna próba zdublowałaby parter).
+            if both and last == first:
+                QMessageBox.warning(
+                    self, "Kondygnacja AC",
+                    "Projekt w AC ma tylko jedną kondygnację — dodaj kondygnację w AC "
+                    "albo odznacz 'Wstaw obie kondygnacje'.",
+                )
+                return
             plan_storeys = [("parter", first), ("poddasze", first + 1)] if both else [(storey, None)]
 
             totals = {"zones": 0, "walls": 0, "doors": 0, "windows": 0, "labels": 0}
+            inserted: list[str] = []
             for st_name, target_idx in plan_storeys:
                 if target_idx is not None:
                     if not tapir.activate_story(target_idx):
-                        QMessageBox.warning(
-                            self, "Kondygnacja AC",
-                            f"Nie udało się automatycznie przełączyć AC na kondygnację {target_idx} "
-                            f"('{st_name}').\n\nPrzełącz kondygnację ręcznie w AC, odznacz "
-                            f"'Wstaw obie kondygnacje' i wstaw każdą osobno.",
+                        switch_msg = (
+                            f"Nie udało się automatycznie przełączyć AC na kondygnację "
+                            f"{target_idx} ('{st_name}')."
                         )
+                        if inserted:
+                            # Część już w AC — user MUSI wstawić tylko resztę, inaczej dubel.
+                            done_txt = ", ".join(inserted)
+                            QMessageBox.warning(
+                                self, "Kondygnacja AC",
+                                f"{switch_msg}\n\n{done_txt.capitalize()} został już wstawiony. "
+                                f"Przełącz ręcznie kondygnację w AC na {st_name}, odznacz "
+                                f"'Wstaw obie kondygnacje', wybierz '{st_name.capitalize()}' "
+                                f"i wstaw TYLKO ją (inaczej zdublujesz {done_txt}).",
+                            )
+                            self.statusBar().showMessage(
+                                f"Dom [{done_txt}] → port {port} ({name}): {totals['zones']} stref "
+                                f"+ {totals['walls']} ścian + {totals['doors']} drzwi "
+                                f"+ {totals['windows']} okien + {totals['labels']} etykiet "
+                                f"— NIE wstawiono: {st_name}"
+                            )
+                        else:
+                            QMessageBox.warning(
+                                self, "Kondygnacja AC",
+                                f"{switch_msg}\n\nPrzełącz kondygnację ręcznie w AC, odznacz "
+                                f"'Wstaw obie kondygnacje' i wstaw każdą osobno.",
+                            )
                         return
                 else:
                     ok, msg = check_active_story(
-                        int(st.get("actStory", 0)), first, int(st.get("lastStory", 0)), st_name,
+                        int(st.get("actStory", 0)), first, last, st_name,
                     )
                     if not ok:
                         reply = QMessageBox.warning(
@@ -1175,8 +1206,9 @@ class MainWindow(QMainWindow):
                 )
                 for k in totals:
                     totals[k] += len(result.get(k, []))
+                inserted.append(st_name)
 
-            done = ", ".join(s for s, _ in plan_storeys)
+            done = ", ".join(inserted)
             self.statusBar().showMessage(
                 f"Dom [{done}] → port {port} ({name}): {totals['zones']} stref + {totals['walls']} ścian "
                 f"+ {totals['doors']} drzwi + {totals['windows']} okien + {totals['labels']} etykiet"

@@ -13,7 +13,7 @@ def _wire(monkeypatch, *, instances, act_story, first=0, last=2):
     import bridge.tapir_connection as tc
     import bridge.house_writer as hw
 
-    cap = {"export": 0}
+    cap = {"export": 0, "storeys": []}
     monkeypatch.setattr(tc.TapirConnection, "list_instances",
                         classmethod(lambda cls, **k: instances))
     monkeypatch.setattr(tc.TapirConnection, "use_port",
@@ -24,6 +24,7 @@ def _wire(monkeypatch, *, instances, act_story, first=0, last=2):
     def fake_export(layout, storey="parter", **kw):
         cap["export"] += 1
         cap["storey"] = storey
+        cap["storeys"].append(storey)
         cap["has_tapir"] = kw.get("tapir") is not None
         return {"zones": [], "walls": [], "doors": [], "labels": [], "windows": []}
 
@@ -120,6 +121,7 @@ def test_house_export_both_storeys_switches_and_exports_twice(qapp, monkeypatch)
     w._export_to_archicad()
     assert switched == [0, 1]
     assert cap["export"] == 2
+    assert cap["storeys"] == ["parter", "poddasze"]
 
 
 def test_house_export_both_storeys_falls_back_to_guard_when_switch_fails(qapp, monkeypatch):
@@ -139,3 +141,47 @@ def test_house_export_both_storeys_falls_back_to_guard_when_switch_fails(qapp, m
     w._export_to_archicad()
     assert cap["export"] == 0
     assert warned
+
+
+def test_house_export_both_storeys_half_switch_keeps_parter_and_warns(qapp, monkeypatch):
+    """Parter wszedł, przełączenie na poddasze padło → 1 eksport + ostrzeżenie o dublu."""
+    from PyQt5.QtWidgets import QMessageBox
+    import bridge.tapir_connection as tc
+    cap = _wire(monkeypatch,
+                instances=[{"port": 19724, "projectName": "K", "projectPath": ""}],
+                act_story=0)
+    monkeypatch.setattr(tc.TapirConnection, "activate_story", lambda self, i: i == 0)
+    warned = []
+    monkeypatch.setattr(QMessageBox, "warning",
+                        staticmethod(lambda *a, **k: warned.append(a) or QMessageBox.Cancel))
+    w = _mainwindow(monkeypatch, "Parter")
+    w._house_layout = type("L", (), {"pietro_rooms": [object()]})()
+    w.house_both_storeys_check.setChecked(True)
+    w._export_to_archicad()
+    assert cap["storeys"] == ["parter"]          # poddasze NIE wstawione
+    assert warned
+    text = warned[0][2]
+    assert "parter" in text.lower() and "już wstawiony" in text.lower()
+    assert "tylko" in text.lower()               # user ma wstawić wyłącznie resztę
+
+
+def test_house_export_both_storeys_blocked_when_ac_project_single_storey(qapp, monkeypatch):
+    """Projekt AC 1-kondygnacyjny + checkbox 'obie' → blok PRZED zapisem, zero eksportów."""
+    from PyQt5.QtWidgets import QMessageBox
+    import bridge.tapir_connection as tc
+    cap = _wire(monkeypatch,
+                instances=[{"port": 19724, "projectName": "K", "projectPath": ""}],
+                act_story=0, first=0, last=0)
+    switched = []
+    monkeypatch.setattr(tc.TapirConnection, "activate_story",
+                        lambda self, i: switched.append(i) or True)
+    warned = []
+    monkeypatch.setattr(QMessageBox, "warning",
+                        staticmethod(lambda *a, **k: warned.append(a) or QMessageBox.Cancel))
+    w = _mainwindow(monkeypatch, "Parter")
+    w._house_layout = type("L", (), {"pietro_rooms": [object()]})()
+    w.house_both_storeys_check.setChecked(True)
+    w._export_to_archicad()
+    assert cap["export"] == 0
+    assert switched == []                        # nawet nie próbujemy przełączać
+    assert warned and "jedną kondygnację" in warned[0][2]

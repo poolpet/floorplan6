@@ -178,8 +178,13 @@ class TapirConnection:
     ]
 
     def story_navitems(self) -> dict[int, str]:
-        """idx kondygnacji → navigatorItemId.guid. ProjectMap listuje story top-down,
-        więc reversed = indeksy rosnące (Parter = 0)."""
+        """Indeks kondygnacji AC → navigatorItemId.guid.
+
+        ProjectMap listuje story top-down, więc reversed = indeksy rosnące. Klucze są
+        w PRZESTRZENI INDEKSÓW AC (`GetStories.firstStory`, ta sama co `actStory`) —
+        przy piwnicy `firstStory == -1` parter ma indeks 0, nie 1.
+        """
+        first = int((self.get_stories() or {}).get("firstStory", 0))
         tree_id = self.types.NavigatorTreeId(type="ProjectMap")
         tree = self.commands.GetNavigatorItemTree(tree_id)
         guids_top_down: list[str] = []
@@ -193,7 +198,7 @@ class TapirConnection:
                 walk(ch)
 
         walk(getattr(tree, "rootItem", tree))
-        return {i: g for i, g in enumerate(reversed(guids_top_down))}
+        return {first + i: g for i, g in enumerate(reversed(guids_top_down))}
 
     def activate_story(self, target_index: int) -> bool:
         """Ustaw aktywną kondygnację AC na `target_index`. True gdy GetStories.actStory == target."""
