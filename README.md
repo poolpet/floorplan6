@@ -26,10 +26,10 @@ to ArchiCAD as native Zone objects via the Tapir Add-On.
 
 | Stage | Module | Status |
 |---|---|---|
-| 1. Plot subdivision | `core/plot_solver.py` | 🚧 not started — placeholder tab in UI |
-| 2. Volumetric generator | `core/volume_generator.py` | 🚧 not started — placeholder tab in UI |
-| 3. Floor layout | `core/floor_layout.py` | ✅ MVP for rectangular floors |
-| 4. Apartment layout | `core/cpsat_solver.py` | ✅ stable, 7 templates M1–M5 |
+| 1. Plot subdivision | `core/plot_subdivider.py` | ✅ MVP (Mode A + Mode B, PDF report) — **frozen** since 2026-05-31 |
+| 2. Volumetric generator | — | ⏸️ dropped from roadmap (see `docs/ROADMAP_domy.md`) |
+| 3. Floor layout | `core/floor_layout.py` | ✅ MVP for rectangular floors — frozen |
+| 4. Apartment + house layout | `core/cpsat_solver.py`, `core/house_layout.py` | ✅ apartments M1–M5, houses (single/2-storey) with furniture, export to AC (zones, walls, doors, windows, labels) |
 
 ### Stage 4 — apartment layout
 - CP-SAT solver places rooms inside an outline read from ArchiCAD
