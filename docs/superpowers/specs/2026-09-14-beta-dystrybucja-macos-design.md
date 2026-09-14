@@ -34,9 +34,12 @@ C++ lub chmura) różni się tylko adresem URL.
 - Endpointy: `POST /solve` (wejście: obrys + typ + opcje → wyjście: lista wariantów w
   formacie `plan_to_contract`), `GET /health` (wersja, status), `POST /export` (wariant →
   AC przez istniejący `plan_writer`; w wersji lokalnej serwer sam gada z Tapirem).
-- Serwer startuje w tle razem z GUI na losowym wolnym porcie `127.0.0.1`; GUI wywołuje
-  go zamiast bezpośrednio `generate_variants`/`generate_house`. Ścieżka bezpośrednia
-  zostaje dla testów i CLI.
+- Serwer startuje na losowym wolnym porcie `127.0.0.1`. **Doprecyzowanie po lekturze kodu
+  (plan 2026-09-14):** w becie GUI generuje i renderuje w procesie (obiekty
+  `FloorPlan`/`TwoStoreyLayout` → `viz/`), bo kontrakt JSON nie ma jeszcze ścieżki powrotnej
+  do renderu. Serwis jest ćwiczony przez testy i `--selftest` zamrożonej binarki i stanowi
+  interfejs dla przyszłej powłoki. Przepięcie GUI na klienta HTTP = osobne zadanie po becie
+  (wymaga deserializacji kontrakt→render).
 - Długie solve'y: `POST /solve` zwraca `job_id`, `GET /jobs/{id}` daje postęp i wyniki
   częściowe (dziś progress callback w `variant_generator`). GUI pokazuje pasek postępu
   i pierwsze warianty zanim skończą się wszystkie.
