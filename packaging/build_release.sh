@@ -3,8 +3,20 @@
 set -euo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
 ROOT="$(cd "$HERE/.." && pwd)"
+
+# Cały przebieg leci też do build.log (gitignorowany) — żeby nie trzeba było
+# pamiętać o przekierowaniu przy ręcznym uruchomieniu.
+exec > >(tee "$HERE/build.log") 2>&1
+
 TAPIR_BUNDLE="$ROOT/../tapir-custom/archicad-addon/Build/RelWithDebInfo/TapirAddOn_AC29_Mac.bundle"
-export FLOORFORGE_VERSION="${FLOORFORGE_VERSION:-$(cd "$ROOT" && git describe --tags --always --dirty)}"
+
+# Wersja osobno: `export X="${X:-$(...)}"` schowałby błąd git describe przed errexit.
+VER="${FLOORFORGE_VERSION:-}"
+if [ -z "$VER" ]; then
+  VER="$(cd "$ROOT" && git describe --tags --always --dirty)"
+fi
+[ -n "$VER" ] || { echo "brak wersji: git describe nic nie zwrócił, ustaw FLOORFORGE_VERSION"; exit 2; }
+export FLOORFORGE_VERSION="$VER"
 
 echo "== FloorForge beta $FLOORFORGE_VERSION"
 [ -d "$TAPIR_BUNDLE" ] || { echo "BRAK bundla Tapira: $TAPIR_BUNDLE — zbuduj tapir-custom (cmake) najpierw"; exit 2; }
@@ -24,8 +36,8 @@ fi
 # com.apple.FinderInfo do każdego katalogu-bundla (*.framework, *.app), a wtedy
 # `codesign --verify --strict` odmawia: "resource fork, Finder information, or
 # similar detritus not allowed". Czyszczenie xattr na miejscu przegrywa wyścig
-# z providerem — dlatego podpisujemy i pakujemy w $TMPDIR, a do packaging/dist
-# wracają gotowe artefakty.
+# z providerem — dlatego podpisujemy, pakujemy i WERYFIKUJEMY w $TMPDIR, a do
+# packaging/dist wracają dopiero sprawdzone artefakty.
 WORK="$(mktemp -d "${TMPDIR:-/tmp}/floorforge-release.XXXXXX")"
 cleanup() { rm -rf "$WORK"; }
 trap cleanup EXIT
@@ -51,10 +63,28 @@ chmod +x "$STAGE/Uruchom.command"
 # Wersja dla Uruchom.command: LSEnvironment z Info.plist działa tylko przy starcie
 # z Findera, a binarka odpalona z shella dziedziczy środowisko terminala.
 printf '%s\n' "$FLOORFORGE_VERSION" > "$STAGE/VERSION"
+ZIP="$WORK/dist/FloorForge-beta-$FLOORFORGE_VERSION.zip"
 (cd "$WORK/dist" && ditto -c -k --keepParent "FloorForge-beta-$FLOORFORGE_VERSION" "FloorForge-beta-$FLOORFORGE_VERSION.zip")
 
-# Artefakty do repo: zip (produkt) + .app i staging (smoke, ręczne odpalenie GUI).
-cp "$WORK/dist/FloorForge-beta-$FLOORFORGE_VERSION.zip" "$HERE/dist/"
-cp -R "$APP" "$HERE/dist/"
+# BRAMKA: sprawdzamy dokładnie to, co pojedzie do testera — .app rozpakowany
+# z zipa, nie oryginał z dist. Obie kontrole są fatalne.
+echo "== weryfikacja paczki"
+VERIFY="$WORK/verify"
+mkdir -p "$VERIFY"
+ditto -x -k "$ZIP" "$VERIFY"
+VAPP="$VERIFY/FloorForge-beta-$FLOORFORGE_VERSION/FloorForge.app"
+if ! codesign --verify --deep --strict "$VAPP"; then
+  echo "PACZKA FAIL: .app z zipa nie przechodzi codesign --verify --deep --strict"; exit 1
+fi
+echo "codesign z paczki OK"
+VOUT="$("$VAPP/Contents/MacOS/FloorForge" --selftest 2>&1 | tail -20 || true)"
+echo "$VOUT"
+echo "$VOUT" | grep -q "SELFTEST OK" || { echo "PACZKA FAIL: selftest z zipa nie przeszedł"; exit 1; }
+echo "selftest z paczki OK"
+
+# Do repo trafia zip (produkt) + staging (podglądowa, uruchamialna kopia).
+# Gołego .appa NIE kopiujemy: file provider i tak by go ostemplował, a to drugie
+# 200 MB tego samego.
+cp "$ZIP" "$HERE/dist/"
 cp -R "$STAGE" "$HERE/dist/"
 echo "== GOTOWE: $HERE/dist/FloorForge-beta-$FLOORFORGE_VERSION.zip"

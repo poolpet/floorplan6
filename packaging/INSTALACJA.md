@@ -7,17 +7,40 @@
 3. Uruchom ArchiCAD i otwórz projekt.
 
 ## 2. Aplikacja
-1. Przenieś `FloorForge.app` do `Programy` (lub gdziekolwiek).
-2. Pierwsze otwarcie: **prawy klik → Otwórz → Otwórz** (aplikacja nie jest notaryzowana w Apple; to jednorazowe).
-   Jeśli macOS mimo to blokuje: Ustawienia → Prywatność i ochrona → „Otwórz mimo to".
-3. W oknie na górze zobaczysz „AC port 19723 · nazwa projektu · kondygnacja …". Jeśli „Brak połączenia": sprawdź, że AC działa i kliknij „Odśwież".
+
+> **Nie rozdzielaj plików z paczki.** `FloorForge.app`, `Uruchom.command` i `VERSION`
+> muszą zostać w jednym folderze — bez `VERSION` aplikacja nie zna swojej wersji,
+> a `Uruchom.command` nie znajdzie `.appa`.
+
+1. Przenieś **cały rozpakowany folder** (nie sam `FloorForge.app`) tam, gdzie ma
+   mieszkać — np. `~/Programy/FloorForge/` albo na Biurko. Uruchamiaj stamtąd.
+2. Pierwsze otwarcie — aplikacja nie jest notaryzowana w Apple, więc macOS ją zatrzyma.
+   To jednorazowe:
+   - Dwuklik w `FloorForge.app` → pojawi się komunikat, że nie da się otworzyć.
+   - **Ustawienia systemowe → Prywatność i ochrona** → zjedź na dół do komunikatu
+     o zablokowanym „FloorForge" → **„Otwórz mimo to"** → potwierdź hasłem/Touch ID.
+   - *(Starsze macOS: działa też skrót prawy klik na `FloorForge.app` → **Otwórz** → **Otwórz**.
+     Na macOS 15+ ten skrót już nie wystarcza — użyj drogi przez Ustawienia.)*
+   - `Uruchom.command` po pobraniu jest objęty tą samą kwarantanną. Przy pierwszym
+     dwukliku przejdź tą samą drogą, albo w Terminalu:
+     `xattr -d com.apple.quarantine /ścieżka/do/Uruchom.command`
+3. Na górze okna zobaczysz `AC port 19723 · nazwa projektu · kondygnacja …`.
+   Jeśli „Brak połączenia z ArchiCAD…" — sprawdź, czy AC działa z dodatkiem Tapir,
+   i kliknij **Odśwież**.
 
 ## 3. Praca
-1. W AC zaznacz ściany obrysu mieszkania (albo strefę / płytę) → w FloorForge „Wczytaj obrys z ArchiCAD".
-2. Wybierz tryb (mieszkanie M1–M5 / dom) → „Generuj układy" (mieszkanie kilka sekund, dom do ~2 min).
-3. Przeglądaj warianty ‹ › → „Wstaw do ArchiCAD". Dom: zaznacz „Wstaw obie kondygnacje".
+1. W AC zaznacz ściany obrysu mieszkania (albo strefę / płytę) → w FloorForge
+   **„Wczytaj obrys z ArchiCAD"** (sekcja `1. Outline`).
+2. W `2. Type and options` wybierz tryb (mieszkanie M1–M5 / dom) → **„3. Generuj układy"**
+   (mieszkanie kilka sekund, dom do ~2 min).
+3. W `4. Result` przeglądaj warianty przyciskami **`<<`** / **`>>`** → **„Wstaw do ArchiCAD"**.
+   Dom: zaznacz **„Wstaw obie kondygnacje (auto-przełączanie w AC)"**.
+
+> W tej becie nagłówki sekcji są jeszcze po angielsku (`1. Outline`,
+> `2. Type and options`, `4. Result`) — przyciski i komunikaty są po polsku.
 
 ## 4. Gdy coś nie działa
-- Okno błędu podaje przyczynę i ścieżkę logu. Prześlij plik `~/Library/Logs/FloorForge/floorforge.log` + zrzut ekranu.
-- Awaryjnie: dwuklik `Uruchom.command` (uruchamia aplikację z terminalem — widać pełny komunikat).
-  Plik `Uruchom.command` i `VERSION` muszą zostać w tym samym folderze co `FloorForge.app`.
+- Okno błędu podaje przyczynę i ścieżkę logu. Prześlij plik
+  `~/Library/Logs/FloorForge/floorforge.log` + zrzut ekranu.
+- Awaryjnie: dwuklik `Uruchom.command` — uruchamia aplikację z terminalem, widać
+  pełny komunikat. Musi leżeć w tym samym folderze co `FloorForge.app` i `VERSION`.
