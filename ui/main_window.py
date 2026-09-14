@@ -23,7 +23,7 @@ if str(_PROJECT_ROOT) not in sys.path:
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QGroupBox, QLabel, QComboBox, QDoubleSpinBox, QSpinBox,
-    QPushButton, QStatusBar, QScrollArea, QSplitter, QTextEdit,
+    QPushButton, QStatusBar, QScrollArea, QSplitter, QTextEdit, QFrame,
     QFileDialog, QMessageBox, QProgressBar, QCheckBox, QDialog,
     QDialogButtonBox, QGridLayout, QStackedWidget, QTabWidget,
     QRadioButton, QButtonGroup,
@@ -550,6 +550,19 @@ class MainWindow(QMainWindow):
         left_widget = QWidget()
         left_widget.setLayout(left)
         left_widget.setMaximumWidth(280)
+        left_widget.setMinimumWidth(280)
+
+        # Panel ma ~1200 px wysokości, a okno minimum 700 — bez przewijania na 13"
+        # laptopie grupy, status AC i przyciski eksportu są zgniecione do kilku pikseli.
+        # Przewijamy TYLKO w pionie; szerokość zawartości zostaje 280 px jak dotąd.
+        self.left_scroll = QScrollArea()
+        self.left_scroll.setWidgetResizable(True)
+        self.left_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.left_scroll.setFrameShape(QFrame.NoFrame)
+        self.left_scroll.setWidget(left_widget)
+        self.left_scroll.setMaximumWidth(
+            280 + self.left_scroll.verticalScrollBar().sizeHint().width()
+        )
 
         # --- Prawy panel: stack [QLabel dla wariantów, FigureCanvas dla preview] ---
         self.image_label = QLabel()
@@ -567,7 +580,7 @@ class MainWindow(QMainWindow):
         self.preview_stack.addWidget(self.preview_canvas)
         self.preview_stack.setCurrentIndex(0)
 
-        main_layout.addWidget(left_widget)
+        main_layout.addWidget(self.left_scroll)
         main_layout.addWidget(self.preview_stack, stretch=1)
 
         # Status bar
