@@ -2,8 +2,9 @@
 from __future__ import annotations
 
 import logging
+import os
 
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtWidgets import QHBoxLayout, QLabel, QPushButton, QSizePolicy, QWidget
 
 logger = logging.getLogger(__name__)
@@ -11,6 +12,12 @@ logger = logging.getLogger(__name__)
 BUSY_TEXT = "Sprawdzam…"
 REFRESH_TEXT = "Odśwież"
 NO_AC_TEXT = "Brak połączenia z ArchiCAD — uruchom AC z dodatkiem Tapir i kliknij Odśwież."
+
+
+def launched_from_archicad() -> bool:
+    """Czy aplikację odpalił add-on FloorForge (a nie user z Findera/terminala)."""
+    return bool(os.environ.get("FLOORFORGE_LAUNCHED_FROM_AC")
+                or os.environ.get("FLOORFORGE_AC_PORT"))
 
 
 class AcStatusWidget(QWidget):
@@ -29,6 +36,13 @@ class AcStatusWidget(QWidget):
         self.refresh_btn.clicked.connect(self.refresh)
         lay.addWidget(self.label, 1)
         lay.addWidget(self.refresh_btn, 0, Qt.AlignTop)
+        # Start z add-onu: AC na pewno działa i znamy jego port — kazanie userowi klikać
+        # „Odśwież" byłoby pustym krokiem. Env czytamy TU (w konstruktorze), bo timer
+        # odpala się później i env mógłby się już zmienić. singleShot(0) zamiast
+        # bezpośredniego refresh(): najpierw okno, potem synchroniczny skan portów.
+        self._auto_refresh = launched_from_archicad()
+        if self._auto_refresh:
+            QTimer.singleShot(0, self.refresh)
 
     def refresh(self):
         """Skan portów AC (synchroniczny) — przycisk na ten czas nieaktywny."""

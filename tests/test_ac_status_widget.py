@@ -109,3 +109,44 @@ def test_refresh_marks_button_busy_and_restores_it(qapp, monkeypatch):
     assert seen["enabled"] is False
     assert w.refresh_btn.text() == "Odśwież"
     assert w.refresh_btn.isEnabled()
+
+
+# ───────────── auto-odświeżanie przy starcie z add-onu (FLOORFORGE_LAUNCHED_FROM_AC) ─────────────
+@pytest.mark.parametrize("env", ["FLOORFORGE_LAUNCHED_FROM_AC", "FLOORFORGE_AC_PORT"])
+def test_auto_refresh_when_launched_from_archicad(qapp, monkeypatch, env):
+    """Start z AC: pasek sam się odświeża po pokazaniu okna — user nie musi klikać „Odśwież"."""
+    import bridge.tapir_connection as tc
+    monkeypatch.setenv(env, "1" if env.endswith("FROM_AC") else "19723")
+    monkeypatch.setattr(tc.TapirConnection, "list_instances",
+                        classmethod(lambda cls, **k: [{"port": 19723, "projectName": "Dom K", "projectPath": ""}]))
+    monkeypatch.setattr(tc.TapirConnection, "_try_connect", staticmethod(lambda port: _FakeConn()))
+
+    from ui.ac_status_widget import AcStatusWidget
+    w = AcStatusWidget()
+    assert "nie sprawdzono" in w.label.text()   # przed pętlą zdarzeń jeszcze nic nie skanowaliśmy
+    qapp.processEvents()
+
+    t = w.label.text()
+    assert "nie sprawdzono" not in t
+    assert "19723" in t and "Dom K" in t
+
+
+def test_no_auto_refresh_without_env(qapp, monkeypatch):
+    """Zwykły start (z Findera): bez skanu portów przy otwarciu okna."""
+    import bridge.tapir_connection as tc
+    monkeypatch.delenv("FLOORFORGE_LAUNCHED_FROM_AC", raising=False)
+    monkeypatch.delenv("FLOORFORGE_AC_PORT", raising=False)
+    called = {"n": 0}
+
+    def _boom(cls, **k):
+        called["n"] += 1
+        return []
+
+    monkeypatch.setattr(tc.TapirConnection, "list_instances", classmethod(_boom))
+
+    from ui.ac_status_widget import AcStatusWidget
+    w = AcStatusWidget()
+    qapp.processEvents()
+
+    assert w.label.text() == "ArchiCAD: nie sprawdzono"
+    assert called["n"] == 0

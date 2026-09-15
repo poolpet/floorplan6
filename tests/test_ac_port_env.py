@@ -1,5 +1,23 @@
 import pytest
 
+from bridge.tapir_connection import TapirConnection
+
+
+@pytest.fixture(autouse=True)
+def _reset_singleton():
+    """Class-state singletona nie wycieka między testami — ani DO tego pliku, ani z niego.
+
+    Bez tego zatruty singleton (_conn="scan-conn" z zamockowanego _scan_for_archicad)
+    przechodzi do innych plików testowych i przewraca je zależnie od kolejności.
+    """
+    TapirConnection._instance = None
+    TapirConnection._conn = None
+    TapirConnection._active_port = None
+    yield
+    TapirConnection._instance = None
+    TapirConnection._conn = None
+    TapirConnection._active_port = None
+
 
 def _conn(monkeypatch):
     import bridge.tapir_connection as tc
