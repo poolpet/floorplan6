@@ -1,17 +1,16 @@
 # -*- mode: python ; coding: utf-8 -*-
-"""Spec PyInstallera dla bety FloorForge (macOS, onedir + .app).
+"""Spec PyInstallera dla bety FloorForge (macOS, onedir — bez .app).
 
-Wersja wchodzi do Info.plist (LSEnvironment) — uruchomienie z Findera ma
-FLOORFORGE_VERSION i FLOORFORGE_BETA. Uruchom.command ustawia je sam (z pliku
-VERSION obok .app), bo LSEnvironment nie działa przy odpaleniu binarki z shella.
+Produkt = katalog dist/FloorForge/ osadzany w FloorForge.bundle/Contents/Resources/FloorForge/
+(build_release.sh). Nie ma już .app ani BUNDLE(): proces odpala add-on C++
+(FloorForgeLauncher) przez posix_spawn i sam ustawia FLOORFORGE_VERSION oraz
+FLOORFORGE_BETA w środowisku potomka — LSEnvironment z Info.plist nie jest potrzebne.
 """
-import os
 from pathlib import Path
 
 from PyInstaller.utils.hooks import collect_data_files, collect_dynamic_libs, collect_submodules
 
 ROOT = Path(SPECPATH).resolve().parent
-VERSION = os.environ.get("FLOORFORGE_VERSION", "dev")
 
 hiddenimports = (
     collect_submodules("ortools.sat")
@@ -50,19 +49,6 @@ a = Analysis(
     noarchive=False,
 )
 pyz = PYZ(a.pure)
-exe = EXE(pyz, a.scripts, exclude_binaries=True, name="FloorForge", console=False,
-          icon=str(ROOT / "packaging" / "icon.icns"))
+exe = EXE(pyz, a.scripts, exclude_binaries=True, name="FloorForge", console=False)
+# Produkt = katalog dist/FloorForge/ osadzany w FloorForge.bundle/Contents/Resources/FloorForge/ (build_release.sh)
 coll = COLLECT(exe, a.binaries, a.datas, name="FloorForge")
-app = BUNDLE(
-    coll, name="FloorForge.app", icon=str(ROOT / "packaging" / "icon.icns"),
-    bundle_identifier="pl.floorforge.beta",
-    info_plist={
-        "CFBundleName": "FloorForge",
-        "CFBundleDisplayName": "FloorForge",
-        "CFBundleShortVersionString": VERSION,
-        "CFBundleVersion": VERSION,
-        "NSHighResolutionCapable": True,
-        "LSMinimumSystemVersion": "13.0",
-        "LSEnvironment": {"FLOORFORGE_BETA": "1", "FLOORFORGE_VERSION": VERSION},
-    },
-)

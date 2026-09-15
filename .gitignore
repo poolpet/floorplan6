@@ -75,8 +75,6 @@ packaging/.venv/
 packaging/build/
 packaging/dist/
 packaging/build.log
-packaging/icon.iconset/
-packaging/icon_1024.png
 
 # add-on C++ (build w $TMPDIR przez build_release.sh; lokalne buildy)
 addon/Build/
