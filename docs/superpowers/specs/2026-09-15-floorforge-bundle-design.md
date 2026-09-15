@@ -55,7 +55,8 @@ Handler menu „Podział rzutu" (`addon/Sources/FloorForgeLauncher.cpp`, nowy pl
    `ACAPI_GetOwnResModule` → `CFBundleCopyBundleURL` lub `dladdr`; jak w Tapirze przy
    szukaniu skryptów).
 2. Env dla procesu: `FLOORFORGE_BETA=1`, `FLOORFORGE_VERSION=<ADDON_VERSION>`,
-   `FLOORFORGE_AC_PROJECT=<nazwa projektu z ACAPI_ProjectOperation_Project>` (pusta = untitled),
+   **`FLOORFORGE_AC_PORT=<port z ACAPI_Command_GetHttpConnectionPort>`** (add-on zna port JSON
+   własnej instancji AC — deterministyczny cel bez skanowania i bez nazw projektów),
    `FLOORFORGE_LAUNCHED_FROM_AC=1`.
 3. Spawn przez `GS::Process::Create (command, argv, GS::Process::CreateNoWindow, …)` (ten sam
    mechanizm, którym paleta Tapira uruchamia skrypty) — bez czekania, bez przechwytywania
@@ -70,10 +71,11 @@ Handler menu „Podział rzutu" (`addon/Sources/FloorForgeLauncher.cpp`, nowy pl
 - `bridge/tapir_connection.py`: `TAPIR_NAMESPACE = "FloorForgeCommand"` (jedna stała; grep
   potwierdza 3 użycia w bridge + 2 w notebooks). Notebooki `ac_story_switch_probe.py`,
   `ac_story_diag.py` czytają stałą zamiast literału.
-- `TapirConnection.connect()`: jeśli env `FLOORFORGE_AC_PROJECT` ustawione → `list_instances()`
-  i wybór portu, którego `projectName` jest równe (przy kilku identycznych nazwach: pierwszy +
-  log ostrzeżenia); brak dopasowania → dotychczasowy skan z preferencją zaznaczenia.
-  `AcStatusWidget` pokazuje wybraną instancję jako pierwszą.
+- `TapirConnection.connect()`: jeśli env `FLOORFORGE_AC_PORT` ustawione i poprawne → `use_port()`
+  na tym porcie (bez skanu, bez preferencji zaznaczenia); port martwy lub env niepoprawne →
+  dotychczasowy skan z ostrzeżeniem w logu. `list_instances()` i picker eksportu domu bez
+  zmian (multi-instance nadal obsługiwane), ale `AcStatusWidget` i eksport domu preferują
+  port z env, gdy jest wśród wykrytych.
 - `floorforge_app.py`: bez zmian funkcjonalnych (env już obsługuje). `--selftest` zostaje
   bramką builda.
 - `ui/user_errors.py`: komunikat „Nie znaleziono ArchiCADa…" dostaje wariant, gdy
@@ -111,7 +113,7 @@ Handler menu „Podział rzutu" (`addon/Sources/FloorForgeLauncher.cpp`, nowy pl
 
 | Poziom | Co | Bramka |
 |---|---|---|
-| pytest | istniejące + `tests/test_ac_project_target.py` (connect po `FLOORFORGE_AC_PROJECT`: dopasowanie, brak dopasowania → skan, duplikaty nazw → pierwszy + log) + test stałej przestrzeni komend (żaden plik poza `tapir_connection.py` nie zawiera literału `"TapirCommand"`/`"FloorForgeCommand"`) | zielone przed buildem |
+| pytest | istniejące + `tests/test_ac_port_env.py` (connect po `FLOORFORGE_AC_PORT`: port żywy → use_port bez skanu; port martwy → skan + log; env niepoprawne → skan) + test stałej przestrzeni komend (żaden plik poza `tapir_connection.py` nie zawiera literału `"TapirCommand"`/`"FloorForgeCommand"`) | zielone przed buildem |
 | C++ | brak testów jednostkowych (jak Tapir); kompilacja z `-Werror` jak CLT | build przechodzi |
 | smoke z zipa | jak dziś, ścieżka do exe w bundlu | `SMOKE OK` po każdym buildzie |
 | **spike kwarantanny (PIERWSZY krok planu)** | zbudować bundle, spakować, pobrać zip na koncie „beta-test" przeglądarką (kwarantanna!), rozpakować Finderem, skopiować do Dodatków, uruchomić AC, kliknąć menu. Oczekiwane: AC ładuje bundle, menu widoczne, okno FloorForge się otwiera. | jeśli FAIL → STOP, raport, decyzja Dawida (notaryzacja / `xattr` w instrukcji) |
@@ -123,7 +125,7 @@ Handler menu „Podział rzutu" (`addon/Sources/FloorForgeLauncher.cpp`, nowy pl
    uruchamia zamrożonego Pythona z obecnego `dist`) — zanim ruszy reszta.
 1. `addon/`: kopia forka, tożsamość FloorForge, przestrzeń komend, menu + launcher, usunięcie
    menu Tapira, `LICENSE` + `NOTICE`.
-2. Python: stała przestrzeni, `FLOORFORGE_AC_PROJECT`, komunikat błędu, testy.
+2. Python: stała przestrzeni, `FLOORFORGE_AC_PORT`, komunikat błędu, testy.
 3. `packaging/`: spec PyInstallera bez `BUNDLE`, `build_release.sh`, `install_local.sh`,
    `smoke_frozen.sh`, usunięcie `Uruchom.command`/`VERSION`/`make_icon` (ikona bundla = `.icns`
    w `RFIX.mac` jak CLT `ArchiCADPlugin.icns`).
