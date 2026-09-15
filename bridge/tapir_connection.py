@@ -14,6 +14,7 @@ Komendy Tapir:
 from __future__ import annotations
 
 import logging
+import os
 import time
 from typing import List, Optional, Tuple
 
@@ -25,7 +26,23 @@ ARCHICAD_PORT_START = 19723
 ARCHICAD_PORT_RANGE = 8                # scan 19723..19730
 CONNECT_RETRIES = 3
 CONNECT_DELAY_S = 2.0
-TAPIR_NAMESPACE = "TapirCommand"
+TAPIR_NAMESPACE = "FloorForgeCommand"
+
+
+def _env_ac_port() -> Optional[int]:
+    """Port JSON instancji AC przekazany przez add-on (FLOORFORGE_AC_PORT). None gdy brak/niepoprawny."""
+    raw = os.environ.get("FLOORFORGE_AC_PORT", "").strip()
+    if not raw:
+        return None
+    try:
+        port = int(raw)
+    except ValueError:
+        logger.warning("FLOORFORGE_AC_PORT niepoprawny: %r", raw)
+        return None
+    if not (1 <= port <= 65535):
+        logger.warning("FLOORFORGE_AC_PORT poza zakresem: %s", port)
+        return None
+    return port
 
 
 class TapirConnection:
@@ -94,9 +111,20 @@ class TapirConnection:
         """Nawiąż połączenie z którąkolwiek dostępną instancją AC.
 
         Strategia:
+          0. Jeśli add-on podał port w FLOORFORGE_AC_PORT — użyj go bez skanu.
           1. Jeśli mamy zapisany ostatni działający port — spróbuj tam.
           2. W przeciwnym razie skanuj 19723..19730 i wybierz tę z zaznaczeniem.
         """
+        env_port = _env_ac_port()
+        if env_port is not None:
+            conn = self._try_connect(env_port)
+            if conn is not None:
+                self._active_port = env_port
+                self._conn = conn
+                logger.info("connect: port z FLOORFORGE_AC_PORT=%s", env_port)
+                return True
+            logger.warning("connect: FLOORFORGE_AC_PORT=%s nie odpowiada — skanuję porty", env_port)
+
         for attempt in range(1, CONNECT_RETRIES + 1):
             try:
                 # Re-check known port first if we had one.

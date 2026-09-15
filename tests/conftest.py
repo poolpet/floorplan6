@@ -36,9 +36,15 @@ def _isolated_env(tmp_path, monkeypatch):
        `os.environ.setdefault("FLOORFORGE_BETA", "1")` na PRAWDZIWYM środowisku,
        więc bez tego każdy test po `tests/test_selftest.py` leciałby w trybie
        beta (polskie etykiety, jedna zakładka) i sypał się w pełnym przebiegu.
+    3. Skasuj FLOORFORGE_AC_PORT i FLOORFORGE_LAUNCHED_FROM_AC: gdy aplikację
+       uruchamia add-on ArchiCADa, obie zmienne siedzą w prawdziwym środowisku
+       i zmieniłyby wynik `TapirConnection.connect()` oraz treść komunikatów
+       z `ui.user_errors.describe()`.
     """
     monkeypatch.setenv("FLOORFORGE_LOG_DIR", str(tmp_path))
     monkeypatch.delenv("FLOORFORGE_BETA", raising=False)
+    monkeypatch.delenv("FLOORFORGE_AC_PORT", raising=False)
+    monkeypatch.delenv("FLOORFORGE_LAUNCHED_FROM_AC", raising=False)
 
 
 @pytest.fixture(scope="session")

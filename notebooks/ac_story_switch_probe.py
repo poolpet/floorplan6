@@ -19,7 +19,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from archicad import ACConnection
 
-NS = "TapirCommand"
+from bridge.tapir_connection import TAPIR_NAMESPACE as NS
 
 
 def tap(conn, name, params=None):

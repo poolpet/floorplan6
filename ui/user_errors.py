@@ -2,6 +2,8 @@
 Testowalne bez Qt."""
 from __future__ import annotations
 
+import os
+
 from ui.app_logging import log_path
 
 _AC_PORTS = "19723–19730"
@@ -24,6 +26,10 @@ def describe(exc: BaseException) -> tuple[str, str]:
 
     if isinstance(exc, (ConnectionRefusedError, ConnectionError)) or "connection refused" in low \
             or "nie znaleziono archicad" in low:
+        if os.environ.get("FLOORFORGE_LAUNCHED_FROM_AC") == "1":
+            return ("ArchiCAD",
+                    "Uruchomiono z ArchiCADa, ale AC nie odpowiada na porcie JSON. "
+                    "Sprawdź Opcje → Ustawienia → JSON API (port 19723) i kliknij Odśwież." + _tail(exc))
         return ("ArchiCAD",
                 f"Nie znaleziono ArchiCADa na portach {_AC_PORTS}. "
                 "Uruchom AC z załadowanym dodatkiem Tapir i kliknij Odśwież." + _tail(exc))
