@@ -1,0 +1,39 @@
+#include "ResourceIds.hpp"
+#include "AddOnVersion.hpp"
+
+'STR#' ID_ADDON_INFO "Add-on Name and Description" {
+/* [  1] */		"FloorForge"
+/* [  2] */		"FloorForge — generator rzutów mieszkań i domów (CP-SAT) z zapisem do Archicada"
+}
+
+'STR#' ID_ADDON_MENU "Add-On Menu" {
+/* [   ] */        "FloorForge"
+/* [  1] */        "O FloorForge...^E3^ES^EE^EI^ED^EL^EW^ET^EM^32503"
+}
+
+'STR#' ID_ADDON_MENU_LAUNCH "Add-On Menu" {
+/* [   ] */        "FloorForge"
+/* [  1] */        "Podział rzutu^E3^ES^EE^EI^ED^EL^EW^ET^EM"
+}
+
+'STR#' ID_LAUNCHER_STRINGS "FloorForge Launcher Strings" {
+/* [  1] */ "FloorForge"
+/* [  2] */ "FloorForge jest już otwarty. Znajdź jego okno (Cmd+Tab)."
+/* [  3] */ "FloorForge — błąd uruchomienia"
+/* [  4] */ "Nie udało się uruchomić FloorForge z pliku:\n%T\n\nPrzeinstaluj FloorForge.bundle (skopiuj cały bundle do Dodatków)."
+/* [  5] */ "OK"
+}
+
+'GDLG' ID_ABOUT_DIALOG Modal     40   40  200  237  "FloorForge" {
+/* [  1] */ Button                     10  204  180   23    LargePlain "OK"
+/* [  2] */ Icon                       36   10  128  128    ID_TAPIR_LOGO
+/* [  3] */ CenterText                 10  148  180   23    LargeBold vCenter "FloorForge — powłoka Archicad"
+/* [  4] */ CenterText                 10  171  180   23    LargePlain vCenter "Wersja: %T, port JSON: %T"
+}
+
+'DLGH' ID_ABOUT_DIALOG FloorForge_About_Dialog {
+1    ""        OkButton
+2    ""        FloorForgeLogo
+3    ""        FloorForgeText
+4    ""        VersionText
+}
