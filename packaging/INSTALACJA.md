@@ -4,7 +4,9 @@
 
 1. Zamknij Archicad (Cmd+Q).
 2. Skopiuj `FloorForge.bundle` do `/Applications/Graphisoft/Archicad 29/Dodatki/`.
-   Jeśli masz tam `TapirAddOn_AC29_Mac.bundle` albo `FloorPlan4.bundle` — usuń je (FloorForge je zastępuje).
+   Jeśli masz tam `TapirAddOn_AC29_Mac.bundle` albo `FloorPlan4.bundle` — przenieś je poza Dodatki
+   (FloorForge je zastępuje). Instalator `install_local.sh` robi to sam: odkłada je do katalogu
+   `.floorforge-backup-<data>` wewnątrz Dodatków.
 3. Uruchom Archicad. W pasku menu pojawi się **FloorForge → Podział rzutu**.
 
 Gdy coś nie działa: **FloorForge → O FloorForge…** pokazuje wersję i port; log aplikacji jest w

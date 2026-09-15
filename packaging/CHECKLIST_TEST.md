@@ -15,7 +15,7 @@ smoke z paczki: `packaging/smoke_frozen.sh`, instalacja na koncie roboczym: `pac
 
 Wynik spike'u z Task 4 planu: **PENDING (wpisz PASS/FAIL + datę po wykonaniu Task 4 z planu)**
 
-Dopóki tu jest PENDING albo FAIL — nie zaczynaj kroków 1–14.
+Dopóki tu jest PENDING albo FAIL — nie zaczynaj kroków 1–14 i 4b.
 
 ---
 
@@ -34,7 +34,7 @@ Dopóki tu jest PENDING albo FAIL — nie zaczynaj kroków 1–14.
 | 8 | „3. Generuj układy" | ≥ 1 wariant, < 30 s | |
 | 9 | „Wstaw do ArchiCAD" | strefy, ściany, drzwi, okna, etykiety w AC | |
 | 10 | Dom 10×8 ręcznie, tryb Dom → „3. Generuj układy" | parter + poddasze, ≤ 2 min | |
-| 11 | „Wstaw obie kondygnacje (auto-przełączanie w AC)" → Wstaw | parter na story 0, poddasze na story 1, ten sam projekt; **FAIL** gdy obie na jednej story bez ostrzeżenia | |
+| 11 | „Wstaw obie kondygnacje (auto-przełączanie w AC)" → Wstaw | parter na story 0, poddasze na story 1, ten sam projekt; **FAIL** gdy obie na jednej story bez ostrzeżenia; ostrzeżenie „Nie udało się automatycznie przełączyć…" + zero wstawionych = **FAIL do zgłoszenia** (auto-switch przeszedł bramkę #1, więc nie powinno wystąpić) | |
 | 12 | Zamknij okno FloorForge, zamknij AC (Cmd+Q), uruchom AC → Podział rzutu | okno startuje ponownie (proces nie „wisi" po zamknięciu AC) | |
 | 13 | Wyłącz AC przy otwartym oknie FloorForge → „Wstaw do ArchiCAD" | dialog „ArchiCAD: Uruchomiono z ArchiCADa, ale AC nie odpowiada…" ze ścieżką logu, bez crasha | |
 | 14 | Otwórz `~/Library/Logs/FloorForge/floorforge.log` | wpisy INFO (`connect: port z FLOORFORGE_AC_PORT=…`) + traceback z kroku 13 | |
@@ -43,7 +43,7 @@ Dopóki tu jest PENDING albo FAIL — nie zaczynaj kroków 1–14.
 
 ## Wynik
 
-Krok 0 = PASS **i** wszystkie pozycje 1–14 + 4b (razem 15) OK:
+Krok 0 = PASS **i** wszystkie pozycje z kroków 1–14 i 4b (razem 15) OK:
 
 1. tag `v0.7-beta1`,
 2. FF gałęzi do `main`,
