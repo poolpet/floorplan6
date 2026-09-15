@@ -22,11 +22,12 @@
 /* [  3] */ "FloorForge — błąd uruchomienia"
 /* [  4] */ "Nie udało się uruchomić FloorForge z pliku:\n%T\n\nPrzeinstaluj FloorForge.bundle (skopiuj cały bundle do Dodatków)."
 /* [  5] */ "OK"
+/* [  6] */ "Archicad nie udostępnia portu JSON. Włącz Opcje → Ustawienia → JSON API i spróbuj ponownie."
 }
 
 'GDLG' ID_ABOUT_DIALOG Modal     40   40  200  237  "FloorForge" {
 /* [  1] */ Button                     10  204  180   23    LargePlain "OK"
-/* [  2] */ Icon                       36   10  128  128    ID_TAPIR_LOGO
+/* [  2] */ Icon                       36   10  128  128    ID_FLOORFORGE_LOGO
 /* [  3] */ CenterText                 10  148  180   23    LargeBold vCenter "FloorForge — powłoka Archicad"
 /* [  4] */ CenterText                 10  171  180   23    LargePlain vCenter "Wersja: %T, port JSON: %T"
 }

@@ -5,40 +5,12 @@
 	416370978
 }
 
-'GICN' ID_TAPIR_LOGO "TapirLogo" {
-    "TapirLogo"
+'GICN' ID_FLOORFORGE_LOGO "FloorForgeLogo" {
+    "FloorForgeLogo"
 }
 
-'GICN' ID_TAPIR_LOGO_MINI "TapirLogoMini" {
-    "TapirLogoMini"
-}
-
-'GICN' ID_RUN_BUTTON_ICON "Run" {
-    "Run"
-}
-
-'GICN' ID_KILL_BUTTON_ICON "Kill" {
-    "Kill"
-}
-
-'GICN' ID_OPENSCRIPT_BUTTON_ICON "Code" {
-    "Code"
-}
-
-'GICN' ID_ADDSCRIPT_BUTTON_ICON "Add" {
-    "Add"
-}
-
-'GICN' ID_DELSCRIPT_BUTTON_ICON "Del" {
-    "Del"
-}
-
-'GICN' ID_UPDATE_ICON "Update" {
-    "Update"
-}
-
-'GICN' ID_RUNWITHUPDATE_BUTTON_ICON "RunWithUpdate" {
-    "RunWithUpdate"
+'GICN' ID_FLOORFORGE_LOGO_MINI "FloorForgeLogoMini" {
+    "FloorForgeLogoMini"
 }
 
 'FILE' ID_COMMON_SCHEMA_DEFINITIONS_FILE "" {

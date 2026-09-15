@@ -82,8 +82,14 @@ void LaunchOrFocus ()
         return;
     }
 
+    // Port JSON to jedyny kanał aplikacja→Archicad. Bez niego okno by się otworzyło
+    // i dopiero po kliknięciu eksportu zgłosiło „brak połączenia" — mówimy od razu.
     UShort port = 0;
-    ACAPI_Command_GetHttpConnectionPort (&port);
+    if (ACAPI_Command_GetHttpConnectionPort (&port) != NoError || port == 0) {
+        DGAlert (DG_ERROR, Str (ID_LAUNCHER_SPAWN_FAILED_TITLE), Str (ID_LAUNCHER_NO_PORT_TEXT),
+                 GS::EmptyUniString, Str (ID_LAUNCHER_OK_BUTTON));
+        return;
+    }
 
     // Proces dziedziczy środowisko AC — ustawiamy zmienne przed spawnem (tylko FLOORFORGE_*).
     setenv ("FLOORFORGE_BETA", "1", 1);
@@ -94,6 +100,10 @@ void LaunchOrFocus ()
     try {
         gProcess = GS::Process::Create (exePath, GS::Array<GS::UniString> (), static_cast<GSFlags> (GS::Process::CreateNoWindow));
     } catch (const GS::Exception&) {
+        gProcess = GS::Process ();
+    } catch (...) {
+        // Wyjątek spoza hierarchii GS (np. std::bad_alloc) traktujemy jak nieudany spawn.
+        // Puszczenie go wyżej ubiłoby Archicada — a to tylko pozycja menu.
         gProcess = GS::Process ();
     }
     if (!gProcess.IsValid ()) {
