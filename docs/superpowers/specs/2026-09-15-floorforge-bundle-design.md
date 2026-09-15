@@ -146,3 +146,17 @@ Handler menu „Podział rzutu" (`addon/Sources/FloorForgeLauncher.cpp`, nowy pl
 - **Wersja AC:** bundle przypięty do AC29; nowa wersja AC = rebuild z nowym DevKit.
 - **Licencja:** fork Tapira MIT → `addon/LICENSE` (oryginał) + `addon/NOTICE` (co zmieniono).
   Repo FP6 pozostaje AGPL na czas bety (decyzja przed sprzedażą bez zmian).
+
+## 9. Język interfejsu (decyzja Dawida 2026-09-15, wieczór)
+
+Beta ma trafić do testerów spoza Polski → **wszystkie stringi widoczne dla użytkownika po
+angielsku** (jeden zestaw; przełącznik PL/EN = po becie, jeśli będzie potrzebny):
+- GUI (tryb beta i domyślny): etykiety przycisków, zakładka „Room layout", pasek statusu AC,
+  komunikaty błędów (`ui/user_errors.py`), dialogi eksportu domu (picker instancji, story-guard,
+  „Insert both storeys (auto-switch in Archicad)"), placeholdery, tytuł okna.
+- Add-on C++: menu „FloorForge → Room layout", „About FloorForge…", alerty launchera, dialog About.
+- Log techniczny może zostać mieszany (nie jest dla testera).
+- Dokumentacja dla testera: `packaging/INSTALL.md` (EN) + `packaging/INSTALACJA.md` (PL), oba w zipie.
+  `CHECKLIST_TEST.md`, `STATE.md`, spec/plan — po polsku (dla właściciela).
+- Testy: asercje na fragmenty tekstu przepięte na angielskie; reguła „polskie stringi" z
+  Global Constraints planu zastąpiona przez „angielskie stringi widoczne dla użytkownika".
