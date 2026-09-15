@@ -6,7 +6,12 @@ function (SetGlobalCompilerDefinitions acVersion)
     else ()
         add_definitions (-Dmacintosh=1)
         if (${acVersion} GREATER_EQUAL 26)
-            set (CMAKE_OSX_ARCHITECTURES "x86_64;arm64" CACHE STRING "" FORCE)
+            # FloorForge: wybór z linii poleceń (-DCMAKE_OSX_ARCHITECTURES=arm64) musi wygrać.
+            # Oryginalny Tapir robił tu bezwarunkowe `CACHE ... FORCE`, co kasowało wartość
+            # podaną przez -D i paczka wychodziła universal mimo arm64-only Pythona.
+            if (NOT CMAKE_OSX_ARCHITECTURES)
+                set (CMAKE_OSX_ARCHITECTURES "x86_64;arm64" CACHE STRING "" FORCE)
+            endif ()
         endif ()
     endif ()
     add_definitions (-DACExtension)
@@ -119,14 +124,14 @@ function (GenerateAddOnProject target acVersion devKitDir addOnName addOnSources
             ${addOnResourcesFolder}/R${addOnLanguage}/*.grc
             ${addOnResourcesFolder}/RFIX/*.grc
             ${addOnResourcesFolder}/RFIX.win/*.rc2
-            ${CMAKE_CURRENT_FUNCTION_LIST_DIR}/*.py
+            ${CMAKE_CURRENT_FUNCTION_LIST_DIR}/CompileResources.py
         )
     else ()
         file (GLOB AddOnResourceFiles CONFIGURE_DEPENDS
             ${addOnResourcesFolder}/R${addOnLanguage}/*.grc
             ${addOnResourcesFolder}/RFIX/*.grc
             ${addOnResourcesFolder}/RFIX.mac/*.plist
-            ${CMAKE_CURRENT_FUNCTION_LIST_DIR}/*.py
+            ${CMAKE_CURRENT_FUNCTION_LIST_DIR}/CompileResources.py
         )
     endif ()
 

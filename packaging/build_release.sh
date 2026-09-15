@@ -38,7 +38,11 @@ rm -rf "$HERE/build"
 # -DCMAKE_BUILD_TYPE jest KONIECZNE: generator Makefiles ignoruje `--config` i bez
 # tego bundle ląduje w "$WORK/addon-build/FloorForge.bundle", nie w RelWithDebInfo/.
 # Generatora Xcode nie używamy — jego faza CodeSign pada na dysku pod iCloudem.
-cmake -S "$ROOT/addon" -B "$WORK/addon-build" -DAC_VERSION="$AC_VERSION" -DAC_API_DEVKIT_DIR="$DEVKIT" -DFLOORFORGE_VERSION="$VER" -DCMAKE_BUILD_TYPE=RelWithDebInfo
+# -DCMAKE_OSX_ARCHITECTURES=arm64: dodatek MUSI być arm64-only. Osadzony Python
+# (PyInstaller) jest arm64-only, więc universal dodatek załadowałby się na Intelu
+# i dopiero spawn by padł. arm64-only = AC na Intelu po prostu nie ładuje dodatku.
+# Żeby to -D przeszło, Tools/CMakeCommon.cmake nie nadpisuje już tej zmiennej FORCE.
+cmake -S "$ROOT/addon" -B "$WORK/addon-build" -DAC_VERSION="$AC_VERSION" -DAC_API_DEVKIT_DIR="$DEVKIT" -DFLOORFORGE_VERSION="$VER" -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_OSX_ARCHITECTURES=arm64
 cmake --build "$WORK/addon-build" --config RelWithDebInfo -j8
 BUNDLE="$WORK/addon-build/RelWithDebInfo/FloorForge.bundle"
 [ -x "$BUNDLE/Contents/MacOS/FloorForge" ] || { echo "cmake nie dał $BUNDLE"; exit 1; }
@@ -71,17 +75,31 @@ ZIP="$WORK/dist/FloorForge-$VER.zip"
 # 6. Bramka — wyłącznie na tym, co pojedzie do testera
 echo "== weryfikacja paczki"
 AD="$(unzip -l "$ZIP" | grep -c '\._' || true)"; [ "$AD" -eq 0 ] || { echo "PACZKA FAIL: $AD plików AppleDouble"; exit 1; }
+echo "  AppleDouble: 0 OK"
 VERIFY="$WORK/verify"; mkdir -p "$VERIFY"; ditto -x -k "$ZIP" "$VERIFY"
 VB="$VERIFY/FloorForge-$VER/FloorForge.bundle"
 codesign --verify --deep --strict "$VB" || { echo "PACZKA FAIL: codesign z zipa"; exit 1; }
+echo "  codesign OK"
 file "$VB/Contents/MacOS/FloorForge" | grep -q "Mach-O" || { echo "PACZKA FAIL: MacOS/FloorForge nie jest Mach-O"; exit 1; }
+echo "  Mach-O OK"
+# Paczka jest arm64-only z premedytacją (osadzony Python nie jest uniwersalny) — dodatek
+# universal ładowałby się na Intelu i dopiero spawn Pythona by padł, czyli błąd zobaczyłby
+# tester zamiast AC. Echo pokazuje pełną listę architektur, żeby regres na universal był
+# widać w logu, nawet jeśli sam warunek (obecność arm64) by przeszedł.
+lipo -archs "$VB/Contents/MacOS/FloorForge" | grep -qw arm64 || { echo "PACZKA FAIL: MacOS/FloorForge bez arm64"; exit 1; }
+lipo -archs "$VB/Contents/Resources/FloorForge/FloorForge" | grep -qw arm64 || { echo "PACZKA FAIL: osadzony Python bez arm64"; exit 1; }
+echo "  arch OK (dodatek: $(lipo -archs "$VB/Contents/MacOS/FloorForge"), python: $(lipo -archs "$VB/Contents/Resources/FloorForge/FloorForge"))"
 plutil -extract CFBundleIdentifier raw "$VB/Contents/Info.plist" | grep -qx "pl.d7studio.floorforge" || { echo "PACZKA FAIL: CFBundleIdentifier"; exit 1; }
+echo "  Info.plist OK"
 VOUT="$("$VB/Contents/Resources/FloorForge/FloorForge" --selftest 2>&1 | tail -20 || true)"
 echo "$VOUT"; echo "$VOUT" | grep -q "SELFTEST OK" || { echo "PACZKA FAIL: selftest z zipa"; exit 1; }
+echo "  selftest OK"
 echo "bramka paczki OK"
 
-# 7. dist — dopiero po bramce
+# 7. dist — dopiero po bramce. Do dist/ idzie WYŁĄCZNIE zip: rozpakowana kopia bundla
+# w katalogu pod iCloudem dostawała FinderInfo i przewracała `codesign --verify --strict`,
+# a i tak nikt z niej nie korzystał — install_local.sh i smoke_frozen.sh biorą zipa.
 mkdir -p "$HERE/dist"; rm -rf "$HERE"/dist/FloorForge-*
-cp "$ZIP" "$HERE/dist/"; cp -R "$STAGE" "$HERE/dist/"
+cp "$ZIP" "$HERE/dist/"
 trap - EXIT; rm -rf "$WORK"
 echo "== GOTOWE: $HERE/dist/FloorForge-$VER.zip"
