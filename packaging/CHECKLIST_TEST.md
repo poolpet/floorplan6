@@ -24,7 +24,7 @@ Dopóki tu jest PENDING albo FAIL — nie zaczynaj kroków 1–14 i 4b.
 | # | Krok | Oczekiwane | OK? |
 |---|---|---|---|
 | 1 | Pobierz zip Safari na konto beta-test, rozpakuj Finderem | folder `FloorForge-<wersja>/` z `FloorForge.bundle` i `INSTALACJA.md`, bez plików `._*` | |
-| 2 | Wykonaj `INSTALACJA.md` (kopia bundla, start AC) | AC startuje bez komunikatów o dodatku; w menu jest „FloorForge" | |
+| 2 | Wykonaj `INSTALACJA.md` (kopia bundla, start AC) | AC startuje bez komunikatów o dodatku; w menu jest „FloorForge"; w Dodatkach nie ma innych kopii FloorForge/FloorPlan4/Tapira (także w ukrytych podfolderach) | |
 | 3 | **FloorForge → O FloorForge…** | wersja = `<wersja>` z nazwy zipa, port JSON (np. 19723) | |
 | 4 | **FloorForge → Podział rzutu** (bez otwartego projektu) | okno `FloorForge <wersja>`, jedna zakładka „Podział rzutu", pasek `AC port … · (nieznany) · kondygnacja …` **bez klikania Odśwież** | |
 | 4b | Okno FloorForge jest ostre na Retinie i wychodzi na wierzch nad AC | tak / tak | |
