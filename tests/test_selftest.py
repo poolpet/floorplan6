@@ -10,8 +10,8 @@ import os
 def test_selftest_returns_zero_with_mocked_solver(monkeypatch, capsys):
     import service.app as app
     monkeypatch.setattr(app, "solve_request",
-                        lambda req, progress=None: {"mode": "apartment",
-                                                    "variants": [{"rooms": [{"name": "salon"}, {"name": "hub"}], "score": 0.9}]})
+                        lambda req, progress=None, store=None: {"mode": "apartment",
+                                                                "variants": [{"rooms": [{"name": "salon"}, {"name": "hub"}], "score": 0.9}]})
     import floorforge_app
     rc = floorforge_app.main(["--selftest"])
     out = capsys.readouterr().out
@@ -21,7 +21,7 @@ def test_selftest_returns_zero_with_mocked_solver(monkeypatch, capsys):
 def test_selftest_returns_one_on_error(monkeypatch, capsys):
     import service.app as app
     monkeypatch.setattr(app, "solve_request",
-                        lambda req, progress=None: (_ for _ in ()).throw(RuntimeError("INFEASIBLE")))
+                        lambda req, progress=None, store=None: (_ for _ in ()).throw(RuntimeError("INFEASIBLE")))
     import floorforge_app
     rc = floorforge_app.main(["--selftest"])
     assert rc == 1 and "SELFTEST FAIL" in capsys.readouterr().out
@@ -31,7 +31,7 @@ def test_selftest_returns_one_when_no_variants(monkeypatch, capsys):
     """Solver skończył bez wyjątku, ale nic nie zwrócił — to też FAIL."""
     import service.app as app
     monkeypatch.setattr(app, "solve_request",
-                        lambda req, progress=None: {"mode": "apartment", "variants": []})
+                        lambda req, progress=None, store=None: {"mode": "apartment", "variants": []})
     import floorforge_app
     rc = floorforge_app.main(["--selftest"])
     assert rc == 1 and "SELFTEST FAIL: the solver returned no variants" in capsys.readouterr().out

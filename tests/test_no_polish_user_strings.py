@@ -31,6 +31,7 @@ SCANNED = [
     "ui/main_window.py",
     "ui/ac_status_widget.py",
     "ui/user_errors.py",
+    "service/errors.py",
     "bridge/plan_writer.py",
     "bridge/house_writer.py",
     "bridge/boundary_reader.py",

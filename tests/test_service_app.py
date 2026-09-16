@@ -7,11 +7,35 @@ import pytest
 @pytest.fixture
 def server(monkeypatch):
     import service.app as app
-    monkeypatch.setattr(app, "solve_request",
-                        lambda req, progress=None: (progress and progress(1, 1)) or {"mode": req["mode"], "variants": []})
-    h = app.start_server(port=0)
+    from service.results import ResultStore
+    results = ResultStore()
+
+    def fake_solve(req, progress=None, store=None):
+        if progress:
+            progress(1, 1)
+        if store is not None and req.get("_job_id"):
+            store.put(req["_job_id"], {"mode": "apartment", "boundary": {}, "plans": ["PLAN"]})
+        return {"mode": req["mode"], "boundary": {}, "variants": []}
+
+    monkeypatch.setattr(app, "solve_request", fake_solve)
+    h = app.start_server(port=0, result_store=results)
     yield h
     h.stop()
+
+
+def _done_job(server) -> str:
+    """Job w stanie `done` z wariantem w ResultStore — punkt wyjścia dla /export."""
+    from service.client import ServiceClient
+    c = ServiceClient(server.url)
+    jid = c.solve({"mode": "apartment", "polygon": [[0, 0], [8, 0], [8, 6], [0, 6]],
+                   "entry": [4, 0], "mtype": "M2"})
+    c.wait(jid, timeout=5)
+    return jid
+
+
+def _post_export(server, body: dict):
+    return urllib.request.Request(f"{server.url}/export", data=json.dumps(body).encode(),
+                                  headers={"Content-Type": "application/json"}, method="POST")
 
 
 def test_health(server):
@@ -45,10 +69,9 @@ def test_unknown_job_is_404(server):
 
 def test_export_without_archicad_is_503(server, monkeypatch):
     import service.app as app
-    monkeypatch.setattr(app, "export_contract",
-                        lambda contract, port=None: (_ for _ in ()).throw(ConnectionError("brak AC")))
-    r = urllib.request.Request(f"{server.url}/export", data=json.dumps({"contract": {}}).encode(),
-                               headers={"Content-Type": "application/json"}, method="POST")
+    monkeypatch.setattr(app, "connect_to_ac",
+                        lambda: (_ for _ in ()).throw(ConnectionError("brak AC")))
+    r = _post_export(server, {"job_id": _done_job(server), "variant": 0})
     with pytest.raises(urllib.error.HTTPError) as ei:
         urllib.request.urlopen(r, timeout=5)
     assert ei.value.code == 503
@@ -59,7 +82,7 @@ def test_client_wait_raises_on_error(server, monkeypatch):
     import service.app as app
     from service.client import ServiceClient
     monkeypatch.setattr(app, "solve_request",
-                        lambda req, progress=None: (_ for _ in ()).throw(ValueError("zły obrys")))
+                        lambda req, progress=None, store=None: (_ for _ in ()).throw(ValueError("zły obrys")))
     c = ServiceClient(server.url)
     jid = c.solve({"mode": "apartment", "polygon": [[0, 0], [1, 0], [1, 1]], "entry": [0, 0], "mtype": "M2"})
     with pytest.raises(RuntimeError, match="zły obrys"):
@@ -68,10 +91,9 @@ def test_client_wait_raises_on_error(server, monkeypatch):
 
 def test_unexpected_exception_is_500(server, monkeypatch):
     import service.app as app
-    monkeypatch.setattr(app, "export_contract",
-                        lambda contract, port=None: (_ for _ in ()).throw(RuntimeError("boom")))
-    r = urllib.request.Request(f"{server.url}/export", data=json.dumps({"contract": {}}).encode(),
-                               headers={"Content-Type": "application/json"}, method="POST")
+    monkeypatch.setattr(app, "connect_to_ac",
+                        lambda: (_ for _ in ()).throw(RuntimeError("boom")))
+    r = _post_export(server, {"job_id": _done_job(server), "variant": 0})
     with pytest.raises(urllib.error.HTTPError) as ei:
         urllib.request.urlopen(r, timeout=5)
     assert ei.value.code == 500

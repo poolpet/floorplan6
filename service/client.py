@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import time
+import urllib.error
 import urllib.request
 
 
@@ -25,6 +26,26 @@ class ServiceClient:
 
     def job(self, job_id: str) -> dict:
         return self._req("GET", f"/jobs/{job_id}")
+
+    def export(self, req: dict) -> dict:
+        """Wstaw wariant do AC. Błąd serwisu (4xx/5xx) → RuntimeError z angielskim `error`."""
+        try:
+            return self._req("POST", "/export", req)
+        except urllib.error.HTTPError as e:
+            try:
+                body = json.loads(e.read().decode("utf-8") or "{}")
+            except (json.JSONDecodeError, UnicodeDecodeError, ValueError):
+                body = {}
+            finally:
+                e.close()
+            raise RuntimeError(body.get("error") or str(e)) from None
+
+    def shutdown(self) -> None:
+        """Poproś serwis o zamknięcie. Zerwane połączenie po odpowiedzi to nie błąd."""
+        try:
+            self._req("POST", "/shutdown", {})
+        except (urllib.error.URLError, OSError):
+            pass
 
     def wait(self, job_id: str, timeout: float = 120.0, poll: float = 0.2) -> dict:
         t0 = time.time()

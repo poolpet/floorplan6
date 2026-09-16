@@ -14,8 +14,9 @@ class JobStore:
         self._jobs: dict[str, dict] = {}
         self._lock = threading.Lock()
 
-    def submit(self, fn, *args, **kwargs) -> str:
-        jid = uuid.uuid4().hex[:12]
+    def submit(self, fn, *args, job_id: str | None = None, **kwargs) -> str:
+        """`job_id` z zewnątrz: handler zna id przed startem wątku (wkłada je w żądanie)."""
+        jid = job_id or uuid.uuid4().hex[:12]
         with self._lock:
             self._jobs[jid] = {"id": jid, "status": "queued",
                                "progress": {"current": 0, "total": 0},
