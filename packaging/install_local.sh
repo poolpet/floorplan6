@@ -47,11 +47,27 @@ codesign --force --deep --sign - "$NEW"
 codesign --verify --deep --strict "$NEW" || { echo "codesign FAIL — instalacja przerwana"; exit 1; }
 echo "codesign OK"
 
-# 2. Kolizje do backupu: ten sam MDID (FloorPlan4) i te same komendy JSON (stary Tapir) = niezdefiniowane
-#    zachowanie AC. Przenosimy, nie kasujemy — żeby dało się wrócić. Katalog backupu powstaje
-#    dopiero gdy jest co przenieść.
-BACKUP="$BACKUP_ROOT/$(date +%Y%m%d-%H%M%S)"
+# Katalog backupu: sekundowy znacznik + PID. Dwa uruchomienia w tej samej sekundzie
+# (skrypt w pętli, podwójny klik) trafiały w ten sam katalog i mieszały ze sobą kopie.
+BACKUP="$BACKUP_ROOT/$(date +%Y%m%d-%H%M%S)-$$"
 BACKED_UP=0
+
+# 2. Sprzątanie po starszej wersji instalatora, która odkładała kopie DO Dodatków —
+#    Archicad ładował je jako drugi komplet dodatków. Wynosimy je na zewnątrz.
+#    PRZED krokiem 3, żeby Dodatki ani przez chwilę nie były bez FloorForge: ten
+#    krok nie rusza działającego dodatku, a potrafi trwać (kopie mają po ~200 MB).
+for stale in "$ADDONS"/.floorforge-backup-*; do
+  [ -e "$stale" ] || continue
+  mkdir -p "$BACKUP"
+  echo "wynoszę stary backup $(basename "$stale") z Dodatków do $BACKUP/"
+  mv "$stale" "$BACKUP/"
+  BACKED_UP=1
+done
+
+# 3. Kolizje do backupu: ten sam MDID (FloorPlan4) i te same komendy JSON (stary Tapir) = niezdefiniowane
+#    zachowanie AC. Przenosimy, nie kasujemy — żeby dało się wrócić. Katalog backupu powstaje
+#    dopiero gdy jest co przenieść. Ten krok zostawia Dodatki bez FloorForge — dlatego
+#    następny (podmiana) idzie od razu po nim.
 for old in "FloorPlan4.bundle" "TapirAddOn_AC29_Mac.bundle" "FloorForge.bundle"; do
   if [ -e "$ADDONS/$old" ]; then
     mkdir -p "$BACKUP"
@@ -61,17 +77,7 @@ for old in "FloorPlan4.bundle" "TapirAddOn_AC29_Mac.bundle" "FloorForge.bundle";
   fi
 done
 
-# 2b. Sprzątanie po starszej wersji instalatora, która odkładała kopie DO Dodatków —
-#     Archicad ładował je jako drugi komplet dodatków. Wynosimy je na zewnątrz.
-for stale in "$ADDONS"/.floorforge-backup-*; do
-  [ -e "$stale" ] || continue
-  mkdir -p "$BACKUP"
-  echo "wynoszę stary backup $(basename "$stale") z Dodatków do $BACKUP/"
-  mv "$stale" "$BACKUP/"
-  BACKED_UP=1
-done
-
-# 3. Podmiana — ostatni krok, już po udanym podpisie.
+# 4. Podmiana — ostatni krok, już po udanym podpisie.
 mv "$NEW" "$TARGET"
 VER="$(plutil -extract CFBundleShortVersionString raw "$TARGET/Contents/Info.plist" 2>/dev/null || echo "?")"
 echo "Zainstalowano $TARGET (wersja: $VER)."

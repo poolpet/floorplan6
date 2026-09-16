@@ -68,6 +68,10 @@ STAGE="$WORK/dist/FloorForge-$VER"; mkdir -p "$STAGE"
 ditto "$BUNDLE" "$STAGE/FloorForge.bundle"
 cp "$HERE/INSTALACJA.md" "$STAGE/"
 cp "$HERE/INSTALL.md" "$STAGE/"
+# Dodatek to fork Tapira (MIT) — licencja i lista zmian MUSZĄ jechać z binarką,
+# inaczej rozpowszechniamy kod MIT bez jego warunków.
+cp "$ROOT/addon/LICENSE" "$STAGE/LICENSE-Tapir.txt"
+cp "$ROOT/addon/NOTICE" "$STAGE/NOTICE.txt"
 ZIP="$WORK/dist/FloorForge-$VER.zip"
 # --norsrc/--noextattr: bez nich ditto wkłada do zipa pliki AppleDouble (`._*`),
 # które tester widzi po rozpakowaniu czymkolwiek innym niż Finder.
@@ -87,8 +91,13 @@ echo "  Mach-O OK"
 # universal ładowałby się na Intelu i dopiero spawn Pythona by padł, czyli błąd zobaczyłby
 # tester zamiast AC. Echo pokazuje pełną listę architektur, żeby regres na universal był
 # widać w logu, nawet jeśli sam warunek (obecność arm64) by przeszedł.
-lipo -archs "$VB/Contents/MacOS/FloorForge" | grep -qw arm64 || { echo "PACZKA FAIL: MacOS/FloorForge bez arm64"; exit 1; }
-lipo -archs "$VB/Contents/Resources/FloorForge/FloorForge" | grep -qw arm64 || { echo "PACZKA FAIL: osadzony Python bez arm64"; exit 1; }
+# Warunek jest na RÓWNOŚĆ, nie na obecność arm64: binarka universal (arm64+x86_64)
+# przeszłaby test obecności, załadowałaby się w AC na Intelu i dopiero spawn Pythona
+# by padł — czyli błąd zobaczyłby tester zamiast Archicada.
+for f in "$VB/Contents/MacOS/FloorForge" "$VB/Contents/Resources/FloorForge/FloorForge"; do
+  A="$(lipo -archs "$f")"
+  [ "$A" = "arm64" ] || { echo "PACZKA FAIL: $(basename "$(dirname "$f")")/$(basename "$f") ma architektury '$A', oczekiwano dokładnie 'arm64'"; exit 1; }
+done
 echo "  arch OK (dodatek: $(lipo -archs "$VB/Contents/MacOS/FloorForge"), python: $(lipo -archs "$VB/Contents/Resources/FloorForge/FloorForge"))"
 plutil -extract CFBundleIdentifier raw "$VB/Contents/Info.plist" | grep -qx "pl.d7studio.floorforge" || { echo "PACZKA FAIL: CFBundleIdentifier"; exit 1; }
 echo "  Info.plist OK"
