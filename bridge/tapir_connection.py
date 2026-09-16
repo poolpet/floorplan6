@@ -29,7 +29,7 @@ CONNECT_DELAY_S = 2.0
 TAPIR_NAMESPACE = "FloorForgeCommand"
 
 
-def _env_ac_port() -> Optional[int]:
+def env_ac_port() -> Optional[int]:
     """Port JSON instancji AC przekazany przez add-on (FLOORFORGE_AC_PORT). None gdy brak/niepoprawny."""
     raw = os.environ.get("FLOORFORGE_AC_PORT", "").strip()
     if not raw:
@@ -115,7 +115,7 @@ class TapirConnection:
           1. Jeśli mamy zapisany ostatni działający port — spróbuj tam.
           2. W przeciwnym razie skanuj 19723..19730 i wybierz tę z zaznaczeniem.
         """
-        env_port = _env_ac_port()
+        env_port = env_ac_port()
         if env_port is not None:
             conn = self._try_connect(env_port)
             if conn is not None:

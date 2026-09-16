@@ -227,3 +227,39 @@ def test_house_export_both_storeys_blocked_when_basement_but_no_upper_storey(qap
     assert cap["export"] == 0
     assert switched == []
     assert warned and "no storey above the ground floor" in warned[0][2]
+
+
+# ───────────── preferencja portu z env (spec §4, I4) ─────────────
+def test_house_export_uses_env_port_without_picker(qapp, monkeypatch):
+    """>1 instancja, ale add-on podał FLOORFORGE_AC_PORT → eksport bez pytania."""
+    from PyQt5.QtWidgets import QInputDialog
+    monkeypatch.setenv("FLOORFORGE_AC_PORT", "19724")
+    cap = _wire(monkeypatch,
+                instances=[{"port": 19723, "projectName": "test", "projectPath": ""},
+                           {"port": 19724, "projectName": "K", "projectPath": ""}],
+                act_story=0)
+
+    def _boom(*a, **k):
+        raise AssertionError("picker NIE powinien się pokazać — port zna add-on")
+
+    monkeypatch.setattr(QInputDialog, "getItem", staticmethod(_boom))
+    w = _mainwindow(monkeypatch, "parter")
+    w._export_to_archicad()
+    assert cap["export"] == 1
+    assert cap["port"] == 19724
+
+
+def test_house_export_falls_back_to_picker_when_env_port_absent(qapp, monkeypatch):
+    """Port z env nieobecny wśród instancji → picker jak dotąd."""
+    from PyQt5.QtWidgets import QInputDialog
+    monkeypatch.setenv("FLOORFORGE_AC_PORT", "19999")
+    cap = _wire(monkeypatch,
+                instances=[{"port": 19723, "projectName": "test", "projectPath": ""},
+                           {"port": 19724, "projectName": "K", "projectPath": ""}],
+                act_story=0)
+    monkeypatch.setattr(QInputDialog, "getItem",
+                        staticmethod(lambda *a, **k: ("19723 — test", True)))
+    w = _mainwindow(monkeypatch, "parter")
+    w._export_to_archicad()
+    assert cap["export"] == 1
+    assert cap["port"] == 19723

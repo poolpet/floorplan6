@@ -161,3 +161,42 @@ def test_status_strings_have_no_polish_letters():
     for txt in (m.BUSY_TEXT, m.REFRESH_TEXT, m.NO_AC_TEXT, m.NOT_CHECKED_TEXT):
         assert not polish & set(txt.lower()), txt
         assert "tapir" not in txt.lower(), txt
+
+
+# ───────────── preferencja portu z env (spec §4, I4) ─────────────
+def test_status_prefers_instance_named_by_env_port(qapp, monkeypatch):
+    """Dwie instancje + FLOORFORGE_AC_PORT = druga → pasek pokazuje DRUGĄ."""
+    import bridge.tapir_connection as tc
+    monkeypatch.setenv("FLOORFORGE_AC_PORT", "19724")
+    monkeypatch.setattr(tc.TapirConnection, "list_instances", classmethod(lambda cls, **k: [
+        {"port": 19723, "projectName": "Pierwszy", "projectPath": ""},
+        {"port": 19724, "projectName": "Drugi", "projectPath": ""},
+    ]))
+    monkeypatch.setattr(tc.TapirConnection, "_try_connect", staticmethod(lambda port: _FakeConn()))
+
+    from ui.ac_status_widget import AcStatusWidget
+    w = AcStatusWidget()
+    w.refresh()
+
+    t = w.label.text()
+    assert t.startswith("Archicad port 19724 ")
+    assert "Drugi" in t and "(+1 more)" in t
+    assert w.instances[0]["port"] == 19724      # picker eksportu dostaje tę samą kolejność
+
+
+def test_status_keeps_order_when_env_port_not_among_instances(qapp, monkeypatch):
+    """Port z env spoza listy (albo brak env) → kolejność bez zmian."""
+    import bridge.tapir_connection as tc
+    monkeypatch.setenv("FLOORFORGE_AC_PORT", "19999")
+    monkeypatch.setattr(tc.TapirConnection, "list_instances", classmethod(lambda cls, **k: [
+        {"port": 19723, "projectName": "Pierwszy", "projectPath": ""},
+        {"port": 19724, "projectName": "Drugi", "projectPath": ""},
+    ]))
+    monkeypatch.setattr(tc.TapirConnection, "_try_connect", staticmethod(lambda port: _FakeConn()))
+
+    from ui.ac_status_widget import AcStatusWidget
+    w = AcStatusWidget()
+    w.refresh()
+
+    assert w.label.text().startswith("Archicad port 19723 ")
+    assert w.instances[0]["port"] == 19723

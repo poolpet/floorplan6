@@ -16,6 +16,24 @@ NO_AC_TEXT = ("Not connected to Archicad — start Archicad with the FloorForge 
 NOT_CHECKED_TEXT = "Archicad: not checked"
 
 
+def prefer_env_port(instances: list[dict]) -> list[dict]:
+    """Instancja wskazana przez FLOORFORGE_AC_PORT na początek listy.
+
+    Add-on uruchamia aplikację z portem SWOJEJ instancji Archicada (spec §4).
+    Bez tego pasek pokazywał pierwszą znalezioną instancję — przy dwóch otwartych
+    AC tester widział port i projekt tego okna, z którego NIE klikał.
+    Port spoza listy (albo brak env) → kolejność bez zmian.
+    """
+    from bridge.tapir_connection import env_ac_port
+    port = env_ac_port()
+    if port is None:
+        return instances
+    for i, inst in enumerate(instances):
+        if inst.get("port") == port:
+            return [instances[i]] + instances[:i] + instances[i + 1:]
+    return instances
+
+
 def launched_from_archicad() -> bool:
     """True when the FloorForge add-on started the app (not the user from Finder/terminal)."""
     return bool(os.environ.get("FLOORFORGE_LAUNCHED_FROM_AC")
@@ -69,6 +87,7 @@ class AcStatusWidget(QWidget):
         if not self.instances:
             self.label.setText(NO_AC_TEXT)
             return
+        self.instances = prefer_env_port(self.instances)
         inst = self.instances[0]
         story_txt = "?"
         try:

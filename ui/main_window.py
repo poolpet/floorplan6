@@ -1181,7 +1181,7 @@ class MainWindow(QMainWindow):
             return
         storey = STOREY_KEYS.get(self.house_storey_combo.currentText(), "parter")
         from bridge.tapir_connection import (
-            TapirConnection, check_active_story, parter_story_index,
+            TapirConnection, check_active_story, env_ac_port, parter_story_index,
         )
         from bridge.house_writer import export_house_to_archicad
 
@@ -1201,9 +1201,16 @@ class MainWindow(QMainWindow):
             )
             return
 
-        # 2. Wybór instancji (picker gdy >1).
+        # 2. Wybór instancji. Gdy add-on podał port SWOJEJ instancji (FLOORFORGE_AC_PORT,
+        #    spec §4) i taka instancja odpowiada — cel jest już jednoznaczny, picker byłby
+        #    pytaniem o to, co użytkownik właśnie kliknął w Archicadzie. Picker zostaje dla
+        #    startu z Findera i dla portu spoza listy.
+        env_port = env_ac_port()
         if len(instances) == 1:
             port = instances[0]["port"]
+        elif env_port is not None and any(i["port"] == env_port for i in instances):
+            port = env_port
+            logger.info("eksport domu: port z FLOORFORGE_AC_PORT=%s (bez pickera)", env_port)
         else:
             port = self._pick_ac_instance(instances)
             if port is None:
