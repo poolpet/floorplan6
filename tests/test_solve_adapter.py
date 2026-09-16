@@ -34,8 +34,11 @@ def test_apartment_request_returns_contracts(monkeypatch):
     assert out["mode"] == "apartment"
     assert len(out["variants"]) == 1
     assert out["variants"][0]["score"] == 0.9
+    assert out["variants"][0]["index"] == 0
     assert out["variants"][0]["validation_errors"] == []
-    assert "rooms" in out["variants"][0] and "walls" in out["variants"][0]
+    c = out["variants"][0]["contract"]
+    assert "rooms" in c and "walls" in c
+    assert out["boundary"]["area"] == 48.0 and out["boundary"]["auto_type"] == "M2"
     assert seen["mtype"] == "M2" and seen["max_variants"] == 3
     assert ticks == [(1, 1)]
 
@@ -53,7 +56,7 @@ def test_house_request_returns_layout_contract(monkeypatch):
     out = sa.solve_request({"mode": "house", "polygon": [[0, 0], [10, 0], [10, 8], [0, 8]],
                             "entry": [5, 0], "num_storeys": 2})
     assert out["mode"] == "house"
-    assert out["layout"]["_src"] == "LAYOUT"
+    assert out["variants"][0]["contract"]["_src"] == "LAYOUT"
     assert called["kw"]["num_storeys"] == 2
 
 
