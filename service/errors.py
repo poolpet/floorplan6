@@ -37,8 +37,8 @@ def describe(exc: BaseException) -> tuple[str, str]:
                 "Start Archicad with the FloorForge add-on loaded and click Refresh." + _tail(exc))
     if isinstance(exc, TimeoutError) or "timed out" in low:
         return ("Archicad",
-                "Archicad does not respond. It is not responding while a dialog window is open "
-                "— close any open dialog windows in Archicad and try again." + _tail(exc))
+                "Archicad does not respond (it is not responding while a dialog window is open). "
+                "Close any open dialog windows in Archicad and try again." + _tail(exc))
     if (isinstance(exc, KeyError) and "librarypart" in low) or "additionalproperties" in low:
         return ("FloorForge add-on",
                 "The FloorForge add-on in Archicad does not support the required parameters "
