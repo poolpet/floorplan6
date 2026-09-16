@@ -69,7 +69,7 @@ def test_unknown_job_is_404(server):
 
 def test_export_without_archicad_is_503(server, monkeypatch):
     import service.app as app
-    monkeypatch.setattr(app, "connect_to_ac",
+    monkeypatch.setattr(app, "connect_for_service",
                         lambda: (_ for _ in ()).throw(ConnectionError("brak AC")))
     r = _post_export(server, {"job_id": _done_job(server), "variant": 0})
     with pytest.raises(urllib.error.HTTPError) as ei:
@@ -85,13 +85,15 @@ def test_client_wait_raises_on_error(server, monkeypatch):
                         lambda req, progress=None, store=None: (_ for _ in ()).throw(ValueError("zły obrys")))
     c = ServiceClient(server.url)
     jid = c.solve({"mode": "apartment", "polygon": [[0, 0], [1, 0], [1, 1]], "entry": [0, 0], "mtype": "M2"})
-    with pytest.raises(RuntimeError, match="zły obrys"):
+    # Job niesie komunikat przepuszczony przez service.errors.describe (EN, dla palety).
+    with pytest.raises(RuntimeError, match="Input data") as ei:
         c.wait(jid, timeout=5)
+    assert "zły obrys" in str(ei.value)
 
 
 def test_unexpected_exception_is_500(server, monkeypatch):
     import service.app as app
-    monkeypatch.setattr(app, "connect_to_ac",
+    monkeypatch.setattr(app, "connect_for_service",
                         lambda: (_ for _ in ()).throw(RuntimeError("boom")))
     r = _post_export(server, {"job_id": _done_job(server), "variant": 0})
     with pytest.raises(urllib.error.HTTPError) as ei:
@@ -99,7 +101,7 @@ def test_unexpected_exception_is_500(server, monkeypatch):
     assert ei.value.code == 500
     body = json.loads(ei.value.read())
     ei.value.close()
-    assert body["error"] == "Błąd wewnętrzny serwisu."
+    assert body["error"] == "Internal service error."
 
 
 @pytest.mark.parametrize("length", ["abc", "-5"])
@@ -111,7 +113,7 @@ def test_bad_content_length_is_400(server, length):
     assert ei.value.code == 400
     body = json.loads(ei.value.read())
     ei.value.close()
-    assert body["error"] == "Nagłówek Content-Length jest niepoprawny."
+    assert body["error"] == "The Content-Length header is invalid."
 
 
 def test_health_ignores_query_string(server):

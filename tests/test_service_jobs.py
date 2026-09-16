@@ -49,7 +49,9 @@ def test_exception_becomes_error_status():
 
     jid = store.submit(boom)
     j = _wait(store, jid, "error")
-    assert j["error"] == "zły obrys" and j["result"] is None
+    # `error` idzie wprost do palety: angielski, przepuszczony przez service.errors.
+    assert j["error"].startswith("Input data: zły obrys") and j["result"] is None
+    assert "ValueError" in j["error_detail"] and "zły obrys" in j["error_detail"]
 
 
 def test_unknown_job_is_none():

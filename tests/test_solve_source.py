@@ -32,10 +32,18 @@ def test_auto_type_thresholds(area, mtype):
 def test_selection_source_uses_boundary_reader(monkeypatch):
     import service.solve_adapter as sa
     from core.models import WallType
-    monkeypatch.setattr(sa, "read_boundary_from_archicad",
-                        lambda tapir=None: (Polygon(RECT), (4.0, 0.0), [WallType.FACADE] * 4))
+    seen = {}
+    monkeypatch.setattr(sa, "connect_for_service", lambda: "TAPIR")
+
+    def fake(tapir=None):
+        seen.update(tapir=tapir)
+        return (Polygon(RECT), (4.0, 0.0), [WallType.FACADE] * 4)
+
+    monkeypatch.setattr(sa, "read_boundary_from_archicad", fake)
     monkeypatch.setattr(sa, "generate_variants", lambda *a, **k: [_fake_plan()])
     out = sa.solve_request({"mode": "apartment", "source": "selection", "mtype": "M2", "max_variants": 1})
+    # Obrys czytamy z instancji AC wskazanej przez add-on, nie z pierwszej znalezionej.
+    assert seen["tapir"] == "TAPIR"
     assert out["boundary"]["auto_type"] == "M2"
     assert out["variants"][0]["index"] == 0 and out["variants"][0]["score"] == 0.9
     assert "rooms" in out["variants"][0]["contract"]
@@ -44,11 +52,12 @@ def test_selection_source_uses_boundary_reader(monkeypatch):
 def test_point_source_passes_coordinates(monkeypatch):
     import service.solve_adapter as sa
     seen = {}
+    monkeypatch.setattr(sa, "connect_for_service", lambda: "TAPIR")
     def fake(x, y, tapir=None):
-        seen.update(x=x, y=y); return (Polygon(RECT), (4.0, 0.0), None)
+        seen.update(x=x, y=y, tapir=tapir); return (Polygon(RECT), (4.0, 0.0), None)
     monkeypatch.setattr(sa, "read_boundary_from_point", fake)
     out = sa.solve_request({"mode": "apartment", "source": "point", "point": [3.5, 2.0], "max_variants": 0})
-    assert seen == {"x": 3.5, "y": 2.0} and out["boundary"]["area"] == pytest.approx(48.0)
+    assert seen == {"x": 3.5, "y": 2.0, "tapir": "TAPIR"} and out["boundary"]["area"] == pytest.approx(48.0)
 
 
 def test_store_receives_plans(monkeypatch):

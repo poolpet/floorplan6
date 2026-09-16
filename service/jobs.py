@@ -6,6 +6,8 @@ import logging
 import threading
 import uuid
 
+from service.errors import describe
+
 logger = logging.getLogger(__name__)
 
 
@@ -20,7 +22,7 @@ class JobStore:
         with self._lock:
             self._jobs[jid] = {"id": jid, "status": "queued",
                                "progress": {"current": 0, "total": 0},
-                               "result": None, "error": None}
+                               "result": None, "error": None, "error_detail": None}
 
         def progress(current, total):
             with self._lock:
@@ -35,8 +37,11 @@ class JobStore:
                     self._jobs[jid].update(status="done", result=result)
             except Exception as e:
                 logger.exception("job %s: błąd", jid)
+                # Paleta pokazuje `error` wprost — musi być po angielsku i po ludzku.
+                title, text = describe(e)
                 with self._lock:
-                    self._jobs[jid].update(status="error", error=str(e))
+                    self._jobs[jid].update(status="error", error=f"{title}: {text}",
+                                           error_detail=repr(e))
 
         threading.Thread(target=run, name=f"job-{jid}", daemon=True).start()
         return jid

@@ -6,6 +6,7 @@ from shapely.geometry import Polygon
 # Importy na górze modułu (nie lazy): paleta i testy podmieniają je monkeypatchem
 # jako atrybuty tego modułu. `bridge.boundary_reader` ciągnie pakiet `archicad`.
 from bridge.boundary_reader import read_boundary_from_archicad, read_boundary_from_point
+from bridge.tapir_connection import connect_for_service
 from core.house_layout import generate_house
 from core.plan_contract import house_to_contract, plan_to_contract
 from core.variant_generator import generate_variants
@@ -14,11 +15,11 @@ APARTMENT_TYPES = ("M1", "M2", "M3", "M4", "M5")
 
 
 def _float(v, what: str) -> float:
-    """Koercja na float z polskim komunikatem błędu."""
+    """Koercja na float. Komunikat po angielsku — czyta go paleta w Archicadzie."""
     try:
         return float(v)
     except (TypeError, ValueError):
-        raise ValueError(f"{what} musi być liczbą.") from None
+        raise ValueError(f"{what} must be a number.") from None
 
 
 def _int_field(req: dict, key: str, default: int) -> int:
@@ -29,7 +30,7 @@ def _int_field(req: dict, key: str, default: int) -> int:
     try:
         return int(v)
     except (TypeError, ValueError):
-        raise ValueError(f"Pole '{key}' musi być liczbą całkowitą.") from None
+        raise ValueError(f"Field '{key}' must be a whole number.") from None
 
 
 def _float_field(req: dict, key: str, default: float) -> float:
@@ -37,27 +38,27 @@ def _float_field(req: dict, key: str, default: float) -> float:
     v = req.get(key, default)
     if v is None:
         v = default
-    return _float(v, f"Pole '{key}'")
+    return _float(v, f"Field '{key}'")
 
 
 def _polygon(req: dict) -> Polygon:
     pts = req.get("polygon")
     if not isinstance(pts, list) or len(pts) < 3:
-        raise ValueError("Obrys musi mieć co najmniej 3 punkty (pole 'polygon').")
+        raise ValueError("The outline needs at least 3 points (field 'polygon').")
     try:
         poly = Polygon([(float(x), float(y)) for x, y in pts])
     except (TypeError, ValueError):
-        raise ValueError("Punkty obrysu muszą być parami liczb [x, y].")
+        raise ValueError("Outline points must be pairs of numbers [x, y].")
     if not poly.is_valid or poly.area <= 0:
-        raise ValueError("Obrys jest niepoprawny (samoprzecięcia lub zerowe pole).")
+        raise ValueError("The outline is invalid (self-intersections or zero area).")
     return poly
 
 
 def _entry(req: dict) -> tuple[float, float]:
     e = req.get("entry")
     if not isinstance(e, (list, tuple)) or len(e) != 2:
-        raise ValueError("Punkt wejścia 'entry' musi być parą [x, y].")
-    what = "Punkt wejścia 'entry'"
+        raise ValueError("Entry point 'entry' must be a pair [x, y].")
+    what = "Entry point 'entry'"
     return _float(e[0], what), _float(e[1], what)
 
 
@@ -80,12 +81,15 @@ def _boundary_from_source(req: dict):
     if source == "polygon":
         return _polygon(req), _entry(req), req.get("wall_types")
     if source == "selection":
-        return read_boundary_from_archicad()
+        # Port z FLOORFORGE_AC_PORT (bez skanu) — czytamy z TEJ instancji AC,
+        # do której paleta jest podpięta, nie z pierwszej lepszej.
+        return read_boundary_from_archicad(tapir=connect_for_service())
     if source == "point":
         pt = req.get("point")
         if not isinstance(pt, (list, tuple)) or len(pt) != 2:
             raise ValueError("Field 'point' must be a pair [x, y].")
-        return read_boundary_from_point(_float(pt[0], "point.x"), _float(pt[1], "point.y"))
+        x, y = _float(pt[0], "point.x"), _float(pt[1], "point.y")
+        return read_boundary_from_point(x, y, tapir=connect_for_service())
     raise ValueError("Field 'source' must be 'selection', 'point' or 'polygon'.")
 
 
@@ -107,7 +111,7 @@ def _remember(store, req: dict, entry: dict) -> None:
 def solve_request(req: dict, progress=None, store=None) -> dict:
     mode = req.get("mode")
     if mode not in ("apartment", "house"):
-        raise ValueError("Pole 'mode' musi być 'apartment' albo 'house'.")
+        raise ValueError("Field 'mode' must be 'apartment' or 'house'.")
     poly, entry, wall_types = _boundary_from_source(req)
     boundary = _boundary_info(poly, entry)
     # Koercja PRZED wywołaniem solvera — złe wejście nie może odpalić liczenia.
@@ -125,7 +129,7 @@ def solve_request(req: dict, progress=None, store=None) -> dict:
 
     mtype = req.get("mtype") or boundary["auto_type"]
     if mtype not in APARTMENT_TYPES:
-        raise ValueError(f"Typ mieszkania musi być jednym z {', '.join(APARTMENT_TYPES)}.")
+        raise ValueError(f"Apartment type must be one of {', '.join(APARTMENT_TYPES)}.")
     min_score = _float_field(req, "min_score", 0.0)
     plans = generate_variants(
         poly, entry, mtype, max_variants,

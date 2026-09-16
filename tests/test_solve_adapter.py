@@ -63,43 +63,43 @@ def test_house_request_returns_layout_contract(monkeypatch):
 @pytest.mark.parametrize("bad,match", [
     # brak polygon
     ({"mode": "apartment", "entry": [0, 0], "mtype": "M2"},
-     "co najmniej 3 punkty"),
+     "at least 3 points"),
     # <3 pkt
     ({"mode": "apartment", "polygon": [[0, 0], [1, 0]], "entry": [0, 0], "mtype": "M2"},
-     "co najmniej 3 punkty"),
+     "at least 3 points"),
     # zły mode
     ({"mode": "xyz", "polygon": [[0, 0], [1, 0], [1, 1]], "entry": [0, 0]},
-     "musi być 'apartment' albo 'house'"),
+     "must be 'apartment' or 'house'"),
     # zły typ mieszkania
     ({"mode": "apartment", "polygon": [[0, 0], [1, 0], [1, 1]], "entry": [0, 0], "mtype": "M9"},
-     "Typ mieszkania"),
+     "Apartment type"),
     # punkt obrysu nie jest liczbą
     ({"mode": "apartment", "polygon": [[0, 0], [1, 0], ["a", 1]], "entry": [0, 0], "mtype": "M2"},
-     "parami liczb"),
+     "pairs of numbers"),
     # obrys z samoprzecięciem
     ({"mode": "apartment", "polygon": [[0, 0], [2, 0], [0, 2], [2, 2]], "entry": [0, 0], "mtype": "M2"},
-     "Obrys jest niepoprawny"),
+     "The outline is invalid"),
     # entry nie jest parą
     ({"mode": "apartment", "polygon": [[0, 0], [1, 0], [1, 1]], "entry": [0, 0, 0], "mtype": "M2"},
-     "musi być parą"),
+     "must be a pair"),
     # entry z None w środku (JSON null)
     ({"mode": "apartment", "polygon": [[0, 0], [1, 0], [1, 1]], "entry": [None, 0], "mtype": "M2"},
-     "Punkt wejścia 'entry' musi być liczbą"),
+     "Entry point 'entry' must be a number"),
     # entry nieliczbowe
     ({"mode": "apartment", "polygon": [[0, 0], [1, 0], [1, 1]], "entry": ["a", 0], "mtype": "M2"},
-     "Punkt wejścia 'entry' musi być liczbą"),
+     "Entry point 'entry' must be a number"),
     # num_storeys nie jest liczbą
     ({"mode": "house", "polygon": [[0, 0], [10, 0], [10, 8], [0, 8]], "entry": [5, 0],
       "num_storeys": "abc"},
-     "'num_storeys' musi być liczbą całkowitą"),
+     "'num_storeys' must be a whole number"),
     # max_variants nie jest liczbą
     ({"mode": "apartment", "polygon": [[0, 0], [8, 0], [8, 6], [0, 6]], "entry": [4, 0],
       "mtype": "M2", "max_variants": "duzo"},
-     "'max_variants' musi być liczbą całkowitą"),
+     "'max_variants' must be a whole number"),
     # min_score nie jest liczbą
     ({"mode": "apartment", "polygon": [[0, 0], [8, 0], [8, 6], [0, 6]], "entry": [4, 0],
       "mtype": "M2", "min_score": "x"},
-     "'min_score' musi być liczbą"),
+     "'min_score' must be a number"),
 ])
 def test_invalid_request_raises_value_error(bad, match):
     import service.solve_adapter as sa

@@ -256,6 +256,11 @@ class TapirConnection:
         return self._active_port
 
     @property
+    def connected(self) -> bool:
+        """Czy jest już żywe połączenie — odczyt cache'u, BEZ skanowania portów."""
+        return self._conn is not None
+
+    @property
     def commands(self):
         if self._conn is None:
             self.connect()
@@ -603,3 +608,17 @@ def check_active_story(act_story: int, first_story: int, last_story: int,
     return False, (f"The active Archicad storey = idx {act_story}, but you selected "
                    f"'Ground floor' (idx {parter_idx}). Switch the storey in Archicad "
                    f"to the ground floor.")
+
+
+def connect_for_service() -> "TapirConnection":
+    """Połączenie serwisu z AC: port z `FLOORFORGE_AC_PORT` bez skanu, inaczej skan.
+
+    Jedna reguła dla odczytu obrysu i dla eksportu — dwa serwisy (dwa AC) nigdy
+    nie wejdą sobie w paradę. `ConnectionError`, gdy AC nie odpowiada.
+    """
+    tapir = TapirConnection()
+    port = env_ac_port()
+    ok = tapir.use_port(port) if port else tapir.connect()
+    if not ok:
+        raise ConnectionError("Archicad does not respond on the JSON port.")
+    return tapir

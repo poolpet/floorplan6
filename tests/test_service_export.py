@@ -41,7 +41,7 @@ def test_export_calls_writer_with_selected_plan(server, monkeypatch):
     h, store = server
     seen = {}
     monkeypatch.setattr(app, "export_plan_to_archicad", lambda plan, tapir=None, **kw: seen.update(plan=plan, kw=kw) or {"zones": ["a"], "walls": [], "doors": [], "windows": [], "labels": []})
-    monkeypatch.setattr(app, "connect_to_ac", lambda: "TAPIR")
+    monkeypatch.setattr(app, "connect_for_service", lambda: "TAPIR")
     c, jid = _solve_done(h)
     out = c.export({"job_id": jid, "variant": 1, "storeys": ["parter"], "furniture": False})
     assert seen["plan"] == "PLAN1" and seen["kw"]["include_furniture"] is False
@@ -72,7 +72,7 @@ def test_export_409_when_job_running(server, monkeypatch):
 def test_export_503_when_ac_unreachable(server, monkeypatch):
     import service.app as app
     h, _ = server
-    monkeypatch.setattr(app, "connect_to_ac", lambda: (_ for _ in ()).throw(ConnectionError("no AC")))
+    monkeypatch.setattr(app, "connect_for_service", lambda: (_ for _ in ()).throw(ConnectionError("no AC")))
     c, jid = _solve_done(h)
     with pytest.raises(RuntimeError, match="Archicad"):
         c.export({"job_id": jid, "variant": 0})
@@ -81,11 +81,37 @@ def test_export_503_when_ac_unreachable(server, monkeypatch):
 def test_export_422_on_writer_value_error(server, monkeypatch):
     import service.app as app
     h, _ = server
-    monkeypatch.setattr(app, "connect_to_ac", lambda: "TAPIR")
+    monkeypatch.setattr(app, "connect_for_service", lambda: "TAPIR")
     monkeypatch.setattr(app, "export_plan_to_archicad", lambda *a, **k: (_ for _ in ()).throw(ValueError("No rooms with geometry to export.")))
     c, jid = _solve_done(h)
     code, body = _post(f"{h.url}/export", {"job_id": jid, "variant": 0})
     assert code == 422 and "No rooms" in body["error"]
+
+
+def test_export_503_when_writer_loses_archicad(server, monkeypatch):
+    """AC może paść W TRAKCIE wstawiania — to nadal 503, nie 500."""
+    import service.app as app
+    h, _ = server
+    monkeypatch.setattr(app, "connect_for_service", lambda: "TAPIR")
+    monkeypatch.setattr(app, "export_plan_to_archicad",
+                        lambda *a, **k: (_ for _ in ()).throw(ConnectionError("AC died")))
+    c, jid = _solve_done(h)
+    with pytest.raises(RuntimeError, match="Archicad"):
+        c.export({"job_id": jid, "variant": 0})
+
+
+def test_export_409_when_job_failed(server, monkeypatch):
+    import service.app as app
+    h, _ = server
+    monkeypatch.setattr(app, "solve_request",
+                        lambda req, progress=None, store=None: (_ for _ in ()).throw(ValueError("bad outline")))
+    from service.client import ServiceClient
+    c = ServiceClient(h.url)
+    jid = c.solve({"mode": "apartment", "source": "polygon", "polygon": [[0,0],[8,0],[8,6],[0,6]], "entry": [4,0]})
+    with pytest.raises(RuntimeError):
+        c.wait(jid, timeout=10)
+    code, body = _post(f"{h.url}/export", {"job_id": jid, "variant": 0})
+    assert code == 409 and body["error"].startswith("Generation failed:") and "bad outline" in body["error"]
 
 
 def test_health_reports_ac_port(server, monkeypatch):
@@ -94,6 +120,8 @@ def test_health_reports_ac_port(server, monkeypatch):
     with urllib.request.urlopen(f"{h.url}/health", timeout=5) as r:
         body = json.loads(r.read())
     assert body["ac_port"] == 19724
+    # Stan połączenia z cache'u singletona — /health nigdy nie skanuje portów.
+    assert body["ac_connected"] is False
 
 
 def test_shutdown_stops_server(server):

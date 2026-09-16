@@ -56,5 +56,5 @@ class ServiceClient:
             if j["status"] == "error":
                 raise RuntimeError(j["error"])
             if time.time() - t0 > timeout:
-                raise TimeoutError(f"Job {job_id} nie skończył się w {timeout:.0f} s.")
+                raise TimeoutError(f"Job {job_id} did not finish within {timeout:.0f} s.")
             time.sleep(poll)

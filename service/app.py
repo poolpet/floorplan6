@@ -10,7 +10,7 @@ import uuid
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 from bridge.plan_writer import export_plan_to_archicad
-from bridge.tapir_connection import TapirConnection, env_ac_port
+from bridge.tapir_connection import TapirConnection, connect_for_service, env_ac_port
 from service.jobs import JobStore
 from service.results import ResultStore
 from service.solve_adapter import solve_request
@@ -20,19 +20,6 @@ VERSION = os.environ.get("FLOORFORGE_VERSION", "dev")
 MAX_BODY_BYTES = 16 * 1024 * 1024  # twardy limit body — lokalny serwis, nie proxy
 STOREYS = ("parter", "poddasze")
 COUNTED = ("zones", "walls", "doors", "windows", "labels")
-
-
-def connect_to_ac() -> TapirConnection:
-    """Połączenie z instancją AC wskazaną przez add-on (FLOORFORGE_AC_PORT), inaczej skan.
-
-    Rzuca `ConnectionError`, gdy AC nie odpowiada — handler zamienia to na 503.
-    """
-    tapir = TapirConnection()
-    port = env_ac_port()
-    ok = tapir.use_port(port) if port else tapir.connect()
-    if not ok:
-        raise ConnectionError("Archicad does not respond on the JSON port.")
-    return tapir
 
 
 def _export_args(body: dict) -> tuple[str, int, list[str], bool]:
@@ -71,35 +58,37 @@ class _Handler(BaseHTTPRequestHandler):
     def _internal_error(self):
         """Ostatnia deska ratunku: klient dostaje JSON 500, nie zerwane połączenie."""
         logger.exception("http: %s %s", self.command, self.path)
-        self._json(500, {"error": "Błąd wewnętrzny serwisu."})
+        self._json(500, {"error": "Internal service error."})
 
     def _read_json(self) -> dict:
         try:
             n = int(self.headers.get("Content-Length") or 0)
         except (TypeError, ValueError):
-            raise ValueError("Nagłówek Content-Length jest niepoprawny.") from None
+            raise ValueError("The Content-Length header is invalid.") from None
         if n < 0:
-            raise ValueError("Nagłówek Content-Length jest niepoprawny.")
+            raise ValueError("The Content-Length header is invalid.")
         if n > MAX_BODY_BYTES:
-            raise ValueError(f"Treść żądania jest za duża (limit {MAX_BODY_BYTES // (1024 * 1024)} MB).")
+            raise ValueError(f"The request body is too large (limit {MAX_BODY_BYTES // (1024 * 1024)} MB).")
         raw = self.rfile.read(n) if n else b""
         try:
             body = json.loads(raw.decode("utf-8") or "{}")
         except (json.JSONDecodeError, UnicodeDecodeError):
-            raise ValueError("Treść żądania nie jest poprawnym JSON.")
+            raise ValueError("The request body is not valid JSON.")
         if not isinstance(body, dict):
-            raise ValueError("Treść żądania musi być obiektem JSON.")
+            raise ValueError("The request body must be a JSON object.")
         return body
 
     def do_GET(self):
         try:
             path = urllib.parse.urlsplit(self.path).path
             if path == "/health":
-                return self._json(200, {"status": "ok", "version": VERSION, "ac_port": env_ac_port()})
+                return self._json(200, {"status": "ok", "version": VERSION,
+                                        "ac_port": env_ac_port(),
+                                        "ac_connected": TapirConnection().connected})
             if path.startswith("/jobs/"):
                 job = self.store.get(path[len("/jobs/"):])
-                return self._json(200, job) if job else self._json(404, {"error": "Nieznany job."})
-            self._json(404, {"error": "Nieznana ścieżka."})
+                return self._json(200, job) if job else self._json(404, {"error": "Unknown job id."})
+            self._json(404, {"error": "Unknown path."})
         except Exception:
             self._internal_error()
 
@@ -125,7 +114,7 @@ class _Handler(BaseHTTPRequestHandler):
                 threading.Thread(target=self._stop_server, name="floorforge-shutdown",
                                  daemon=True).start()
                 return
-            self._json(404, {"error": "Nieznana ścieżka."})
+            self._json(404, {"error": "Unknown path."})
         except Exception:
             self._internal_error()
 
@@ -139,7 +128,10 @@ class _Handler(BaseHTTPRequestHandler):
         job = self.store.get(job_id)
         if job is None:
             return self._json(404, {"error": "Unknown job id."})
-        if job.get("status") != "done":
+        status = job.get("status")
+        if status == "error":
+            return self._json(409, {"error": f"Generation failed: {job.get('error') or 'unknown error'}"})
+        if status != "done":
             return self._json(409, {"error": "Job is not finished yet."})
         entry = self.results.get(job_id)
         if entry is None:
@@ -150,14 +142,9 @@ class _Handler(BaseHTTPRequestHandler):
         # Zakres wariantu sprawdzamy PRZED łączeniem z AC — 404 ma być natychmiastowe.
         if not house and not 0 <= variant < len(plans):
             return self._json(404, {"error": "Unknown variant index."})
+        # ConnectionError obejmuje też writera: AC może paść W TRAKCIE wstawiania.
         try:
-            tapir = connect_to_ac()
-        except ConnectionError as e:
-            logger.warning("export: ArchiCAD nie odpowiada (%s)", e)
-            return self._json(503, {"error": "Archicad does not respond on the JSON port. "
-                                             "Start Archicad with the FloorForge add-on and try again."})
-
-        try:
+            tapir = connect_for_service()
             if house:
                 from bridge.house_export import export_house_storeys  # lazy — Task 2
                 res = export_house_storeys(entry["layout"], storeys, tapir,
@@ -168,6 +155,10 @@ class _Handler(BaseHTTPRequestHandler):
                                         "storeys": res.get("inserted") or [],
                                         "partial": bool(res.get("partial"))})
             res = export_plan_to_archicad(plans[variant], tapir=tapir, include_furniture=furniture)
+        except ConnectionError as e:
+            logger.warning("export: ArchiCAD nie odpowiada (%s)", e)
+            return self._json(503, {"error": "Archicad does not respond on the JSON port. "
+                                             "Start Archicad with the FloorForge add-on and try again."})
         except ValueError as e:
             logger.warning("export: writer odrzucił rzut (%s)", e)
             return self._json(422, {"error": str(e)})
