@@ -1,5 +1,5 @@
 FloorForge add-on = fork Tapir Archicad Automation (https://github.com/ENZYME-APD/tapir-archicad-automation),
-licencja MIT (patrz LICENSE). Zmiany względem upstreamu v1.4.0:
+licencja MIT (patrz LICENSE; w paczce dystrybucyjnej: LICENSE-Tapir.txt). MIT license — see LICENSE (shipped as LICENSE-Tapir.txt). Zmiany względem upstreamu v1.4.0:
 - CreateDoors: parametry libraryPart / oSide / reflected (ExtendedElementCommands.cpp)
 - Tools/CMakeCommon.cmake: `PARENT_SCOPE CACHE STRING` → `CACHE STRING` (CMake 4.x)
 - tożsamość: MDID FloorForge, CFBundleIdentifier pl.d7studio.floorforge, nazwa FloorForge

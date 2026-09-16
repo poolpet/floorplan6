@@ -26,8 +26,9 @@ downloaded from the internet and kills the embedded application. Remove the flag
 restart Archicad:
 
 ```sh
-xattr -dr com.apple.quarantine "/Applications/Graphisoft/Archicad 29/Dodatki/FloorForge.bundle"
+xattr -dr com.apple.quarantine "/Applications/Graphisoft/Archicad 29/Add-Ons/FloorForge.bundle"
 ```
+(On a Polish Archicad the folder is `Dodatki` instead of `Add-Ons` — use the path where you copied the bundle.)
 
 (on an English installation the folder is `Add-Ons` instead of `Dodatki`).
 
