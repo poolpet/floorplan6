@@ -24,7 +24,7 @@ def _layout():
         _room("hub", "Hol", Strefa.KOMUNIKACJA, 2.5, 3.0, 4.0, 0.0),
     ]
     pietro = [
-        _room("sypialnia_1", "Sypialnia 1", Strefa.NOCNA, 4.0, 3.0, 0.0, 0.0),
+        _room("sypialnia_1", "Sypialnia główna", Strefa.NOCNA, 4.0, 3.0, 0.0, 0.0),
         _room("hub", "Hol", Strefa.KOMUNIKACJA, 2.5, 3.0, 4.0, 0.0),
     ]
     return TwoStoreyLayout(ok=True, parter_rooms=parter, pietro_rooms=pietro,
@@ -59,9 +59,12 @@ def test_furnish_layout_forwards_boundary(monkeypatch):
 
 
 def test_house_details_text_has_both_storeys():
+    """Panel szczegółów jest po angielsku (spec §9) — nagłówki i nazwy pokoi."""
     text = house_details_text(_layout())
-    assert "PARTER" in text and "PIĘTRO" in text
-    assert "Salon" in text and "Sypialnia 1" in text
+    assert "GROUND FLOOR" in text and "FIRST FLOOR" in text
+    assert "Living room" in text and "Master bedroom" in text
+    assert "Salon" not in text and "Hol" not in text      # polskie nazwy z core/ nie wychodzą
+    assert not set("ąćęłńóśźż") & set(text.lower()), text
 
 
 def test_render_house_figure_two_panels():

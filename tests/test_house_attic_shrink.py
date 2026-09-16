@@ -138,7 +138,7 @@ def test_render_details_contract_with_low_strips(lay_11x8, tmp_path):
     render_house_figure(lay_11x8, with_furniture=True, save_path=p, show=False)
     assert p.exists() and p.stat().st_size > 0
     txt = house_details_text(lay_11x8)
-    assert "poddasze" in txt.lower()
+    assert "attic" in txt.lower()      # panel szczegółów po angielsku (spec §9)
 
     c = house_to_contract(lay_11x8)
     got = c["poddasze"]["meta"]["boundary_bbox"]      # poddasze = pełny obrys
