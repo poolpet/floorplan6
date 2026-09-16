@@ -109,23 +109,34 @@ PYTHONPATH=. python run_archicad.py --manual --type M3 --width 10 --height 8
 4. In ArchiCAD: pick a Zone (created via Tools → Zone → Inner Edge) or
    a closed wall loop. The GUI auto-detects it.
 
-## Beta (macOS + ArchiCAD 29)
+## Beta (macOS + Archicad 29)
 
-A frozen app for testers, so they need no Python environment:
-`packaging/build_release.sh` → `packaging/dist/FloorForge-beta-<ver>.zip`
-(`FloorForge.app` + a custom Tapir build + `INSTALACJA.md` + `Uruchom.command` +
-`VERSION`). After a build the runnable app is
-`packaging/dist/FloorForge-beta-<ver>/FloorForge.app`.
+The beta ships as **one `FloorForge.bundle`** — the Archicad add-on built from
+[`addon/`](addon/) (a fork of Tapir, MIT) with the frozen Python application embedded in
+`Contents/Resources/FloorForge/`. Installing means copying that bundle into
+`/Applications/Graphisoft/Archicad 29/Add-Ons/` (`Dodatki` on a Polish install) and
+restarting Archicad; there is nothing else to install. The menu is
+**FloorForge → Room layout** (plus **About FloorForge...**), and it launches the embedded
+application already connected to that Archicad instance (the add-on hands it the JSON port
+in `FLOORFORGE_AC_PORT`).
 
-Beta mode is `FLOORFORGE_BETA=1`: a single "Podział rzutu" tab, Polish messages, and a
-technical log in `~/Library/Logs/FloorForge/`. `packaging/smoke_frozen.sh` runs
-`--selftest` on the binary unpacked **from the zip** — the zip is what a tester gets.
-The build is ad-hoc signed, not notarized, so the first launch goes through
-System Settings → Privacy & Security → "Open Anyway" (see `packaging/INSTALACJA.md`).
+Apple Silicon only — the embedded Python is arm64-only, so the add-on is too, on purpose.
+
+| Command | What it does |
+|---|---|
+| `packaging/build_release.sh` | cmake add-on + PyInstaller + ad-hoc codesign → `packaging/dist/FloorForge-<ver>.zip`, then a gate run **on the zip** (no AppleDouble, codesign, Mach-O, exactly `arm64`, Info.plist, `--selftest`) |
+| `packaging/install_local.sh` | installs the newest zip into the local Add-Ons folder (old FloorPlan4/Tapir copies go to `~/Library/Application Support/FloorForge/backups/`, outside Add-Ons) |
+| `packaging/smoke_frozen.sh` | `--selftest` on the binary unpacked **from the zip** — the zip is what a tester gets |
+
+The zip contains `FloorForge.bundle`, `INSTALL.md` (EN), `INSTALACJA.md` (PL),
+`LICENSE-Tapir.txt` and `NOTICE.txt`. All user-facing strings are English (testers are not
+only Polish speakers); the technical log is in `~/Library/Logs/FloorForge/floorforge.log`.
+The build is ad-hoc signed, not notarized, so a bundle downloaded from the internet may be
+quarantined — see Troubleshooting in `packaging/INSTALL.md`.
 
 Release gate before the zip goes out: [`packaging/CHECKLIST_TEST.md`](packaging/CHECKLIST_TEST.md)
 on a clean macOS account. Spec:
-`docs/superpowers/specs/2026-09-14-beta-dystrybucja-macos-design.md`.
+`docs/superpowers/specs/2026-09-15-floorforge-bundle-design.md`.
 
 ## Documentation
 

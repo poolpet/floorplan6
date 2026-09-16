@@ -1,5 +1,13 @@
 # Beta dystrybucyjna FloorForge — macOS + ArchiCAD 29 (design)
 
+> ⚠️ **Forma dystrybucji z tego specu jest NIEAKTUALNA.** Zastępuje ją
+> `2026-09-15-floorforge-bundle-design.md`: zamiast osobnej `.app` + bundla Tapira +
+> `Uruchom.command` jedzie **jeden `FloorForge.bundle`** (add-on Archicada z osadzonym
+> Pythonem) kopiowany do `Dodatki`. Nieaktualne są też: język interfejsu (od §9 nowego
+> specu — angielski, nie polski) i nazwy menu („Room layout", „About FloorForge...").
+> Aktualne zostaje wszystko poza formą paczki: tryb bety, `user_errors`, log na dysku,
+> serwis HTTP, `--selftest`, bramka z checklisty.
+>
 > Data: 2026-09-14. Zatwierdzone przez Dawida w brainstormingu (wariant A: kontynuacja
 > FloorPlan6 w miejscu; cel: dystrybucja zamkniętej bety kilku znajomym architektom).
 
