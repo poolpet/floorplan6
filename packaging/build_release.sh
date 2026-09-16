@@ -67,6 +67,7 @@ echo "codesign OK (ad-hoc)"
 STAGE="$WORK/dist/FloorForge-$VER"; mkdir -p "$STAGE"
 ditto "$BUNDLE" "$STAGE/FloorForge.bundle"
 cp "$HERE/INSTALACJA.md" "$STAGE/"
+cp "$HERE/INSTALL.md" "$STAGE/"
 ZIP="$WORK/dist/FloorForge-$VER.zip"
 # --norsrc/--noextattr: bez nich ditto wkłada do zipa pliki AppleDouble (`._*`),
 # które tester widzi po rozpakowaniu czymkolwiek innym niż Finder.

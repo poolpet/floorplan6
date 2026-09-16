@@ -23,20 +23,20 @@ Dopóki tu jest PENDING albo FAIL — nie zaczynaj kroków 1–14 i 4b.
 
 | # | Krok | Oczekiwane | OK? |
 |---|---|---|---|
-| 1 | Pobierz zip Safari na konto beta-test, rozpakuj Finderem | folder `FloorForge-<wersja>/` z `FloorForge.bundle` i `INSTALACJA.md`, bez plików `._*` | |
-| 2 | Wykonaj `INSTALACJA.md` (kopia bundla, start AC) | AC startuje bez komunikatów o dodatku; w menu jest „FloorForge"; w Dodatkach nie ma innych kopii FloorForge/FloorPlan4/Tapira (także w ukrytych podfolderach) | |
-| 3 | **FloorForge → O FloorForge…** | wersja = `<wersja>` z nazwy zipa, port JSON (np. 19723) | |
-| 4 | **FloorForge → Podział rzutu** (bez otwartego projektu) | okno `FloorForge <wersja>`, jedna zakładka „Podział rzutu", pasek `AC port … · (nieznany) · kondygnacja …` **bez klikania Odśwież** | |
+| 1 | Pobierz zip Safari na konto beta-test, rozpakuj Finderem | folder `FloorForge-<wersja>/` z `FloorForge.bundle`, `INSTALACJA.md` i `INSTALL.md`, bez plików `._*` | |
+| 2 | Wykonaj `INSTALACJA.md` / `INSTALL.md` (kopia bundla, start AC) | AC startuje bez komunikatów o dodatku; w menu jest „FloorForge"; w Dodatkach nie ma innych kopii FloorForge/FloorPlan4/Tapira (także w ukrytych podfolderach) | |
+| 3 | **FloorForge → About FloorForge…** | wersja = `<wersja>` z nazwy zipa, port JSON (np. 19723) | |
+| 4 | **FloorForge → Room layout** (bez otwartego projektu) | okno `FloorForge <wersja>`, jedna zakładka „Room layout", pasek `Archicad port … · (unknown) · storey …` **bez klikania Refresh** | |
 | 4b | Okno FloorForge jest ostre na Retinie i wychodzi na wierzch nad AC | tak / tak | |
-| 5 | Drugi raz **Podział rzutu** przy otwartym oknie | alert „FloorForge jest już otwarty", drugie okno NIE powstaje | |
-| 6 | Otwórz projekt testowy w AC → **Odśwież** w FloorForge | `AC port <ten sam> · <nazwa projektu> · kondygnacja Parter` | |
-| 7 | Mieszkanie: zaznacz ściany obrysu M3 → „Wczytaj obrys z ArchiCAD" | podgląd obrysu, typ M3 | |
-| 8 | „3. Generuj układy" | ≥ 1 wariant, < 30 s | |
-| 9 | „Wstaw do ArchiCAD" | strefy, ściany, drzwi, okna, etykiety w AC | |
-| 10 | Dom 10×8 ręcznie, tryb Dom → „3. Generuj układy" | parter + poddasze, ≤ 2 min | |
-| 11 | „Wstaw obie kondygnacje (auto-przełączanie w AC)" → Wstaw | parter na story 0, poddasze na story 1, ten sam projekt; **FAIL** gdy obie na jednej story bez ostrzeżenia; ostrzeżenie „Nie udało się automatycznie przełączyć…" + zero wstawionych = **FAIL do zgłoszenia** (auto-switch przeszedł bramkę #1, więc nie powinno wystąpić) | |
-| 12 | Zamknij okno FloorForge, zamknij AC (Cmd+Q), uruchom AC → Podział rzutu | okno startuje ponownie (proces nie „wisi" po zamknięciu AC) | |
-| 13 | Wyłącz AC przy otwartym oknie FloorForge → „Wstaw do ArchiCAD" | dialog „ArchiCAD: Uruchomiono z ArchiCADa, ale AC nie odpowiada…" ze ścieżką logu, bez crasha | |
+| 5 | Drugi raz **Room layout** przy otwartym oknie | alert „FloorForge is already open", drugie okno NIE powstaje | |
+| 6 | Otwórz projekt testowy w AC → **Refresh** w FloorForge | `Archicad port <ten sam> · <nazwa projektu> · storey <nazwa kondygnacji z projektu>` | |
+| 7 | Mieszkanie: zaznacz ściany obrysu M3 → „Load outline from Archicad" | podgląd obrysu, typ M3 | |
+| 8 | „3. Generate layouts" | ≥ 1 wariant, < 30 s | |
+| 9 | „Insert into Archicad" | strefy, ściany, drzwi, okna, etykiety w AC | |
+| 10 | Dom 10×8 ręcznie, tryb „Single-family house (2 storeys)" → „3. Generate layouts" | parter + poddasze, ≤ 2 min | |
+| 11 | „Insert both storeys (auto-switch in Archicad)" → „Insert into Archicad" | parter na story 0, poddasze na story 1, ten sam projekt; **FAIL** gdy obie na jednej story bez ostrzeżenia; ostrzeżenie „Could not switch Archicad automatically…" + zero wstawionych = **FAIL do zgłoszenia** (auto-switch przeszedł bramkę #1, więc nie powinno wystąpić) | |
+| 12 | Zamknij okno FloorForge, zamknij AC (Cmd+Q), uruchom AC → Room layout | okno startuje ponownie (proces nie „wisi" po zamknięciu AC) | |
+| 13 | Wyłącz AC przy otwartym oknie FloorForge → „Insert into Archicad" | dialog „Archicad: Started from Archicad, but Archicad does not answer on the JSON port…" ze ścieżką logu, bez crasha | |
 | 14 | Otwórz `~/Library/Logs/FloorForge/floorforge.log` | wpisy INFO (`connect: port z FLOORFORGE_AC_PORT=…`) + traceback z kroku 13 | |
 
 ---
