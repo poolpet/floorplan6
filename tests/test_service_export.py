@@ -114,6 +114,51 @@ def test_export_409_when_job_failed(server, monkeypatch):
     assert code == 409 and body["error"].startswith("Generation failed:") and "bad outline" in body["error"]
 
 
+def _house_job(server, monkeypatch, result):
+    """Job 'done' z wynikiem domu w ResultStore + podmieniony wspolny eksport kondygnacji."""
+    import bridge.house_export as he
+    import service.app as app
+    h, store = server
+    monkeypatch.setattr(app, "connect_for_service", lambda: "TAPIR")
+    seen = {}
+    def fake(layout, storeys, tapir, **kw):
+        seen.update(storeys=storeys, tapir=tapir, kw=kw)
+        return result
+    monkeypatch.setattr(he, "export_house_storeys", fake)
+    _c, jid = _solve_done(h)
+    store.put(jid, {"mode": "house", "layout": object()})
+    return h, jid, seen
+
+
+def test_export_house_partial_is_200_with_flag(server, monkeypatch):
+    """Polowa domu w AC (przelaczenie story padlo) → 200 z partial=true i lista wstawionych."""
+    h, jid, seen = _house_job(server, monkeypatch, {
+        "inserted": ["parter"],
+        "totals": {"zones": 5, "walls": 3, "doors": 2, "windows": 1, "labels": 5},
+        "partial": True,
+        "error": None,
+        "error_stage": None,
+    })
+    code, body = _post(f"{h.url}/export", {"job_id": jid, "storeys": ["parter", "poddasze"]})
+    assert code == 200 and body["partial"] is True and body["storeys"] == ["parter"]
+    assert body["zones"] == 5 and body["doors"] == 2
+    assert seen["storeys"] == ["parter", "poddasze"] and seen["tapir"] == "TAPIR"
+
+
+def test_export_house_error_is_422(server, monkeypatch):
+    """Blokada kondygnacji (nic nie wstawione) → 422 z tekstem z bridge, bez traceback."""
+    h, jid, _ = _house_job(server, monkeypatch, {
+        "inserted": [],
+        "totals": {"zones": 0, "walls": 0, "doors": 0, "windows": 0, "labels": 0},
+        "partial": False,
+        "error": "The Archicad project has no storey above the ground floor (index 1).",
+        "error_stage": "storey_missing",
+    })
+    code, body = _post(f"{h.url}/export", {"job_id": jid, "storeys": ["parter", "poddasze"]})
+    assert code == 422 and "no storey above the ground floor" in body["error"]
+    assert body["inserted"] == []
+
+
 def test_health_reports_ac_port(server, monkeypatch):
     h, _ = server
     monkeypatch.setenv("FLOORFORGE_AC_PORT", "19724")

@@ -1181,9 +1181,9 @@ class MainWindow(QMainWindow):
             return
         storey = STOREY_KEYS.get(self.house_storey_combo.currentText(), "parter")
         from bridge.tapir_connection import (
-            TapirConnection, check_active_story, env_ac_port, parter_story_index,
+            TapirConnection, check_active_story, env_ac_port,
         )
-        from bridge.house_writer import export_house_to_archicad
+        from bridge.house_export import export_house_storeys
 
         # 1. Wykryj instancje AC (deterministyczny cel).
         try:
@@ -1222,86 +1222,65 @@ class MainWindow(QMainWindow):
             tapir = TapirConnection()
             tapir.use_port(port)
 
-            # 3. Plan kondygnacji: "obie" (auto-switch) albo jedna (story-guard).
+            # 3. Plan kondygnacji: "obie" (auto-switch w bridge) albo jedna (guard tutaj).
             both = self.house_both_storeys_check.isChecked() and bool(getattr(layout, "pietro_rooms", None))
-            st = tapir.get_stories() or {}
-            first = int(st.get("firstStory", 0))
-            last = int(st.get("lastStory", 0))
-            # Parter to indeks 0 w przestrzeni AC (gdy istnieje) — NIE `firstStory`:
-            # przy piwnicy firstStory = -1 i parter leży o jeden wyżej. Ta sama
-            # reguła co w `check_active_story` (jedno źródło prawdy).
-            parter_idx = parter_story_index(first, last)
-            poddasze_idx = parter_idx + 1
-            # Brak kondygnacji nad parterem: blokuj PRZED jakimkolwiek zapisem (inaczej
-            # parter wszedłby, poddasze nie — i ponowna próba zdublowałaby parter).
-            if both and poddasze_idx > last:
-                QMessageBox.warning(
-                    self, "Archicad storey",
-                    f"The Archicad project has no storey above the ground floor "
-                    f"(index {poddasze_idx}) — add a storey in Archicad or uncheck "
-                    f"'Insert both storeys'.",
+            storeys = ["parter", "poddasze"] if both else [storey]
+            if not both:
+                # Jedna kondygnacja = zapis na AKTYWNĄ story AC. Guard tylko ostrzega,
+                # user może świadomie wstawić mimo to — override zostaje w GUI.
+                st = tapir.get_stories() or {}
+                ok, msg = check_active_story(
+                    int(st.get("actStory", 0)), int(st.get("firstStory", 0)),
+                    int(st.get("lastStory", 0)), storey,
                 )
-                return
-            plan_storeys = ([("parter", parter_idx), ("poddasze", poddasze_idx)]
-                            if both else [(storey, None)])
-
-            totals = {"zones": 0, "walls": 0, "doors": 0, "windows": 0, "labels": 0}
-            inserted: list[str] = []
-            for st_name, target_idx in plan_storeys:
-                if target_idx is not None:
-                    if not tapir.activate_story(target_idx):
-                        switch_msg = (
-                            f"Could not switch Archicad automatically to storey "
-                            f"{target_idx} ('{STOREY_LABELS.get(st_name, st_name)}')."
-                        )
-                        st_label = STOREY_LABELS.get(st_name, st_name)
-                        if inserted:
-                            # Część już w AC — user MUSI wstawić tylko resztę, inaczej dubel.
-                            done_txt = ", ".join(STOREY_LABELS.get(i, i) for i in inserted)
-                            QMessageBox.warning(
-                                self, "Archicad storey",
-                                f"{switch_msg}\n\n{done_txt} has already been inserted. "
-                                f"Switch the storey in Archicad manually to {st_label}, uncheck "
-                                f"'Insert both storeys', select '{st_label}' "
-                                f"and insert ONLY that one (otherwise you duplicate {done_txt}).",
-                            )
-                            self.statusBar().showMessage(
-                                f"House [{done_txt}] → port {port} ({name}): "
-                                f"{totals['zones']} zones + {totals['walls']} walls "
-                                f"+ {totals['doors']} doors + {totals['windows']} windows "
-                                f"+ {totals['labels']} labels — NOT inserted: {st_label}"
-                            )
-                        else:
-                            QMessageBox.warning(
-                                self, "Archicad storey",
-                                f"{switch_msg}\n\nSwitch the storey in Archicad manually, uncheck "
-                                f"'Insert both storeys' and insert each storey separately.",
-                            )
-                        return
-                else:
-                    ok, msg = check_active_story(
-                        int(st.get("actStory", 0)), first, last, st_name,
+                if not ok:
+                    reply = QMessageBox.warning(
+                        self, "Archicad storey", f"{msg}\n\nInsert ANYWAY?",
+                        QMessageBox.Yes | QMessageBox.Cancel, QMessageBox.Cancel,
                     )
-                    if not ok:
-                        reply = QMessageBox.warning(
-                            self, "Archicad storey", f"{msg}\n\nInsert ANYWAY?",
-                            QMessageBox.Yes | QMessageBox.Cancel, QMessageBox.Cancel,
-                        )
-                        if reply != QMessageBox.Yes:
-                            return
-                result = export_house_to_archicad(
-                    layout, storey=st_name, tapir=tapir, offset=self._archicad_offset,
-                )
-                for k in totals:
-                    totals[k] += len(result.get(k, []))
-                inserted.append(st_name)
+                    if reply != QMessageBox.Yes:
+                        return
 
-            done = ", ".join(STOREY_LABELS.get(i, i) for i in inserted)
-            self.statusBar().showMessage(
-                f"House [{done}] → port {port} ({name}): {totals['zones']} zones "
-                f"+ {totals['walls']} walls + {totals['doors']} doors "
-                f"+ {totals['windows']} windows + {totals['labels']} labels"
+            # Reszta (przełączanie story, zapis, sumy) — wspólna z serwisem.
+            res = export_house_storeys(
+                layout, storeys, tapir, offset=self._archicad_offset, switch=both,
             )
+            totals, inserted = res["totals"], res["inserted"]
+            done = ", ".join(STOREY_LABELS.get(i, i) for i in inserted)
+            rest = ", ".join(STOREY_LABELS.get(s, s) for s in storeys if s not in inserted)
+            counts = (f"{totals['zones']} zones + {totals['walls']} walls "
+                      f"+ {totals['doors']} doors + {totals['windows']} windows "
+                      f"+ {totals['labels']} labels")
+
+            if res["error"]:
+                stage = res["error_stage"]
+                if stage == "storey_missing":
+                    hint = ("\n\nOr uncheck 'Insert both storeys' and insert the ground "
+                            "floor only.")
+                elif stage == "storey_switch" and inserted:
+                    # Część już w AC — user MUSI wstawić tylko resztę, inaczej dubel.
+                    hint = (f"\n\nUncheck 'Insert both storeys', select '{rest}' and insert "
+                            f"ONLY that one (otherwise you duplicate {done}).")
+                elif stage == "storey_switch":
+                    hint = ("\n\nUncheck 'Insert both storeys' and insert each storey "
+                            "separately.")
+                else:
+                    hint = ""
+                if stage in ("storey_missing", "storey_switch"):
+                    warn = ("Archicad storey", f"{res['error']}{hint}")
+                else:
+                    # Odmowa writera (np. poddasze w parterowcu) — ten sam mapper co
+                    # dotąd, gdy leciała wyjątkiem: tytuł, podpowiedź i ścieżka logu.
+                    warn = describe(ValueError(res["error"]))
+                QMessageBox.warning(self, *warn)
+                if inserted:
+                    self.statusBar().showMessage(
+                        f"House [{done}] → port {port} ({name}): {counts} "
+                        f"— NOT inserted: {rest}"
+                    )
+                return
+
+            self.statusBar().showMessage(f"House [{done}] → port {port} ({name}): {counts}")
             QMessageBox.information(
                 self, "Archicad",
                 f"Storeys: {done} → {name} (port {port}):\n\n"

@@ -229,6 +229,33 @@ def test_house_export_both_storeys_blocked_when_basement_but_no_upper_storey(qap
     assert warned and "no storey above the ground floor" in warned[0][2]
 
 
+def test_house_export_writer_refusal_warns_without_success_dialog(qapp, monkeypatch):
+    """Parterowiec + wybrane poddasze: writer odmawia → ostrzeżenie, zero sukcesu."""
+    from PyQt5.QtWidgets import QMessageBox
+    import bridge.house_writer as hw
+    cap = _wire(monkeypatch,
+                instances=[{"port": 19724, "projectName": "K", "projectPath": ""}],
+                act_story=1)
+
+    tried = []
+
+    def refuse(layout, storey="parter", **kw):
+        tried.append(storey)
+        raise ValueError("A single-storey house has no attic - pick the ground floor.")
+
+    monkeypatch.setattr(hw, "export_house_to_archicad", refuse)
+    informed = []
+    monkeypatch.setattr(QMessageBox, "information", staticmethod(lambda *a, **k: informed.append(a)))
+    warned = []
+    monkeypatch.setattr(QMessageBox, "warning",
+                        staticmethod(lambda *a, **k: warned.append(a) or QMessageBox.Cancel))
+    w = _mainwindow(monkeypatch, "poddasze")
+    w._house_layout = type("L", (), {"pietro_rooms": []})()      # parterowiec
+    w._export_to_archicad()
+    assert tried == ["poddasze"] and cap["export"] == 0 and not informed
+    assert warned and "no attic" in warned[0][2]
+
+
 # ───────────── preferencja portu z env (spec §4, I4) ─────────────
 def test_house_export_uses_env_port_without_picker(qapp, monkeypatch):
     """>1 instancja, ale add-on podał FLOORFORGE_AC_PORT → eksport bez pytania."""

@@ -39,6 +39,7 @@ SCANNED = [
     "service/results.py",
     "bridge/plan_writer.py",
     "bridge/house_writer.py",
+    "bridge/house_export.py",
     "bridge/boundary_reader.py",
     "bridge/tapir_connection.py",
     "viz/plan_renderer.py",
