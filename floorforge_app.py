@@ -46,14 +46,14 @@ def selftest() -> int:
 def ac_probe() -> int:
     """Diagnostics: connect to Archicad (FLOORFORGE_AC_PORT or scan) and print product/project info."""
     try:
-        from bridge.tapir_connection import TapirConnection, env_ac_port
+        from bridge.tapir_connection import TAPIR_NAMESPACE, TapirConnection, env_ac_port
         t = TapirConnection()
         t.connect()
         port = t.active_port
         ver = t.commands.GetProductInfo()
         info = {}
         try:
-            cid = t.types.AddOnCommandId("FloorForgeCommand", "GetProjectInfo")
+            cid = t.types.AddOnCommandId(TAPIR_NAMESPACE, "GetProjectInfo")
             info = t.commands.ExecuteAddOnCommand(cid, {}) or {}
         except Exception as e:  # add-on command missing → still a useful signal
             info = {"addon_error": repr(e)}
