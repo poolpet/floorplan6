@@ -32,10 +32,7 @@ def selftest() -> int:
         if not variants:
             print("SELFTEST FAIL: the solver returned no variants")
             return 1
-        # Po zmianie kontraktu /solve pokoje siedzą w variants[i]["contract"];
-        # fallback na sam wariant zostaje dla starych mocków w testach.
-        v0 = variants[0]
-        n_rooms = len(v0.get("contract", v0).get("rooms", []))
+        n_rooms = len(variants[0].get("contract", {}).get("rooms", []))
         print(f"SELFTEST OK: {len(variants)} variants, {n_rooms} rooms, version {_version()}")
         return 0
     except Exception as e:

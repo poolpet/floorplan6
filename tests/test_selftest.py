@@ -10,8 +10,10 @@ import os
 def test_selftest_returns_zero_with_mocked_solver(monkeypatch, capsys):
     import service.app as app
     monkeypatch.setattr(app, "solve_request",
-                        lambda req, progress=None, store=None: {"mode": "apartment",
-                                                                "variants": [{"rooms": [{"name": "salon"}, {"name": "hub"}], "score": 0.9}]})
+                        lambda req, progress=None, store=None: {
+                            "mode": "apartment", "boundary": {},
+                            "variants": [{"index": 0, "score": 0.9,
+                                          "contract": {"rooms": [{"name": "salon"}, {"name": "hub"}]}}]})
     import floorforge_app
     rc = floorforge_app.main(["--selftest"])
     out = capsys.readouterr().out
@@ -61,7 +63,13 @@ def test_version_is_side_effect_free(monkeypatch, capsys, tmp_path):
     assert "FLOORFORGE_BETA" not in os.environ
 
 
-def test_selftest_real_solver_m2_8x6():
+def test_selftest_real_solver_m2_8x6(capsys):
     """Prawdziwy solver, ~3 s. Bramka: mózg działa w tym środowisku."""
+    import re
+
     import floorforge_app
     assert floorforge_app.main(["--selftest"]) == 0
+    out = capsys.readouterr().out
+    # Samo rc == 0 to za mało: przy złym odczycie kontraktu selftest pokazywał "0 rooms".
+    m = re.search(r"(\d+) rooms", out)
+    assert m and int(m.group(1)) > 0, out
