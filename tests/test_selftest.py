@@ -15,7 +15,7 @@ def test_selftest_returns_zero_with_mocked_solver(monkeypatch, capsys):
     import floorforge_app
     rc = floorforge_app.main(["--selftest"])
     out = capsys.readouterr().out
-    assert rc == 0 and "SELFTEST OK" in out and "2 pokoi" in out
+    assert rc == 0 and "SELFTEST OK" in out and "2 rooms" in out
 
 
 def test_selftest_returns_one_on_error(monkeypatch, capsys):
@@ -34,7 +34,7 @@ def test_selftest_returns_one_when_no_variants(monkeypatch, capsys):
                         lambda req, progress=None: {"mode": "apartment", "variants": []})
     import floorforge_app
     rc = floorforge_app.main(["--selftest"])
-    assert rc == 1 and "SELFTEST FAIL: solver nie zwrócił wariantów" in capsys.readouterr().out
+    assert rc == 1 and "SELFTEST FAIL: the solver returned no variants" in capsys.readouterr().out
 
 
 def test_selftest_returns_one_when_service_fails_to_start(monkeypatch, capsys):

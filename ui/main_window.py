@@ -7,10 +7,10 @@ FLOORFORGE_BETA (patrz `is_beta()`):
     "Stage 2: Volume Generator" (placeholder), "Stage 3: Floor Layout" oraz
     "Stage 4: Apartment Layout". Stringi UI po angielsku.
   - beta (FLOORFORGE_BETA=1, paczka dla testerów): JEDNA zakładka
-    "Podział rzutu" (tylko Stage 4 — zamrożone etapy 1-3 nie są nawet
-    importowane), przyciski i komunikaty po polsku. Nagłówki sekcji
-    (`1. Outline`, `2. Type and options`, `4. Result`) są jeszcze po
-    angielsku — patrz packaging/INSTALACJA.md.
+    "Room layout" (tylko Stage 4 — zamrożone etapy 1-3 nie są nawet
+    importowane). Wszystkie stringi widoczne dla użytkownika są po
+    angielsku (beta idzie do testerów spoza Polski) — patrz
+    docs/superpowers/specs/2026-09-15-floorforge-bundle-design.md §9.
 """
 from __future__ import annotations
 
@@ -57,8 +57,14 @@ logger = logging.getLogger(__name__)
 
 
 def is_beta() -> bool:
-    """Tryb beta dla testerów: jedna zakładka, polskie etykiety (env FLOORFORGE_BETA)."""
+    """Tryb beta dla testerów: jedna zakładka (env FLOORFORGE_BETA)."""
     return os.environ.get("FLOORFORGE_BETA", "").lower() in ("1", "true")
+
+
+# Kondygnacje domu: klucz wewnętrzny (kontrakt z core/ i bridge/house_writer) ->
+# etykieta widoczna w GUI. Kluczy NIE tłumaczymy — jadą do solvera i eksportu.
+STOREY_LABELS = {"parter": "Ground floor", "poddasze": "Attic"}
+STOREY_KEYS = {v: k for k, v in STOREY_LABELS.items()}
 
 
 class FacadeDialog(QDialog):
@@ -226,16 +232,11 @@ class MainWindow(QMainWindow):
             self.setWindowTitle("FloorPlan6 — Apartment Layout Generator")
         self.setMinimumSize(1100, 700)
         # Etykiety przycisków — używane też przy resetach po zakończeniu workera/nasłuchu,
-        # żeby w becie nie wracał angielski tekst.
-        self._generate_label = "3. Generuj układy" if is_beta() else "3. Generate layouts"
-        self._generating_label = "Generowanie..." if is_beta() else "Generating..."
-        self._import_label = (
-            "Wczytaj obrys z ArchiCAD" if is_beta() else "Load outline from ArchiCAD"
-        )
-        self._import_listen_label = (
-            "Przerwij nasłuch (kliknij w AC)" if is_beta()
-            else "Cancel listening (click in AC)"
-        )
+        # żeby po resecie wracał dokładnie ten sam napis, co na starcie.
+        self._generate_label = "3. Generate layouts"
+        self._generating_label = "Generating..."
+        self._import_label = "Load outline from Archicad"
+        self._import_listen_label = "Cancel listening (click in Archicad)"
 
         self.variants: list[FloorPlan] = []
         self.current_idx = 0
@@ -295,7 +296,7 @@ class MainWindow(QMainWindow):
 
         # Stage 4 — apartment layout (this is the existing implementation)
         self.apt_tab = QWidget()
-        self.tabs.addTab(self.apt_tab, "Podział rzutu" if is_beta() else "Stage 4: Apartment Layout")
+        self.tabs.addTab(self.apt_tab, "Room layout" if is_beta() else "Stage 4: Apartment Layout")
         # Default to Stage 4 (the working part) so users see results immediately
         self.tabs.setCurrentWidget(self.apt_tab)
 
@@ -310,10 +311,10 @@ class MainWindow(QMainWindow):
         left.addWidget(self.ac_status)
 
         # ══════════ Tryb: mieszkanie / dom ══════════
-        mode_group = QGroupBox("Tryb")
+        mode_group = QGroupBox("Mode")
         mode_lay = QVBoxLayout(mode_group)
-        self.mode_apartment_radio = QRadioButton("Mieszkanie w bloku (M1-M5)")
-        self.mode_house_radio = QRadioButton("Dom jednorodzinny (2-kond.)")
+        self.mode_apartment_radio = QRadioButton("Apartment (M1–M5)")
+        self.mode_house_radio = QRadioButton("Single-family house (2 storeys)")
         self.mode_apartment_radio.setChecked(True)
         self.mode_btn_group = QButtonGroup(self)
         self.mode_btn_group.addButton(self.mode_apartment_radio)
@@ -334,16 +335,16 @@ class MainWindow(QMainWindow):
         step1_lay.addWidget(self.import_btn)
 
         self.click_pick_btn = QPushButton(
-            "Auto-detect z Inner Edge w AC"
+            "Auto-detect from Inner Edge in Archicad"
         )
         self.click_pick_btn.setMinimumHeight(32)
         self.click_pick_btn.setToolTip(
-            "Native AC workflow:\n"
-            "1. Naciśnij ten przycisk.\n"
-            "2. W AC: skrót Z (Zone tool) → klik w pustym miejscu mieszkania.\n"
-            "3. Wróć tutaj i potwierdź OK.\n"
-            "Skrypt znajdzie tę nową Zone, zaimportuje polygon, "
-            "usunie temp Zone."
+            "Native Archicad workflow:\n"
+            "1. Click this button.\n"
+            "2. In Archicad: press Z (Zone tool) → click inside the empty apartment.\n"
+            "3. Come back here and confirm with OK.\n"
+            "FloorForge finds that new Zone, imports its polygon "
+            "and deletes the temporary Zone."
         )
         self.click_pick_btn.clicked.connect(self._import_from_inner_edge)
         step1_lay.addWidget(self.click_pick_btn)
@@ -454,25 +455,29 @@ class MainWindow(QMainWindow):
         self.house_options = QWidget()
         house_opt_lay = QVBoxLayout(self.house_options)
         house_opt_lay.setContentsMargins(0, 0, 0, 0)
-        self.house_program_label = QLabel("Program: dom 2-kond. (parter + piętro)")
+        self.house_program_label = QLabel("Program: 2-storey house (ground floor + attic)")
         self.house_program_label.setStyleSheet("color: #555; font-style: italic;")
         house_opt_lay.addWidget(self.house_program_label)
-        self.furniture_check = QCheckBox("Meble")
+        self.furniture_check = QCheckBox("Furniture")
         self.furniture_check.setChecked(True)
-        self.furniture_check.setToolTip("Rozstaw kanoniczne meble w pokojach (parter + piętro).")
+        self.furniture_check.setToolTip(
+            "Place canonical furniture in the rooms (ground floor + attic).")
         house_opt_lay.addWidget(self.furniture_check)
-        house_opt_lay.addWidget(QLabel("Kondygnacja → AC:"))
+        house_opt_lay.addWidget(QLabel("Storey → Archicad:"))
         self.house_storey_combo = QComboBox()
-        self.house_storey_combo.addItems(["Parter", "Poddasze"])
+        # Widoczne napisy po angielsku, klucze wewnętrzne (`parter`/`poddasze`) bez zmian —
+        # patrz STOREY_KEYS i _export_house_to_archicad.
+        self.house_storey_combo.addItems([STOREY_LABELS["parter"], STOREY_LABELS["poddasze"]])
         self.house_storey_combo.setToolTip(
-            "Którą kondygnację wstawić. Ustaw TĘ SAMĄ aktywną kondygnację w ArchiCAD."
+            "Which storey to insert. Set THE SAME active storey in Archicad."
         )
         house_opt_lay.addWidget(self.house_storey_combo)
-        self.house_both_storeys_check = QCheckBox("Wstaw obie kondygnacje (auto-przełączanie w AC)")
+        self.house_both_storeys_check = QCheckBox(
+            "Insert both storeys (auto-switch in Archicad)")
         self.house_both_storeys_check.setChecked(False)
         self.house_both_storeys_check.setToolTip(
-            "Jednym kliknięciem: FloorPlan sam przełącza kondygnację w AC i wstawia "
-            "parter, a potem poddasze."
+            "One click: FloorForge switches the storey in Archicad itself and inserts "
+            "the ground floor, then the attic."
         )
         house_opt_lay.addWidget(self.house_both_storeys_check)
         step2_lay.addWidget(self.house_options)
@@ -518,14 +523,15 @@ class MainWindow(QMainWindow):
         nav_lay.addWidget(self.next_btn)
         step4_lay.addLayout(nav_lay)
 
-        # W becie pionowo — polskie etykiety nie mieszczą się obok siebie w wąskim panelu.
+        # W becie pionowo — dwa przyciski obok siebie nie mieszczą się w wąskim panelu.
         export_lay = QVBoxLayout() if is_beta() else QHBoxLayout()
-        self.export_btn = QPushButton("Zapisz PNG" if is_beta() else "Export PNG")
+        self.export_btn = QPushButton("Save PNG" if is_beta() else "Export PNG")
         self.export_btn.clicked.connect(self._export_png)
         self.export_btn.setEnabled(False)
         export_lay.addWidget(self.export_btn)
 
-        self.archicad_btn = QPushButton("Wstaw do ArchiCAD" if is_beta() else "To ArchiCAD")
+        self.archicad_btn = QPushButton(
+            "Insert into Archicad" if is_beta() else "To Archicad")
         self.archicad_btn.clicked.connect(self._export_to_archicad)
         self.archicad_btn.setEnabled(False)
         export_lay.addWidget(self.archicad_btn)
@@ -604,14 +610,8 @@ class MainWindow(QMainWindow):
         """Tekst pustego podglądu — MUSI nazywać przyciski tak, jak są podpisane.
 
         Etykiety biorą się z `self._import_label` / `self._generate_label`, więc
-        w becie (polskie napisy) komunikat wskazuje „Wczytaj obrys z ArchiCAD" /
-        „3. Generuj układy", a nie nieistniejące „Load outline" / „Generate".
+        komunikat nigdy nie wskazuje przycisku, którego w oknie nie ma.
         """
-        if is_beta():
-            if house:
-                return (f"Tryb domu — kliknij „{self._generate_label}” "
-                        f"(obrys + wejście z kroku 1).")
-            return f"Kliknij „{self._import_label}” albo „{self._generate_label}”"
         if house:
             return (f"House mode — click '{self._generate_label}' "
                     f"(outline + entry from step 1).")
@@ -655,7 +655,7 @@ class MainWindow(QMainWindow):
         self.image_label.setText(self._placeholder_text(house=house))
         self.preview_stack.setCurrentWidget(self.image_label)
         self.archicad_btn.setToolTip(
-            "Wstaw wybraną kondygnację do AKTYWNEJ kondygnacji ArchiCAD." if house else ""
+            "Insert the selected storey into the ACTIVE storey in Archicad." if house else ""
         )
 
     def _input_polygon_entry(self):
@@ -728,7 +728,7 @@ class MainWindow(QMainWindow):
         self.generate_btn.setText(self._generating_label)
         self.progress_bar.setRange(0, 0)   # busy — generate_house nie ma callbacku
         self.progress_bar.setVisible(True)
-        self.statusBar().showMessage("Generating house (parter + piętro)...")
+        self.statusBar().showMessage("Generating house (ground floor + attic)...")
         self.house_worker = HouseGenerateWorker(polygon, entry)
         self.house_worker.finished.connect(self._on_house_ready)
         self.house_worker.error.connect(self._on_error)
@@ -746,9 +746,9 @@ class MainWindow(QMainWindow):
             self._house_layout = None
             self.export_btn.setEnabled(False)
             self.variant_label.setText("—")
-            self.statusBar().showMessage(f"Dom: {layout.message}")
+            self.statusBar().showMessage(f"House: {layout.message}")
             self.image_label.setText(
-                f"Nie udało się wygenerować domu:\n\n{layout.message}"
+                f"Could not generate the house:\n\n{layout.message}"
             )
             self.preview_stack.setCurrentWidget(self.image_label)
             self.details.clear()
@@ -756,8 +756,8 @@ class MainWindow(QMainWindow):
         self._house_layout = layout
         self.export_btn.setEnabled(True)
         self.archicad_btn.setEnabled(True)
-        self.variant_label.setText("Dom (PARTER + PIĘTRO)")
-        self.statusBar().showMessage("Wygenerowano dom 2-kondygnacyjny.")
+        self.variant_label.setText("House (GROUND FLOOR + ATTIC)")
+        self.statusBar().showMessage("2-storey house generated.")
         self._show_house()
 
     def _show_house(self):
@@ -766,7 +766,7 @@ class MainWindow(QMainWindow):
             return
         fig = render_house_figure(
             layout, with_furniture=self._with_furniture,
-            title="Dom jednorodzinny 2-kondygnacyjny", show=False,
+            title="Single-family house, 2 storeys", show=False,
         )
         pixmap = self._fig_to_pixmap(fig)
         plt.close(fig)
@@ -832,7 +832,7 @@ class MainWindow(QMainWindow):
             exc = RuntimeError(str(exc))
         logger.error("generowanie: %r", exc, exc_info=exc)
         title, text = describe(exc)
-        self.statusBar().showMessage(f"Błąd: {title}")
+        self.statusBar().showMessage(f"Error: {title}")
         QMessageBox.critical(self, title, text)
 
     def _show_variant(self, idx: int):
@@ -894,12 +894,12 @@ class MainWindow(QMainWindow):
             if self._house_layout is None:
                 return
             path, _ = QFileDialog.getSaveFileName(
-                self, "Save PNG", "dom_2kond.png", "PNG (*.png)",
+                self, "Save PNG", "house_2storey.png", "PNG (*.png)",
             )
             if path:
                 fig = render_house_figure(
                     self._house_layout, with_furniture=self._with_furniture,
-                    title="Dom jednorodzinny 2-kondygnacyjny", show=False,
+                    title="Single-family house, 2 storeys", show=False,
                 )
                 fig.savefig(path, dpi=150, bbox_inches="tight")
                 plt.close(fig)
@@ -951,10 +951,10 @@ class MainWindow(QMainWindow):
                 label = f"#{i+1} ENTRY"
             elif wall_types[i] == WallType.FACADE:
                 color, lw = "#2266cc", 4  # niebieski — fasada
-                label = f"#{i+1} FASADA"
+                label = f"#{i+1} FACADE"
             else:
                 color, lw = "#cc4422", 4  # czerwony — wewnętrzna
-                label = f"#{i+1} WEW"
+                label = f"#{i+1} INTERNAL"
             ax.plot([p1[0], p2[0]], [p1[1], p2[1]], color=color, linewidth=lw)
             mx, my = (p1[0] + p2[0]) / 2, (p1[1] + p2[1]) / 2
             ax.annotate(label, (mx, my), fontsize=8, ha="center", va="center",
@@ -977,7 +977,7 @@ class MainWindow(QMainWindow):
         ax.set_title(
             f"Outline {polygon.area:.1f}m² — click edge to toggle type "
             f"| Shift+click = move entry\n"
-            f"FASADA: {n_facade}, WEW: {n - n_facade}",
+            f"FACADE: {n_facade}, INTERNAL: {n - n_facade}",
             fontsize=11,
         )
         ax.grid(True, alpha=0.3)
@@ -991,7 +991,7 @@ class MainWindow(QMainWindow):
             f"Edges: {n} (FACADE: {n_facade}, INTERNAL: {n - n_facade})\n\n"
             f"Click edge = toggle FACADE/INTERNAL\n"
             f"Shift+click edge = move entry there\n"
-            f"Then click 'Generate layouts'."
+            f"Then click '{self._generate_label}'."
         )
 
     def _closest_edge_to_point(self, points, pt):
@@ -1141,15 +1141,15 @@ class MainWindow(QMainWindow):
             n_windows = len(result.get("windows", []))
             apt_id = result.get("apartment_id", "?")
             self.statusBar().showMessage(
-                f"[{apt_id}] {n_zones} stref + {n_walls} ścian + "
-                f"{n_doors} drzwi + {n_windows} okien + {n_labels} etykiet"
+                f"[{apt_id}] {n_zones} zones + {n_walls} walls + "
+                f"{n_doors} doors + {n_windows} windows + {n_labels} labels"
             )
             QMessageBox.information(
-                self, "ArchiCAD",
-                f"Mieszkanie {apt_id}:\n\n"
-                f"{n_zones} stref + {n_walls} ścianek + {n_doors} drzwi "
-                f"+ {n_windows} okien (WT 1/8) + {n_labels} etykiet.\n\n"
-                f"Numery stref: {apt_id}-001…{apt_id}-{n_zones:03d}"
+                self, "Archicad",
+                f"Apartment {apt_id}:\n\n"
+                f"{n_zones} zones + {n_walls} partition walls + {n_doors} doors "
+                f"+ {n_windows} windows (WT 1/8) + {n_labels} labels.\n\n"
+                f"Zone numbers: {apt_id}-001…{apt_id}-{n_zones:03d}"
             )
         except Exception as e:
             logger.exception("eksport mieszkania do AC")
@@ -1165,8 +1165,8 @@ class MainWindow(QMainWindow):
             if inst["port"] == self._ac_target_port:
                 cur = idx
         label, ok = QInputDialog.getItem(
-            self, "Instancja ArchiCAD",
-            "Otwartych >1 instancji — wybierz dokument-cel eksportu:",
+            self, "Archicad instance",
+            "More than one instance is open — pick the target document for the export:",
             labels, cur, False,
         )
         if not ok or not label:
@@ -1178,7 +1178,7 @@ class MainWindow(QMainWindow):
         layout = getattr(self, "_house_layout", None)
         if layout is None:
             return
-        storey = "poddasze" if self.house_storey_combo.currentText() == "Poddasze" else "parter"
+        storey = STOREY_KEYS.get(self.house_storey_combo.currentText(), "parter")
         from bridge.tapir_connection import (
             TapirConnection, check_active_story, parter_story_index,
         )
@@ -1194,9 +1194,9 @@ class MainWindow(QMainWindow):
             return
         if not instances:
             QMessageBox.warning(
-                self, "ArchiCAD",
-                "Żadna instancja ArchiCAD nie odpowiada.\n\n"
-                "Uruchom AC z Tapir Add-On i spróbuj ponownie."
+                self, "Archicad",
+                "No Archicad instance is responding.\n\n"
+                "Start Archicad with the FloorForge add-on and try again."
             )
             return
 
@@ -1228,9 +1228,10 @@ class MainWindow(QMainWindow):
             # parter wszedłby, poddasze nie — i ponowna próba zdublowałaby parter).
             if both and poddasze_idx > last:
                 QMessageBox.warning(
-                    self, "Kondygnacja AC",
-                    f"Projekt w AC nie ma kondygnacji nad parterem (indeks {poddasze_idx}) — "
-                    f"dodaj kondygnację w AC albo odznacz 'Wstaw obie kondygnacje'.",
+                    self, "Archicad storey",
+                    f"The Archicad project has no storey above the ground floor "
+                    f"(index {poddasze_idx}) — add a storey in Archicad or uncheck "
+                    f"'Insert both storeys'.",
                 )
                 return
             plan_storeys = ([("parter", parter_idx), ("poddasze", poddasze_idx)]
@@ -1242,30 +1243,31 @@ class MainWindow(QMainWindow):
                 if target_idx is not None:
                     if not tapir.activate_story(target_idx):
                         switch_msg = (
-                            f"Nie udało się automatycznie przełączyć AC na kondygnację "
-                            f"{target_idx} ('{st_name}')."
+                            f"Could not switch Archicad automatically to storey "
+                            f"{target_idx} ('{STOREY_LABELS.get(st_name, st_name)}')."
                         )
+                        st_label = STOREY_LABELS.get(st_name, st_name)
                         if inserted:
                             # Część już w AC — user MUSI wstawić tylko resztę, inaczej dubel.
-                            done_txt = ", ".join(inserted)
+                            done_txt = ", ".join(STOREY_LABELS.get(i, i) for i in inserted)
                             QMessageBox.warning(
-                                self, "Kondygnacja AC",
-                                f"{switch_msg}\n\n{done_txt.capitalize()} został już wstawiony. "
-                                f"Przełącz ręcznie kondygnację w AC na {st_name}, odznacz "
-                                f"'Wstaw obie kondygnacje', wybierz '{st_name.capitalize()}' "
-                                f"i wstaw TYLKO ją (inaczej zdublujesz {done_txt}).",
+                                self, "Archicad storey",
+                                f"{switch_msg}\n\n{done_txt} has already been inserted. "
+                                f"Switch the storey in Archicad manually to {st_label}, uncheck "
+                                f"'Insert both storeys', select '{st_label}' "
+                                f"and insert ONLY that one (otherwise you duplicate {done_txt}).",
                             )
                             self.statusBar().showMessage(
-                                f"Dom [{done_txt}] → port {port} ({name}): {totals['zones']} stref "
-                                f"+ {totals['walls']} ścian + {totals['doors']} drzwi "
-                                f"+ {totals['windows']} okien + {totals['labels']} etykiet "
-                                f"— NIE wstawiono: {st_name}"
+                                f"House [{done_txt}] → port {port} ({name}): "
+                                f"{totals['zones']} zones + {totals['walls']} walls "
+                                f"+ {totals['doors']} doors + {totals['windows']} windows "
+                                f"+ {totals['labels']} labels — NOT inserted: {st_label}"
                             )
                         else:
                             QMessageBox.warning(
-                                self, "Kondygnacja AC",
-                                f"{switch_msg}\n\nPrzełącz kondygnację ręcznie w AC, odznacz "
-                                f"'Wstaw obie kondygnacje' i wstaw każdą osobno.",
+                                self, "Archicad storey",
+                                f"{switch_msg}\n\nSwitch the storey in Archicad manually, uncheck "
+                                f"'Insert both storeys' and insert each storey separately.",
                             )
                         return
                 else:
@@ -1274,7 +1276,7 @@ class MainWindow(QMainWindow):
                     )
                     if not ok:
                         reply = QMessageBox.warning(
-                            self, "Kondygnacja AC", f"{msg}\n\nWstawić MIMO TO?",
+                            self, "Archicad storey", f"{msg}\n\nInsert ANYWAY?",
                             QMessageBox.Yes | QMessageBox.Cancel, QMessageBox.Cancel,
                         )
                         if reply != QMessageBox.Yes:
@@ -1286,17 +1288,20 @@ class MainWindow(QMainWindow):
                     totals[k] += len(result.get(k, []))
                 inserted.append(st_name)
 
-            done = ", ".join(inserted)
+            done = ", ".join(STOREY_LABELS.get(i, i) for i in inserted)
             self.statusBar().showMessage(
-                f"Dom [{done}] → port {port} ({name}): {totals['zones']} stref + {totals['walls']} ścian "
-                f"+ {totals['doors']} drzwi + {totals['windows']} okien + {totals['labels']} etykiet"
+                f"House [{done}] → port {port} ({name}): {totals['zones']} zones "
+                f"+ {totals['walls']} walls + {totals['doors']} doors "
+                f"+ {totals['windows']} windows + {totals['labels']} labels"
             )
             QMessageBox.information(
-                self, "ArchiCAD",
-                f"Kondygnacje: {done} → {name} (port {port}):\n\n"
-                f"{totals['zones']} stref + {totals['walls']} ścianek + {totals['doors']} drzwi "
-                f"+ {totals['windows']} okien + {totals['labels']} etykiet."
-                + ("" if both else "\n\nDruga kondygnacja: przełącz kondygnację w AC, wybierz ją tutaj, kliknij ponownie."),
+                self, "Archicad",
+                f"Storeys: {done} → {name} (port {port}):\n\n"
+                f"{totals['zones']} zones + {totals['walls']} partition walls "
+                f"+ {totals['doors']} doors + {totals['windows']} windows "
+                f"+ {totals['labels']} labels."
+                + ("" if both else "\n\nSecond storey: switch the storey in Archicad, "
+                                   "select it here and click again."),
             )
         except Exception as e:
             logger.exception("eksport domu do AC")
@@ -1342,23 +1347,23 @@ class MainWindow(QMainWindow):
 
         # 2. Modal: user wykonuje akcje w AC i naciska OK
         reply = QMessageBox.question(
-            self, "Auto-detect z Inner Edge",
-            f"<b>Wykonaj w ArchiCAD:</b><br><br>"
-            f"1. Naciśnij <b>Z</b> (Zone tool, lub Tools → Zone)<br>"
-            f"2. Klik w pustym miejscu wewnątrz mieszkania<br>"
-            f"&nbsp;&nbsp;&nbsp;(AC sam wykryje obrys — Inner Edge)<br>"
-            f"3. Wróć tutaj i kliknij <b>OK</b><br><br>"
-            f"<i>Aktualnie w projekcie: {len(pre_guids)} Zone.<br>"
-            f"Po imporcie nowa Zone zostanie usunięta z AC.</i>",
+            self, "Auto-detect from Inner Edge",
+            f"<b>Do this in Archicad:</b><br><br>"
+            f"1. Press <b>Z</b> (Zone tool, or Tools → Zone)<br>"
+            f"2. Click on an empty spot inside the apartment<br>"
+            f"&nbsp;&nbsp;&nbsp;(Archicad detects the outline itself — Inner Edge)<br>"
+            f"3. Come back here and click <b>OK</b><br><br>"
+            f"<i>Currently in the project: {len(pre_guids)} Zone(s).<br>"
+            f"After the import the new Zone is deleted from Archicad.</i>",
             QMessageBox.Ok | QMessageBox.Cancel,
             QMessageBox.Ok,
         )
         if reply != QMessageBox.Ok:
-            self.statusBar().showMessage("Auto-detect anulowany.")
+            self.statusBar().showMessage("Auto-detect cancelled.")
             return
 
         # 3. Import: znajdź nową Zone, polygon, cleanup
-        self.statusBar().showMessage("Szukam nowej Zone w AC…")
+        self.statusBar().showMessage("Looking for the new Zone in Archicad…")
         try:
             polygon, entry_point, wall_types = read_boundary_from_new_zone(
                 tapir, before_guids=pre_guids, cleanup=True,
@@ -1411,7 +1416,7 @@ class MainWindow(QMainWindow):
         self.import_btn.clicked.connect(self._cancel_import_polling)
 
         self.statusBar().showMessage(
-            "Listening... In AC: Tools → Zone → Inner Edge → click inside apartment"
+            "Listening... In Archicad: Tools → Zone → Inner Edge → click inside the apartment"
         )
 
         self._poll_attempts = 0
@@ -1436,17 +1441,17 @@ class MainWindow(QMainWindow):
         self._show_boundary_preview(polygon, entry)
         self.tabs.setCurrentWidget(self.apt_tab)
         self._real_status_bar.showMessage(
-            f"Załadowano sub-działkę ze Stage 1 ({polygon.area:.1f} m²). "
-            f"Kliknij Generate aby wygenerować rzut.", 6000
+            f"Loaded the sub-plot from Stage 1 ({polygon.area:.1f} m²). "
+            f"Click '{self._generate_label}' to generate the layout.", 6000
         )
 
     def _confirm_stage4_overwrite(self) -> bool:
         """Ask before overwriting an existing Stage 4 result with new data."""
         reply = QMessageBox.question(
             self,
-            "Nadpisać obecny rzut?",
-            "Stage 4 zawiera już wygenerowany rzut. Czy chcesz go zastąpić "
-            "obrysem wybranej sub-działki?",
+            "Overwrite the current layout?",
+            "Stage 4 already holds a generated layout. Do you want to replace it "
+            "with the outline of the selected sub-plot?",
             QMessageBox.Yes | QMessageBox.Cancel,
             QMessageBox.Cancel,
         )
@@ -1466,7 +1471,7 @@ class MainWindow(QMainWindow):
         self._poll_attempts += 1
         if self._poll_attempts >= self._poll_max_attempts:
             self._cancel_import_polling()
-            self.statusBar().showMessage("Timeout 60s — no new Zone detected in AC")
+            self.statusBar().showMessage("Timeout 60 s — no new Zone detected in Archicad")
             return
 
         try:

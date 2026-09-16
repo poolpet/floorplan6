@@ -63,7 +63,7 @@ def test_happy_path_new_zone_detected_and_deleted():
 def test_no_new_zone_raises():
     """Pre: {A,B}. Po user action: {A,B}. ValueError = user nic nie zrobił."""
     tapir = _make_tapir(current_zone_guids=["A", "B"])
-    with pytest.raises(ValueError, match="Nie wykryto nowej Zone"):
+    with pytest.raises(ValueError, match="No new Zone was detected"):
         read_boundary_from_new_zone(tapir, before_guids={"A", "B"})
 
 
@@ -104,7 +104,7 @@ def test_polygon_too_few_points_raises():
         current_zone_guids=["A", "C"],
         polygon_pts=[(0.0, 0.0), (5.0, 0.0)],  # tylko 2 punkty
     )
-    with pytest.raises(ValueError, match="<3 punkty"):
+    with pytest.raises(ValueError, match="fewer than 3 polygon points"):
         read_boundary_from_new_zone(tapir, before_guids={"A"})
     # cleanup MUSI być wywołany nawet jak read padnie
     tapir.delete_elements.assert_called_once()

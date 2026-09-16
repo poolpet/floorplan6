@@ -93,9 +93,9 @@ class TapirConnection:
 
         if not candidates:
             raise ConnectionError(
-                f"Żadna instancja ArchiCAD nie odpowiada na portach "
+                f"No Archicad instance is responding on ports "
                 f"{ARCHICAD_PORT_START}..{ARCHICAD_PORT_START + ARCHICAD_PORT_RANGE - 1}. "
-                f"Sprawdź czy AC jest uruchomiony i Tapir Add-On zainstalowany."
+                f"Check that Archicad is running with the FloorForge add-on installed."
             )
 
         # Prefer the AC instance that currently has a selection (= user is
@@ -148,7 +148,7 @@ class TapirConnection:
                     raise
 
         raise ConnectionError(
-            "ArchiCAD nie odpowiada na żadnym ze skanowanych portów."
+            "Archicad is not responding on any of the scanned ports."
         )
 
     @classmethod
@@ -156,7 +156,7 @@ class TapirConnection:
         """Wykryte instancje AC: [{port, projectName, projectPath}] (deterministyczny picker).
 
         Świeże połączenie per port (NIE mutuje singletona), nazwa via Tapir GetProjectInfo.
-        Martwy port pominięty; brak nazwy → "(nieznany)".
+        Martwy port pominięty; brak nazwy → "(unknown)".
         """
         if port_range is None:
             port_range = range(ARCHICAD_PORT_START,
@@ -166,11 +166,11 @@ class TapirConnection:
             conn = cls._try_connect(port)
             if conn is None:
                 continue
-            name, path = "(nieznany)", ""
+            name, path = "(unknown)", ""
             try:
                 cid = conn.types.AddOnCommandId(TAPIR_NAMESPACE, "GetProjectInfo")
                 info = conn.commands.ExecuteAddOnCommand(cid, {}) or {}
-                name = info.get("projectName") or "(nieznany)"
+                name = info.get("projectName") or "(unknown)"
                 path = info.get("projectPath", "") or ""
             except Exception:
                 pass
@@ -182,7 +182,7 @@ class TapirConnection:
         conn = self._try_connect(port)
         if conn is None:
             raise ConnectionError(
-                f"ArchiCAD na porcie {port} nie odpowiada (Tapir Add-On?)."
+                f"Archicad on port {port} is not responding (FloorForge add-on?)."
             )
         self._active_port = port
         self._conn = conn
@@ -316,9 +316,9 @@ class TapirConnection:
         """
         elements = self.get_elements_by_type("Wall")
         if not elements:
-            print("[get_all_walls] 0 ścian na aktywnej kondygnacji/oknie "
-                  "(GetElementsByType = scope aktywnej bazy planu) — okna pominięte. "
-                  "Sprawdź, czy aktywne okno AC to plan właściwej kondygnacji.")
+            print("[get_all_walls] 0 walls on the active storey/window "
+                  "(GetElementsByType = scope of the active plan database) — windows skipped. "
+                  "Check that the active Archicad window is the plan of the right storey.")
             return []
         guids = []
         for e in elements:
@@ -589,15 +589,17 @@ def check_active_story(act_story: int, first_story: int, last_story: int,
     poddasze_idx = parter_idx + 1
     if gui_storey == "poddasze":
         if poddasze_idx > last_story:
-            return False, (f"Projekt nie ma kondygnacji nad parterem (idx {poddasze_idx}) "
-                           f"— nie ma poddasza. Wybierz 'Parter' albo dodaj kondygnację w AC.")
+            return False, (f"The project has no storey above the ground floor "
+                           f"(idx {poddasze_idx}) — there is no attic. Select 'Ground floor' "
+                           f"or add a storey in Archicad.")
         if act_story >= poddasze_idx:
             return True, ""
-        return False, (f"Aktywna kondygnacja AC = idx {act_story}, a wybrałeś 'Poddasze' "
-                       f"(idx {poddasze_idx}). Przełącz w AC kondygnację na poddasze "
-                       f"i spróbuj ponownie.")
+        return False, (f"The active Archicad storey = idx {act_story}, but you selected "
+                       f"'Attic' (idx {poddasze_idx}). Switch the storey in Archicad "
+                       f"to the attic and try again.")
     # parter (domyślnie)
     if act_story == parter_idx:
         return True, ""
-    return False, (f"Aktywna kondygnacja AC = idx {act_story}, a wybrałeś 'Parter' "
-                   f"(idx {parter_idx}). Przełącz w AC kondygnację na parter.")
+    return False, (f"The active Archicad storey = idx {act_story}, but you selected "
+                   f"'Ground floor' (idx {parter_idx}). Switch the storey in Archicad "
+                   f"to the ground floor.")

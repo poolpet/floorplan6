@@ -97,7 +97,7 @@ def test_two_sides_smaller_wins():
 def test_no_selection_raises():
     tapir = MagicMock()
     tapir.get_selected_elements.return_value = []
-    with pytest.raises(ValueError, match="Brak zaznaczonych"):
+    with pytest.raises(ValueError, match="No elements are selected"):
         read_boundary_from_wall_pick(tapir=tapir)
 
 
@@ -106,7 +106,7 @@ def test_non_wall_selected_raises():
     tapir = MagicMock()
     tapir.get_selected_elements.return_value = [{"elementId": {"guid": "d1"}}]
     tapir.get_element_details.return_value = [{"type": "Door", "details": {}}]
-    with pytest.raises(ValueError, match="nie zawierają ściany"):
+    with pytest.raises(ValueError, match="contain no wall"):
         read_boundary_from_wall_pick(tapir=tapir)
 
 
@@ -116,7 +116,7 @@ def test_zero_length_wall_raises():
         wall_beg=(1.0, 1.0), wall_end=(1.0, 1.0),
         polygon_per_side={+1: None, -1: None},
     )
-    with pytest.raises(ValueError, match="zerową długość"):
+    with pytest.raises(ValueError, match="zero length"):
         read_boundary_from_wall_pick(tapir=tapir)
 
 
@@ -126,5 +126,5 @@ def test_both_sides_out_of_range_raises():
     huge = [(0.0, 0.0), (50.0, 0.0), (50.0, 50.0), (0.0, 50.0)]  # 2500m² - za duży
     tapir = _make_tapir_wall_selected(polygon_per_side={+1: tiny, -1: huge})
 
-    with pytest.raises(ValueError, match="żadnej stronie"):
+    with pytest.raises(ValueError, match="both sides of the wall"):
         read_boundary_from_wall_pick(tapir=tapir)

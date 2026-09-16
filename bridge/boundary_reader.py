@@ -49,16 +49,16 @@ def read_boundary_from_point(
         temp_guid = tapir.create_temp_zone_at_point(x, y)
         if not temp_guid:
             raise ValueError(
-                f"ArchiCAD nie znalazł zamkniętego obrysu wokół punktu "
+                f"Archicad found no closed outline around the point "
                 f"({x:.3f}, {y:.3f}).\n"
-                "Sprawdź czy punkt leży WEWNĄTRZ obrysu ścian i ściany "
-                "tworzą zamkniętą pętlę."
+                "Check that the point lies INSIDE the wall outline and that the walls "
+                "form a closed loop."
             )
 
         outline_points = tapir.get_zone_polygon(temp_guid)
         if len(outline_points) < 3:
             raise ValueError(
-                f"Temp Zone (GUID {temp_guid[:8]}...) ma <3 punktów polygonu."
+                f"Temp Zone (GUID {temp_guid[:8]}...) has fewer than 3 polygon points."
             )
     finally:
         # Cleanup: usuń temp Zone (nawet przy błędzie)
@@ -82,7 +82,7 @@ def _finalize_boundary_from_outline(
     from core.boundary_analyzer import _remove_collinear_vertices
     points = _remove_collinear_vertices(outline_points)
     if len(points) < 3:
-        raise ValueError("Polygon ma <3 punkty po usunięciu kolinearnych")
+        raise ValueError("Polygon has fewer than 3 points after removing collinear ones")
 
     polygon = Polygon(points)
     if not polygon.is_valid:
@@ -139,9 +139,9 @@ def read_boundary_from_new_zone(
     new_guids = current_guids - before_guids
     if not new_guids:
         raise ValueError(
-            "Nie wykryto nowej Zone w AC.\n"
-            "W AC: naciśnij Z (Zone tool) → klik w pustym miejscu mieszkania "
-            "→ wróć tutaj i potwierdź."
+            "No new Zone was detected in Archicad.\n"
+            "In Archicad: press Z (Zone tool) → click on an empty spot inside the "
+            "apartment → come back here and confirm."
         )
 
     new_guid = next(iter(new_guids))
@@ -150,7 +150,7 @@ def read_boundary_from_new_zone(
         outline_points = tapir.get_zone_polygon(new_guid)
         if len(outline_points) < 3:
             raise ValueError(
-                f"Nowa Zone (GUID {new_guid[:8]}...) ma <3 punkty polygonu."
+                f"The new Zone (GUID {new_guid[:8]}...) has fewer than 3 polygon points."
             )
     finally:
         if cleanup and new_guid:
@@ -206,8 +206,8 @@ def read_boundary_from_wall_pick(
     selected = tapir.get_selected_elements()
     if not selected:
         raise ValueError(
-            "Brak zaznaczonych elementów w AC.\n"
-            "Zaznacz dowolną ścianę mieszkania (1 klik) i spróbuj ponownie."
+            "No elements are selected in Archicad.\n"
+            "Select any wall of the apartment (1 click) and try again."
         )
     guids = []
     for elem in selected:
@@ -225,15 +225,15 @@ def read_boundary_from_wall_pick(
     if wall_detail is None:
         types = [d.get("type", "?") for d in details if isinstance(d, dict)]
         raise ValueError(
-            f"Wybrane elementy nie zawierają ściany. Typy: {types}.\n"
-            "Zaznacz dowolną ścianę mieszkania (Wall) i spróbuj ponownie."
+            f"The selected elements contain no wall. Types: {types}.\n"
+            "Select any wall of the apartment (Wall) and try again."
         )
 
     inner = wall_detail.get("details", {})
     beg = inner.get("begCoordinate") or wall_detail.get("begCoordinate")
     end = inner.get("endCoordinate") or wall_detail.get("endCoordinate")
     if not beg or not end:
-        raise ValueError("Ściana nie ma begCoordinate/endCoordinate")
+        raise ValueError("The wall has no begCoordinate/endCoordinate")
 
     bx, by = float(beg["x"]), float(beg["y"])
     ex, ey = float(end["x"]), float(end["y"])
@@ -242,7 +242,7 @@ def read_boundary_from_wall_pick(
     dx, dy = ex - bx, ey - by
     length = math.hypot(dx, dy)
     if length < 1e-6:
-        raise ValueError(f"Ściana ma zerową długość ({length:.4f}m)")
+        raise ValueError(f"The wall has zero length ({length:.4f} m)")
 
     # Wektor prostopadły jednostkowy
     nx, ny = -dy / length, dx / length
@@ -268,9 +268,9 @@ def read_boundary_from_wall_pick(
 
     if not candidates:
         raise ValueError(
-            "Nie udało się auto-wykryć obrysu po żadnej stronie ściany:\n  "
+            "Auto-detection of the outline failed on both sides of the wall:\n  "
             + "\n  ".join(errors)
-            + f"\n\nZaznaczona ściana: ({bx:.2f},{by:.2f}) → ({ex:.2f},{ey:.2f}), "
+            + f"\n\nSelected wall: ({bx:.2f},{by:.2f}) → ({ex:.2f},{ey:.2f}), "
             f"midpoint ({mx:.2f},{my:.2f})."
         )
 
@@ -304,15 +304,16 @@ def read_boundary_from_archicad(
         except Exception as e:
             raw = {"error": str(e)}
         raise ValueError(
-            "Tapir zwrócił PUSTĄ listę zaznaczeń.\n\n"
+            "The FloorForge add-on returned an EMPTY selection list.\n\n"
             f"Raw response: {raw}\n\n"
-            "Jeśli W ArchiCAD ZAZNACZYŁEŚ elementy a Tapir zwraca empty:\n"
-            "  • Sprawdź czy Tapir Add-On jest aktywny (Options → Add-On Manager)\n"
-            "  • Sprawdź czy zaznaczone elementy są w aktualnej kondygnacji\n"
-            "  • Sprawdź typ zaznaczonych elementów — Tapir czyta Wall, Slab, Zone, Polyline\n"
-            "  • Próbuj: Tools → Arrow → kliknij polygon obrysu bezpośrednio\n\n"
-            "Możliwe że Tapir używa innego klucza w response niż 'elements'/'elementIds'. "
-            "Powyższy raw response pomoże zdiagnozować."
+            "If you DID select elements in Archicad and the list is still empty:\n"
+            "  • Check that the FloorForge add-on is active (Options → Add-On Manager)\n"
+            "  • Check that the selected elements are on the current storey\n"
+            "  • Check the type of the selected elements — only Wall, Slab, Zone and "
+            "Polyline are read\n"
+            "  • Try: Tools → Arrow → click the outline polygon directly\n\n"
+            "The add-on may use a response key other than 'elements'/'elementIds'. "
+            "The raw response above helps diagnose that."
         )
 
     guids = []
@@ -364,8 +365,8 @@ def read_boundary_from_archicad(
 
     if len(segments) < 3:
         raise ValueError(
-            f"Za mało segmentów ścian: {len(segments)}. "
-            f"Potrzebuję min. 3 ścian tworzących zamknięty obrys."
+            f"Too few wall segments: {len(segments)}. "
+            f"At least 3 walls forming a closed outline are required."
         )
 
     # 4. Złóż segmenty w zamknięty polygon
@@ -406,8 +407,8 @@ def _read_boundary_from_zone_or_slab(
     outline = inner.get("polygonOutline") or inner.get("polygon") or []
     if not outline:
         raise ValueError(
-            f"{detail.get('type')} nie ma polygonOutline. Sprawdź czy Zone "
-            "została poprawnie utworzona (Tools → Zone → Inner Edge → klik wewnątrz)."
+            f"{detail.get('type')} has no polygonOutline. Check that the Zone was "
+            "created correctly (Tools → Zone → Inner Edge → click inside)."
         )
 
     points = [(float(p["x"]), float(p["y"])) for p in outline]
@@ -421,7 +422,7 @@ def _read_boundary_from_zone_or_slab(
     points = _remove_collinear_vertices(points)
 
     if len(points) < 3:
-        raise ValueError(f"Polygon {detail.get('type')} ma <3 punkty")
+        raise ValueError(f"Polygon {detail.get('type')} has fewer than 3 points")
 
     polygon = Polygon(points)
     if not polygon.is_valid:

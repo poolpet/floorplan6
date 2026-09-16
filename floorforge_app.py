@@ -30,10 +30,10 @@ def selftest() -> int:
         job = c.wait(c.solve(SELFTEST_REQ), timeout=120)
         variants = job["result"].get("variants", [])
         if not variants:
-            print("SELFTEST FAIL: solver nie zwrócił wariantów")
+            print("SELFTEST FAIL: the solver returned no variants")
             return 1
         n_rooms = len(variants[0].get("rooms", []))
-        print(f"SELFTEST OK: {len(variants)} wariantów, {n_rooms} pokoi, wersja {_version()}")
+        print(f"SELFTEST OK: {len(variants)} variants, {n_rooms} rooms, version {_version()}")
         return 0
     except Exception as e:
         print(f"SELFTEST FAIL: {e!r}")

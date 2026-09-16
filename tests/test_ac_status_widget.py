@@ -42,7 +42,8 @@ def test_status_no_archicad(qapp, monkeypatch):
     from ui.ac_status_widget import AcStatusWidget
     w = AcStatusWidget()
     w.refresh()
-    assert "Brak połączenia" in w.label.text()
+    assert "Not connected to Archicad" in w.label.text()
+    assert "FloorForge add-on" in w.label.text()     # NIE "Tapir" — tester ma bundle FloorForge
     assert w.instances == []
 
 
@@ -55,7 +56,8 @@ def test_status_shows_port_project_story(qapp, monkeypatch):
     w = AcStatusWidget()
     w.refresh()
     t = w.label.text()
-    assert "19723" in t and "Dom K" in t and "Poddasze" in t
+    assert t.startswith("Archicad port 19723 ")
+    assert "Dom K" in t and "storey Poddasze" in t
 
 
 def test_status_survives_exception(qapp, monkeypatch):
@@ -65,7 +67,7 @@ def test_status_survives_exception(qapp, monkeypatch):
     from ui.ac_status_widget import AcStatusWidget
     w = AcStatusWidget()
     w.refresh()
-    assert "Brak połączenia" in w.label.text()
+    assert "Not connected to Archicad" in w.label.text()
 
 
 def test_refresh_does_not_retarget_singleton(qapp, monkeypatch):
@@ -85,13 +87,13 @@ def test_refresh_does_not_retarget_singleton(qapp, monkeypatch):
     w = AcStatusWidget()
     w.refresh()
 
-    assert "(+1 inne)" in w.label.text()
+    assert "(+1 more)" in w.label.text()
     assert tc.TapirConnection()._active_port == 19730
     assert tc.TapirConnection()._conn == "sentinel-conn"
 
 
 def test_refresh_marks_button_busy_and_restores_it(qapp, monkeypatch):
-    """Na czas skanu portów przycisk jest nieaktywny („Sprawdzam…"), potem wraca — nawet po wyjątku."""
+    """Na czas skanu portów przycisk jest nieaktywny („Checking…"), potem wraca — nawet po wyjątku."""
     import bridge.tapir_connection as tc
     seen = {}
 
@@ -105,16 +107,16 @@ def test_refresh_marks_button_busy_and_restores_it(qapp, monkeypatch):
     w = AcStatusWidget()
     w.refresh()
 
-    assert seen["text"] == "Sprawdzam…"
+    assert seen["text"] == "Checking…"
     assert seen["enabled"] is False
-    assert w.refresh_btn.text() == "Odśwież"
+    assert w.refresh_btn.text() == "Refresh"
     assert w.refresh_btn.isEnabled()
 
 
 # ───────────── auto-odświeżanie przy starcie z add-onu (FLOORFORGE_LAUNCHED_FROM_AC) ─────────────
 @pytest.mark.parametrize("env", ["FLOORFORGE_LAUNCHED_FROM_AC", "FLOORFORGE_AC_PORT"])
 def test_auto_refresh_when_launched_from_archicad(qapp, monkeypatch, env):
-    """Start z AC: pasek sam się odświeża po pokazaniu okna — user nie musi klikać „Odśwież"."""
+    """Start z AC: pasek sam się odświeża po pokazaniu okna — user nie musi klikać „Refresh"."""
     import bridge.tapir_connection as tc
     monkeypatch.setenv(env, "1" if env.endswith("FROM_AC") else "19723")
     monkeypatch.setattr(tc.TapirConnection, "list_instances",
@@ -123,11 +125,11 @@ def test_auto_refresh_when_launched_from_archicad(qapp, monkeypatch, env):
 
     from ui.ac_status_widget import AcStatusWidget
     w = AcStatusWidget()
-    assert "nie sprawdzono" in w.label.text()   # przed pętlą zdarzeń jeszcze nic nie skanowaliśmy
+    assert "not checked" in w.label.text()     # przed pętlą zdarzeń jeszcze nic nie skanowaliśmy
     qapp.processEvents()
 
     t = w.label.text()
-    assert "nie sprawdzono" not in t
+    assert "not checked" not in t
     assert "19723" in t and "Dom K" in t
 
 
@@ -148,5 +150,14 @@ def test_no_auto_refresh_without_env(qapp, monkeypatch):
     w = AcStatusWidget()
     qapp.processEvents()
 
-    assert w.label.text() == "ArchiCAD: nie sprawdzono"
+    assert w.label.text() == "Archicad: not checked"
     assert called["n"] == 0
+
+
+def test_status_strings_have_no_polish_letters():
+    """Bramka §9: pasek statusu AC jest w całości po angielsku."""
+    from ui import ac_status_widget as m
+    polish = set("ąćęłńóśźż")
+    for txt in (m.BUSY_TEXT, m.REFRESH_TEXT, m.NO_AC_TEXT, m.NOT_CHECKED_TEXT):
+        assert not polish & set(txt.lower()), txt
+        assert "tapir" not in txt.lower(), txt

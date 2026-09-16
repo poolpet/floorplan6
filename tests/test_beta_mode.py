@@ -1,4 +1,4 @@
-"""Tryb beta (FLOORFORGE_BETA): jedna polska zakładka + brak importu zamrożonych etapów."""
+"""Tryb beta (FLOORFORGE_BETA): jedna zakładka + brak importu zamrożonych etapów."""
 import os
 import subprocess
 import sys
@@ -8,21 +8,19 @@ import pytest
 pytest.importorskip("PyQt5")
 
 
-def test_beta_mode_single_polish_tab(qapp, monkeypatch):
+def test_beta_mode_single_english_tab(qapp, monkeypatch):
     monkeypatch.setenv("FLOORFORGE_BETA", "1")
     monkeypatch.setenv("FLOORFORGE_VERSION", "beta-test")
     from ui.main_window import MainWindow
     w = MainWindow()
     assert w.tabs.count() == 1
-    assert w.tabs.tabText(0) == "Podział rzutu"
+    assert w.tabs.tabText(0) == "Room layout"
     assert w.windowTitle() == "FloorForge beta-test"
     assert hasattr(w, "ac_status")
-    # Pusty podgląd musi nazywać przyciski tak, jak są podpisane w becie —
-    # „Generate"/„Load outline" w tym oknie nie istnieją.
+    # Pusty podgląd musi nazywać przyciski tak, jak są podpisane.
     placeholder = w.image_label.text()
-    assert "Generuj układy" in placeholder, placeholder
-    assert "Wczytaj obrys z ArchiCAD" in placeholder, placeholder
-    assert "Generate" not in placeholder and "Load outline" not in placeholder
+    assert w.import_btn.text() in placeholder, placeholder
+    assert w.generate_btn.text() in placeholder, placeholder
 
 
 def test_beta_house_mode_placeholder_uses_real_button_label(qapp, monkeypatch):
@@ -32,12 +30,12 @@ def test_beta_house_mode_placeholder_uses_real_button_label(qapp, monkeypatch):
     w = MainWindow()
     w.mode_house_radio.setChecked(True)
     txt = w.image_label.text()
-    assert "Generuj układy" in txt, txt
-    assert "'Generate'" not in txt, txt
+    assert "House mode" in txt, txt
+    assert w.generate_btn.text() in txt, txt
 
 
 def test_default_mode_placeholder_uses_real_button_labels(qapp, monkeypatch):
-    """W trybie domyślnym etykiety są angielskie, ale też muszą się zgadzać z przyciskami."""
+    """Etykiety muszą się zgadzać z przyciskami także w trybie domyślnym."""
     monkeypatch.delenv("FLOORFORGE_BETA", raising=False)
     from ui.main_window import MainWindow
     w = MainWindow()
@@ -52,26 +50,62 @@ def test_default_mode_unchanged(qapp, monkeypatch):
     w = MainWindow()
     assert w.tabs.count() >= 2
     assert w.windowTitle() == "FloorPlan6 — Apartment Layout Generator"
-    # Pasek statusu AC jest w OBU trybach (dialog AC-offline mówi „kliknij Odśwież").
+    # Pasek statusu AC jest w OBU trybach (dialog AC-offline mówi „click Refresh").
     assert hasattr(w, "ac_status")
 
 
 def test_beta_labels_survive_button_resets(qapp, monkeypatch):
-    """Etykiety wracają po polsku — resety przycisków nie mogą wstawiać angielskiego."""
+    """Po resecie wraca DOKŁADNIE ten sam napis, co na starcie."""
     monkeypatch.setenv("FLOORFORGE_BETA", "1")
     from PyQt5.QtWidgets import QMessageBox
     monkeypatch.setattr(QMessageBox, "critical", staticmethod(lambda *a, **k: None))
     from ui.main_window import MainWindow
     w = MainWindow()
 
-    assert w.import_btn.text() == "Wczytaj obrys z ArchiCAD"
+    assert w.import_btn.text() == "Load outline from Archicad"
     w.import_btn.setText("cokolwiek")
     w._reset_import_button()
-    assert w.import_btn.text() == "Wczytaj obrys z ArchiCAD"
+    assert w.import_btn.text() == "Load outline from Archicad"
 
     w._on_error(RuntimeError("x"))
-    assert w.generate_btn.text() == "3. Generuj układy"
+    assert w.generate_btn.text() == "3. Generate layouts"
     assert w.generate_btn.isEnabled()
+
+
+@pytest.mark.parametrize("beta", [True, False])
+def test_user_visible_strings_are_english(qapp, monkeypatch, beta):
+    """Beta idzie do testerów spoza Polski: zero polskich znaków w widocznych napisach."""
+    if beta:
+        monkeypatch.setenv("FLOORFORGE_BETA", "1")
+    else:
+        monkeypatch.delenv("FLOORFORGE_BETA", raising=False)
+    from ui.main_window import MainWindow
+    w = MainWindow()
+    w.mode_house_radio.setChecked(True)
+
+    visible = [
+        w.windowTitle(), w.tabs.tabText(w.tabs.indexOf(w.apt_tab)),
+        w.import_btn.text(), w.click_pick_btn.text(), w.generate_btn.text(),
+        w.export_btn.text(), w.archicad_btn.text(), w.facades_btn.text(),
+        w.mode_apartment_radio.text(), w.mode_house_radio.text(),
+        w.furniture_check.text(), w.house_both_storeys_check.text(),
+        w.house_program_label.text(), w.image_label.text(),
+        w.ac_status.label.text(), w.ac_status.refresh_btn.text(),
+        w.house_storey_combo.itemText(0), w.house_storey_combo.itemText(1),
+    ]
+    polish = set("ąćęłńóśźż")
+    offenders = [t for t in visible if polish & set(t.lower())]
+    assert not offenders, offenders
+
+
+def test_storey_combo_labels_english_but_keys_unchanged(qapp, monkeypatch):
+    """Widoczne napisy po angielsku, klucze kontraktu (`parter`/`poddasze`) bez zmian."""
+    monkeypatch.setenv("FLOORFORGE_BETA", "1")
+    from ui.main_window import MainWindow, STOREY_KEYS
+    w = MainWindow()
+    assert [w.house_storey_combo.itemText(i) for i in range(2)] == ["Ground floor", "Attic"]
+    assert STOREY_KEYS["Ground floor"] == "parter"
+    assert STOREY_KEYS["Attic"] == "poddasze"
 
 
 def test_beta_mode_does_not_import_frozen_stages():

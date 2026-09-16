@@ -59,7 +59,7 @@ def test_ac_did_not_find_outline_raises():
     """AC zwrócił None GUID (brak zamkniętego obrysu) → ValueError."""
     tapir = _make_fake_tapir(polygon_points=None, temp_guid=None)
 
-    with pytest.raises(ValueError, match="nie znalazł zamkniętego obrysu"):
+    with pytest.raises(ValueError, match="found no closed outline"):
         read_boundary_from_point(1.0, 1.0, tapir=tapir)
 
     # Nie ma temp_guid, więc delete nie powinno być wołane
@@ -70,7 +70,7 @@ def test_polygon_too_small_raises_with_cleanup():
     """Polygon ma <3 punkty (corrupt) → ValueError, ale cleanup nadal."""
     tapir = _make_fake_tapir(polygon_points=[(0.0, 0.0), (1.0, 0.0)])
 
-    with pytest.raises(ValueError, match="<3 punkt"):
+    with pytest.raises(ValueError, match="fewer than 3 polygon points"):
         read_boundary_from_point(0.5, 0.5, tapir=tapir)
 
     # Cleanup mimo błędu

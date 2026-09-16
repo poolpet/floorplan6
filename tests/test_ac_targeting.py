@@ -64,7 +64,20 @@ def test_check_active_story_basement_points_at_ground_floor_not_basement():
     ok, msg = check_active_story(-1, -1, 1, "parter")
     assert ok is False
     assert "idx 0" in msg, msg          # cel = parter
-    assert "idx -1" not in msg.split("wybrałeś")[1], msg
+    assert "idx -1" not in msg.split("you selected")[1], msg
+
+
+@pytest.mark.parametrize("act,first,last,gui", [
+    (1, 0, 2, "parter"),
+    (0, 0, 2, "poddasze"),
+    (0, 0, 0, "poddasze"),
+])
+def test_check_active_story_messages_are_english(act, first, last, gui):
+    """Komunikat guardu ląduje wprost w dialogu GUI — musi być po angielsku (spec §9)."""
+    ok, msg = check_active_story(act, first, last, gui)
+    assert ok is False
+    assert not set("ąćęłńóśźż") & set(msg.lower()), msg
+    assert ("Ground floor" in msg) or ("Attic" in msg) or ("ground floor" in msg), msg
 
 
 def test_check_active_story_matches_gui_export_target():
@@ -126,7 +139,7 @@ def test_list_instances_unknown_name_when_projectinfo_fails(monkeypatch):
     monkeypatch.setattr(tc.ACConnection, "connect",
                         staticmethod(lambda port: _Boom("x") if port == 19723 else None))
     out = TapirConnection.list_instances()
-    assert out == [{"port": 19723, "projectName": "(nieznany)", "projectPath": ""}]
+    assert out == [{"port": 19723, "projectName": "(unknown)", "projectPath": ""}]
 
 
 # ─────────────────────────────── use_port ───────────────────────────────────

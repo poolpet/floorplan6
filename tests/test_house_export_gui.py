@@ -1,4 +1,4 @@
-"""GUI: 'Wstaw do AC' w trybie dom — picker instancji + story-guard + dyspozytor kondygnacji.
+"""GUI: 'Insert into Archicad' w trybie dom — picker instancji + story-guard + dyspozytor kondygnacji.
 
 Bez żywego AC: list_instances/use_port/get_stories/export = szpiedzy (monkeypatch).
 """
@@ -33,13 +33,15 @@ def _wire(monkeypatch, *, instances, act_story, first=0, last=2):
     return cap
 
 
-def _mainwindow(monkeypatch, storey_text):
-    from ui.main_window import MainWindow
+def _mainwindow(monkeypatch, storey_key):
+    """`storey_key` to klucz kontraktu ('parter'/'poddasze'); w combo siedzi angielska etykieta."""
+    from ui.main_window import MainWindow, STOREY_LABELS
     w = MainWindow()
     w._archicad_offset = (0.0, 0.0)
     w.mode_house_radio.setChecked(True)
     w._house_layout = object()
-    w.house_storey_combo.setCurrentText(storey_text)
+    w.house_storey_combo.setCurrentText(STOREY_LABELS[storey_key])
+    assert w.house_storey_combo.currentText() == STOREY_LABELS[storey_key]
     return w
 
 
@@ -48,7 +50,7 @@ def test_house_export_single_instance_dispatches(qapp, monkeypatch):
     cap = _wire(monkeypatch,
                 instances=[{"port": 19724, "projectName": "K", "projectPath": ""}],
                 act_story=1)
-    w = _mainwindow(monkeypatch, "Poddasze")
+    w = _mainwindow(monkeypatch, "poddasze")
     w._export_to_archicad()
     assert cap["export"] == 1
     assert cap["storey"] == "poddasze"
@@ -63,7 +65,7 @@ def test_house_export_guard_blocks_storey_mismatch(qapp, monkeypatch):
                 instances=[{"port": 19724, "projectName": "K", "projectPath": ""}],
                 act_story=0)
     monkeypatch.setattr(QMessageBox, "warning", staticmethod(lambda *a, **k: QMessageBox.Cancel))
-    w = _mainwindow(monkeypatch, "Poddasze")
+    w = _mainwindow(monkeypatch, "poddasze")
     w._export_to_archicad()
     assert cap["export"] == 0
 
@@ -75,7 +77,7 @@ def test_house_export_guard_override_proceeds(qapp, monkeypatch):
                 instances=[{"port": 19724, "projectName": "K", "projectPath": ""}],
                 act_story=0)
     monkeypatch.setattr(QMessageBox, "warning", staticmethod(lambda *a, **k: QMessageBox.Yes))
-    w = _mainwindow(monkeypatch, "Poddasze")
+    w = _mainwindow(monkeypatch, "poddasze")
     w._export_to_archicad()
     assert cap["export"] == 1
 
@@ -90,7 +92,7 @@ def test_house_export_picker_when_multi_instance(qapp, monkeypatch):
     # picker zwraca drugą pozycję ("19724 — K")
     monkeypatch.setattr(QInputDialog, "getItem",
                         staticmethod(lambda *a, **k: ("19724 — K", True)))
-    w = _mainwindow(monkeypatch, "Parter")
+    w = _mainwindow(monkeypatch, "parter")
     w._export_to_archicad()
     assert cap["export"] == 1
     assert cap["port"] == 19724
@@ -101,7 +103,7 @@ def test_house_export_no_instance_warns_no_export(qapp, monkeypatch):
     from PyQt5.QtWidgets import QMessageBox
     cap = _wire(monkeypatch, instances=[], act_story=0)
     monkeypatch.setattr(QMessageBox, "warning", staticmethod(lambda *a, **k: None))
-    w = _mainwindow(monkeypatch, "Parter")
+    w = _mainwindow(monkeypatch, "parter")
     w._export_to_archicad()
     assert cap["export"] == 0
 
@@ -115,7 +117,7 @@ def test_house_export_both_storeys_switches_and_exports_twice(qapp, monkeypatch)
     switched = []
     monkeypatch.setattr(tc.TapirConnection, "activate_story",
                         lambda self, i: switched.append(i) or True)
-    w = _mainwindow(monkeypatch, "Parter")
+    w = _mainwindow(monkeypatch, "parter")
     w._house_layout = type("L", (), {"pietro_rooms": [object()]})()   # 2-kond.
     w.house_both_storeys_check.setChecked(True)
     w._export_to_archicad()
@@ -135,7 +137,7 @@ def test_house_export_both_storeys_falls_back_to_guard_when_switch_fails(qapp, m
     warned = []
     monkeypatch.setattr(QMessageBox, "warning",
                         staticmethod(lambda *a, **k: warned.append(a) or QMessageBox.Cancel))
-    w = _mainwindow(monkeypatch, "Parter")
+    w = _mainwindow(monkeypatch, "parter")
     w._house_layout = type("L", (), {"pietro_rooms": [object()]})()
     w.house_both_storeys_check.setChecked(True)
     w._export_to_archicad()
@@ -154,15 +156,16 @@ def test_house_export_both_storeys_half_switch_keeps_parter_and_warns(qapp, monk
     warned = []
     monkeypatch.setattr(QMessageBox, "warning",
                         staticmethod(lambda *a, **k: warned.append(a) or QMessageBox.Cancel))
-    w = _mainwindow(monkeypatch, "Parter")
+    w = _mainwindow(monkeypatch, "parter")
     w._house_layout = type("L", (), {"pietro_rooms": [object()]})()
     w.house_both_storeys_check.setChecked(True)
     w._export_to_archicad()
     assert cap["storeys"] == ["parter"]          # poddasze NIE wstawione
     assert warned
     text = warned[0][2]
-    assert "parter" in text.lower() and "już wstawiony" in text.lower()
-    assert "tylko" in text.lower()               # user ma wstawić wyłącznie resztę
+    assert "ground floor" in text.lower() and "already been inserted" in text.lower()
+    assert "only that one" in text.lower()       # user ma wstawić wyłącznie resztę
+    assert not set("ąćęłńóśźż") & set(text.lower()), text
 
 
 def test_house_export_both_storeys_blocked_when_ac_project_single_storey(qapp, monkeypatch):
@@ -178,13 +181,13 @@ def test_house_export_both_storeys_blocked_when_ac_project_single_storey(qapp, m
     warned = []
     monkeypatch.setattr(QMessageBox, "warning",
                         staticmethod(lambda *a, **k: warned.append(a) or QMessageBox.Cancel))
-    w = _mainwindow(monkeypatch, "Parter")
+    w = _mainwindow(monkeypatch, "parter")
     w._house_layout = type("L", (), {"pietro_rooms": [object()]})()
     w.house_both_storeys_check.setChecked(True)
     w._export_to_archicad()
     assert cap["export"] == 0
     assert switched == []                        # nawet nie próbujemy przełączać
-    assert warned and "nie ma kondygnacji nad parterem" in warned[0][2]
+    assert warned and "no storey above the ground floor" in warned[0][2]
 
 
 def test_house_export_both_storeys_with_basement_targets_parter_and_poddasze(qapp, monkeypatch):
@@ -196,7 +199,7 @@ def test_house_export_both_storeys_with_basement_targets_parter_and_poddasze(qap
     switched = []
     monkeypatch.setattr(tc.TapirConnection, "activate_story",
                         lambda self, i: switched.append(i) or True)
-    w = _mainwindow(monkeypatch, "Parter")
+    w = _mainwindow(monkeypatch, "parter")
     w._house_layout = type("L", (), {"pietro_rooms": [object()]})()
     w.house_both_storeys_check.setChecked(True)
     w._export_to_archicad()
@@ -217,10 +220,10 @@ def test_house_export_both_storeys_blocked_when_basement_but_no_upper_storey(qap
     warned = []
     monkeypatch.setattr(QMessageBox, "warning",
                         staticmethod(lambda *a, **k: warned.append(a) or QMessageBox.Cancel))
-    w = _mainwindow(monkeypatch, "Parter")
+    w = _mainwindow(monkeypatch, "parter")
     w._house_layout = type("L", (), {"pietro_rooms": [object()]})()
     w.house_both_storeys_check.setChecked(True)
     w._export_to_archicad()
     assert cap["export"] == 0
     assert switched == []
-    assert warned and "nie ma kondygnacji nad parterem" in warned[0][2]
+    assert warned and "no storey above the ground floor" in warned[0][2]
