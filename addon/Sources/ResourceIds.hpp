@@ -17,6 +17,7 @@
 #define ID_LAUNCHER_SPAWN_FAILED_TEXT       4
 #define ID_LAUNCHER_OK_BUTTON               5
 #define ID_LAUNCHER_NO_PORT_TEXT            6
+#define ID_LAUNCHER_DIED_TEXT               7
 
 // 32503 jest wpisane LICZBĄ w AddOn.grc (pozycja menu "^EM^32503") — zmiana wartości
 // wymaga poprawienia też tamtego stringa.

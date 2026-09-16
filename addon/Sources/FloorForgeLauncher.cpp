@@ -110,6 +110,18 @@ void LaunchOrFocus ()
         DGAlert (DG_ERROR, Str (ID_LAUNCHER_SPAWN_FAILED_TITLE),
                  GS::UniString::Printf (Str (ID_LAUNCHER_SPAWN_FAILED_TEXT), exePath.ToPrintf ()),
                  GS::EmptyUniString, Str (ID_LAUNCHER_OK_BUTTON));
+        return;
+    }
+
+    // Spawn sam w sobie mówi tylko „fork się udał". Kwarantanna Gatekeepera ubija
+    // osadzoną binarkę PARĘ SET MILISEKUND PÓŹNIEJ — bez tego czekania menu wygląda
+    // jak no-op (okno nigdy nie wstaje, zero komunikatu). 700 ms wystarcza na SIGKILL
+    // od Gatekeepera, a jest niezauważalne dla użytkownika przy udanym starcie.
+    gProcess.WaitFor (static_cast<UInt32> (700));
+    if (gProcess.IsTerminated ()) {
+        gProcess = GS::Process ();
+        DGAlert (DG_ERROR, Str (ID_LAUNCHER_SPAWN_FAILED_TITLE), Str (ID_LAUNCHER_DIED_TEXT),
+                 GS::EmptyUniString, Str (ID_LAUNCHER_OK_BUTTON));
     }
 }
 

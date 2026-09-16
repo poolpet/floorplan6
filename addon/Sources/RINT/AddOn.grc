@@ -23,6 +23,7 @@
 /* [  4] */ "Could not start FloorForge from:\n%T\n\nReinstall FloorForge.bundle (copy the whole bundle into Add-Ons)."
 /* [  5] */ "OK"
 /* [  6] */ "Archicad does not expose its JSON port. Enable Options → Preferences → JSON API and try again."
+/* [  7] */ "FloorForge started but exited immediately. If you downloaded this bundle from the internet, macOS may have blocked it (quarantine). See INSTALL.md → Troubleshooting, or send ~/Library/Logs/FloorForge/floorforge.log."
 }
 
 'GDLG' ID_ABOUT_DIALOG Modal     40   40  200  237  "FloorForge" {

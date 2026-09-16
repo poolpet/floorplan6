@@ -8,10 +8,10 @@ To jest **kod dodatku C++**; aplikacja Pythona żyje w katalogu nadrzędnym.
 
 - rejestruje komendy JSON w przestrzeni **`FloorForgeCommand`** (strefy, ściany, drzwi,
   kondygnacje, właściwości) — to nimi aplikacja rozmawia z Archicadem;
-- dokłada menu **FloorForge → Podział rzutu**, które uruchamia osadzonego Pythona
+- dokłada menu **FloorForge → Room layout**, które uruchamia osadzonego Pythona
   z `FloorForge.bundle/Contents/Resources/FloorForge/FloorForge` i przekazuje mu port
   JSON w `FLOORFORGE_AC_PORT` (plus `FLOORFORGE_LAUNCHED_FROM_AC`);
-- **FloorForge → O FloorForge…** pokazuje wersję i aktywny port JSON.
+- **FloorForge → About FloorForge...** pokazuje wersję i aktywny port JSON.
 
 ## Budowanie (macOS, Apple Silicon)
 

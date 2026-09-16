@@ -14,14 +14,19 @@ AboutDialog::AboutDialog () :
     AttachToAllItems (*this);
     Attach (*this);
 
+    // Port bierzemy tylko wtedy, gdy AC faktycznie go oddał. Bez sprawdzenia zwrotu
+    // dialog pokazywał „JSON port: 0" — a to dla testera wygląda jak prawdziwy port.
     GS::UShort portNumber = 0;
-    ACAPI_Command_GetHttpConnectionPort (&portNumber);
+    GS::UniString portString ("n/a");
+    if (ACAPI_Command_GetHttpConnectionPort (&portNumber) == NoError && portNumber != 0) {
+        portString = GS::ValueToUniString (portNumber);
+    }
 
     GS::UniString versionTextContent = versionText.GetText ();
     GS::UniString versionTextNewContent = GS::UniString::SPrintf (
         versionTextContent,
         GS::UniString (ADDON_VERSION).ToPrintf (),
-        GS::ValueToUniString (portNumber).ToPrintf ()
+        portString.ToPrintf ()
     );
     versionText.SetText (versionTextNewContent);
 }

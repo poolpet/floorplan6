@@ -4,5 +4,5 @@ licencja MIT (patrz LICENSE). Zmiany względem upstreamu v1.4.0:
 - Tools/CMakeCommon.cmake: `PARENT_SCOPE CACHE STRING` → `CACHE STRING` (CMake 4.x)
 - tożsamość: MDID FloorForge, CFBundleIdentifier pl.d7studio.floorforge, nazwa FloorForge
 - przestrzeń komend JSON: "FloorForgeCommand" (zamiast "TapirCommand")
-- menu: FloorForge → Podział rzutu (uruchamia osadzony proces Pythona), O FloorForge…;
+- menu: FloorForge → Room layout (uruchamia osadzony proces Pythona), About FloorForge...;
   paleta skryptów, Check for Updates i VersionChecker nie są rejestrowane
