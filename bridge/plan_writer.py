@@ -40,6 +40,7 @@ from core.furniture_extractor import (
     furniture_to_create_payload,
     furniture_to_gdl_payload,
 )
+from bridge.room_names import room_name_en
 from bridge.tapir_connection import TapirConnection
 
 
@@ -177,7 +178,8 @@ def export_plan_to_archicad(
         # Unikalne numberStr per pokój: "M3-A5F2-001" → zestawianie w AC schedule
         zone_number = f"{apartment_id}-{i + 1:03d}"
         zones_data.append({
-            "name": room.spec.nazwa,
+            # Nazwa strefy trafia na rzut w AC — tam musi być po angielsku (spec §9).
+            "name": room_name_en(room.spec.nazwa),
             "numberStr": zone_number,
             "geometry": {
                 "referencePosition": {
@@ -188,7 +190,7 @@ def export_plan_to_archicad(
         })
 
     if not zones_data:
-        raise ValueError("Brak pokoi z geometrią do wyeksportowania")
+        raise ValueError("No rooms with geometry to export")
 
     zone_guids = tapir.create_zones(zones_data)
 
@@ -211,9 +213,17 @@ def export_plan_to_archicad(
     if include_labels and zone_guids:
         labels = extract_labels(plan, zone_guids=zone_guids)
         labels_payload = labels_to_tapir_payload(labels)
-        for lbl in labels_payload:
+        for seg, lbl in zip(labels, labels_payload):
             lbl["begCoordinate"]["x"] = round(lbl["begCoordinate"]["x"] + ox, 6)
             lbl["begCoordinate"]["y"] = round(lbl["begCoordinate"]["y"] + oy, 6)
+            # Tekst etykiety to "{nazwa}\n{powierzchnia} m²" złożone w core/ (zamrożone).
+            # Nazwę bierzemy z LabelSegment.room_name, nie z rozcinania tekstu — reszta
+            # (powierzchnia) zostaje nietknięta, jaka by nie była.
+            if seg.room_name:
+                en = room_name_en(seg.room_name)
+                if en != seg.room_name:
+                    _, _, rest = lbl.get("text", "").partition("\n")
+                    lbl["text"] = f"{en}\n{rest}" if rest else en
         label_guids = tapir.create_labels(labels_payload)
 
     # ─────── 5. Okna fasadowe (V4 — Tapir 1.4.0 CreateWindows) ───────

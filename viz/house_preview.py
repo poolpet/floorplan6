@@ -9,6 +9,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Optional
 
+from bridge.room_names import room_name_en
 from core.furniture import place_furniture
 from core.house_layout import TwoStoreyLayout
 from viz.plan_renderer import render_two_storey
@@ -31,30 +32,30 @@ def furnish_layout(layout: TwoStoreyLayout, with_furniture: bool) -> tuple[list,
 
 
 def house_details_text(layout: TwoStoreyLayout) -> str:
-    """Opis tekstowy domu: obie kondygnacje + pokoje/powierzchnie (panel UI)."""
+    """Opis tekstowy domu po ANGIELSKU: obie kondygnacje + pokoje/powierzchnie (panel UI)."""
     area = getattr(getattr(layout, "boundary", None), "area", None)
     if area is None:
         area = sum(r.area for r in layout.parter_rooms)
     strips = getattr(layout, "attic_low_strips", None) or []
-    lines = ["Dom jednorodzinny 2-kondygnacyjny", f"Obrys/kondygnacja: {area:.1f} m²"]
+    lines = ["Two-storey single-family house", f"Outline/storey: {area:.1f} m²"]
     if strips:  # knee-wall v2: pełny footprint + strefy niskiej ścianki kolankowej
         low = sum(s.area for s in strips)
-        lines.append(f"Poddasze: strefy niskiej ścianki kolankowej {low:.1f} m² "
-                     f"(wzdłuż dłuższych krawędzi)")
-    for storey_title, rooms in (("PARTER", layout.parter_rooms),
-                                ("PODDASZE" if strips else "PIĘTRO",
+        lines.append(f"Attic: knee-wall low zones {low:.1f} m² "
+                     f"(along the longer edges)")
+    for storey_title, rooms in (("GROUND FLOOR", layout.parter_rooms),
+                                ("ATTIC" if strips else "FIRST FLOOR",
                                  layout.pietro_rooms)):
         lines.append("")
         lines.append(f"{storey_title}:")
         for r in rooms:
-            lines.append(f"  {r.spec.nazwa:28s} {r.area:5.1f} m²")
+            lines.append(f"  {room_name_en(r.spec.nazwa):28s} {r.area:5.1f} m²")
     return "\n".join(lines)
 
 
 def render_house_figure(layout: TwoStoreyLayout, with_furniture: bool, title: Optional[str] = None,
                         save_path: Optional[Path] = None, show: bool = False,
                         architectural: bool = False):
-    """Renderuj gotowy TwoStoreyLayout jako 2-panelowy rzut (PARTER | PIĘTRO)."""
+    """Renderuj gotowy TwoStoreyLayout jako 2-panelowy rzut (parter | poddasze)."""
     parter_furniture, pietro_furniture = furnish_layout(layout, with_furniture)
     return render_two_storey(
         layout,

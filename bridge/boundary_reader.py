@@ -258,13 +258,13 @@ def read_boundary_from_wall_pick(
             area = polygon.area
             if area < min_area_m2 or area > max_area_m2:
                 errors.append(
-                    f"strona {sign:+d}: polygon {area:.1f}m² poza zakresem "
+                    f"side {sign:+d}: polygon {area:.1f} m² outside the range "
                     f"[{min_area_m2}, {max_area_m2}]"
                 )
                 continue
             candidates.append((area, polygon, entry_point, wall_types, (px, py)))
         except Exception as e:
-            errors.append(f"strona {sign:+d}: {e}")
+            errors.append(f"side {sign:+d}: {e}")
 
     if not candidates:
         raise ValueError(

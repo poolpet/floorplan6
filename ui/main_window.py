@@ -45,6 +45,7 @@ from matplotlib.figure import Figure
 
 from shapely.geometry import Polygon
 
+from bridge.room_names import room_name_en
 from core.variant_generator import generate_variants
 from core.house_layout import generate_house
 from core.models import FloorPlan, WallType
@@ -864,7 +865,7 @@ class MainWindow(QMainWindow):
         lines.append(f"Outline area: {plan.boundary.area:.1f} m²")
         lines.append("")
         for r in plan.rooms:
-            lines.append(f"  {r.spec.nazwa:28s} {r.area:5.1f} m²  "
+            lines.append(f"  {room_name_en(r.spec.nazwa):28s} {r.area:5.1f} m²  "
                          f"({r.width:.2f}×{r.depth:.2f}m)")
         if plan.validation_warnings:
             lines.append("")

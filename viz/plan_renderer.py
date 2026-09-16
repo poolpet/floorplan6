@@ -18,6 +18,7 @@ from matplotlib.path import Path as MplPath
 from shapely.geometry import Polygon
 from shapely.ops import unary_union
 
+from bridge.room_names import room_name_en
 from core.models import FloorPlan, Room, Boundary, Strefa
 
 
@@ -146,7 +147,7 @@ def render_floor_plan(
 
     # Tytuł
     if title is None:
-        title = f"{plan.template.nazwa} — {plan.boundary.area:.1f} m²"
+        title = f"{room_name_en(plan.template.nazwa)} — {plan.boundary.area:.1f} m²"
         if plan.score > 0:
             title += f" (score: {plan.score:.2f})"
     ax.set_title(title, fontsize=14, fontweight="bold")
@@ -161,7 +162,7 @@ def render_floor_plan(
                     label=strefa.display,
                 ))
         if furniture:
-            legend_patches.append(mpatches.Patch(facecolor="#A1887F", edgecolor="#4E342E", label="Meble"))
+            legend_patches.append(mpatches.Patch(facecolor="#A1887F", edgecolor="#4E342E", label="Furniture"))
         # legenda POD rzutem (poziomo) — nie zasłania etykiet pokoi
         ax.legend(handles=legend_patches, loc="upper center", bbox_to_anchor=(0.5, -0.08),
                   ncol=len(legend_patches) or 1, fontsize=9, framealpha=0.9)
@@ -196,7 +197,7 @@ def render_floor_plan(
 def render_rooms_only(
     rooms: list[Room],
     boundary: Boundary,
-    title: str = "Pokoje",
+    title: str = "Rooms",
     save_path: Optional[Path] = None,
     show: bool = True,
 ) -> plt.Figure:
@@ -244,14 +245,14 @@ def render_two_storey(
     # strefy niskiej ścianki kolankowej (przyciemnienie + linia ścianki).
     strips = getattr(layout, "attic_low_strips", None) or []
     _draw_storey(ax_p, layout.parter_rooms, layout.boundary, core_abs,
-                 parter_furniture or [], "PARTER", architectural=architectural)
+                 parter_furniture or [], "GROUND FLOOR", architectural=architectural)
     _draw_storey(ax_g, layout.pietro_rooms, layout.boundary, core_abs,
                  pietro_furniture or [],
-                 "PODDASZE" if strips else "PIĘTRO",
+                 "ATTIC" if strips else "FIRST FLOOR",
                  low_strips=strips, architectural=architectural)
 
     if title is None:
-        title = "Dom jednorodzinny 2-kondygnacyjny"
+        title = "Two-storey single-family house"
     fig.suptitle(title, fontsize=15, fontweight="bold")
     plt.tight_layout(rect=(0, 0, 1, 0.96))
 
@@ -341,7 +342,7 @@ def _draw_storey(ax, rooms, boundary, core_abs, furniture, title, low_strips=Non
             if any(r.spec.strefa == strefa for r in rooms)
         ]
         if furniture:
-            legend_patches.append(mpatches.Patch(facecolor="#A1887F", edgecolor="#4E342E", label="Meble"))
+            legend_patches.append(mpatches.Patch(facecolor="#A1887F", edgecolor="#4E342E", label="Furniture"))
         # legenda POD panelem (poziomo) — nie zasłania etykiet pokoi (MVP credibility)
         ax.legend(handles=legend_patches, loc="upper center", bbox_to_anchor=(0.5, -0.10),
                   ncol=len(legend_patches) or 1, fontsize=8, framealpha=0.9)
@@ -550,7 +551,7 @@ def _draw_boundary(ax: plt.Axes, boundary: Boundary, architectural: bool = False
     # Oznacz drzwi wejściowe (dev — pomijane w trybie architektonicznym)
     if not architectural:
         ex, ey = boundary.entry_point
-        ax.plot(ex, ey, "rv", markersize=12, label="Drzwi wejściowe")
+        ax.plot(ex, ey, "rv", markersize=12, label="Entrance door")
         ax.annotate("ENTRY", (ex, ey), textcoords="offset points",
                     xytext=(0, -15), ha="center", fontsize=8, color="red",
                     fontweight="bold")
@@ -592,7 +593,7 @@ def _draw_room(ax: plt.Axes, room: Room, draw_edge: bool = True, furniture_polys
     # Etykieta — odsunięta od mebli (gdy podane), inaczej w centrum pokoju
     cx, cy = _label_anchor(room.polygon, furniture_polys or [])
 
-    label = f"{room.spec.nazwa}\n{room.area:.1f} m²"
+    label = f"{room_name_en(room.spec.nazwa)}\n{room.area:.1f} m²"
     fontsize = _auto_fontsize(room)
 
     ax.text(cx, cy, label, ha="center", va="center",

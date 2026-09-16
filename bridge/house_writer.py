@@ -38,12 +38,12 @@ def export_house_to_archicad(
         template = tpls.get("house_single_storey") if single else tpls.get("house_parter")
     elif storey == "poddasze":
         if single:
-            raise ValueError("Parterowiec nie ma poddasza — wybierz 'parter'.")
+            raise ValueError("A single-storey house has no attic — pick the ground floor.")
         rooms = layout.pietro_rooms
         boundary = getattr(layout, "attic_boundary", None) or layout.boundary
         template = tpls.get("house_pietro")
     else:
-        raise ValueError(f"Nieznana kondygnacja: {storey!r} (parter|poddasze)")
+        raise ValueError(f"Unknown storey: {storey!r} (parter|poddasze)")
 
     plan = FloorPlan(boundary=boundary, template=template, rooms=rooms)
     # apartment_id JAWNIE — szablon domu nie ma typ_mieszkania (export_plan_to_archicad:95).
