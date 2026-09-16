@@ -32,7 +32,10 @@ datas = [
     (str(ROOT / "templates"), "templates"),
     (str(ROOT / "rules"), "rules"),
     (str(ROOT / "data" / "plans"), "data/plans"),
-] + collect_data_files("shapely") + collect_data_files("ortools")
+] + collect_data_files("shapely") + collect_data_files("ortools") \
+  + collect_data_files("archicad", include_py_files=True)
+# archicad/versioning.py robi os.scandir(archicad.releases.__path__[0]) — katalog MUSI istnieć
+# na dysku w _internal/, inaczej ACConnection.connect() pada i GUI widzi "brak AC".
 
 binaries = collect_dynamic_libs("shapely") + collect_dynamic_libs("ortools")
 

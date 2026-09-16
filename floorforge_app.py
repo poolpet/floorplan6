@@ -43,6 +43,27 @@ def selftest() -> int:
             h.stop()
 
 
+def ac_probe() -> int:
+    """Diagnostics: connect to Archicad (FLOORFORGE_AC_PORT or scan) and print product/project info."""
+    try:
+        from bridge.tapir_connection import TapirConnection, env_ac_port
+        t = TapirConnection()
+        t.connect()
+        port = t.active_port
+        ver = t.commands.GetProductInfo()
+        info = {}
+        try:
+            cid = t.types.AddOnCommandId("FloorForgeCommand", "GetProjectInfo")
+            info = t.commands.ExecuteAddOnCommand(cid, {}) or {}
+        except Exception as e:  # add-on command missing → still a useful signal
+            info = {"addon_error": repr(e)}
+        print(f"AC-PROBE OK: port={port} env_port={env_ac_port()} product={ver} project={info}")
+        return 0
+    except Exception as e:
+        print(f"AC-PROBE FAIL: {e!r}")
+        return 1
+
+
 def main(argv: list[str] | None = None) -> int:
     argv = sys.argv[1:] if argv is None else argv
     if "--version" in argv:
@@ -52,6 +73,8 @@ def main(argv: list[str] | None = None) -> int:
     os.environ.setdefault("FLOORFORGE_BETA", "1")
     from ui.app_logging import setup_logging
     setup_logging()
+    if "--ac-probe" in argv:
+        return ac_probe()
     if "--selftest" in argv:
         return selftest()
     from ui.main_window import run_gui
